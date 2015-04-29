@@ -21,15 +21,120 @@ library( GenomicRanges )
 library( rtracklayer )
 library( plyr )
 library( ColorPalettes )
-
-# custom colors
-jet.colors <- colorRampPalette(c("#00007F", "blue", "#007FFF", "cyan", "#7FFF7F", "yellow", "#FF7F00", "red", "#7F0000"))
-
+library( randomForest )
+library( snow )
 
 # Load data ---------------------------------------------------------
 # NOTE: metabolome data was cleaned up. for strains < 10, a leading zero was added, e.g. 01B
 metabolome_data = read.table( "./qtl_endometabolome_23042015/seg_endometabolome.txt", sep = "\t", header = T, row.names = 1, dec = "," )
 load( "./qtl_endometabolome_23042015/geno_mrk.RData" )
+
+#-------------------------------------------------------------------#
+# Rqtl 
+#-------------------------------------------------------------------#
+
+# the data format for rqtl really sucks...
+
+# subset genotype data on metabolite data. transpose it.
+geno_subset = t( geno[ ,rownames( metabolome_data ) ] )
+# add chr num to markers
+geno_subset = rbind( gsub('chr','', as.character( seqnames( mrk[ colnames( geno_subset ) ] ) ) ), geno_subset )
+geno_subset = cbind( c( NULL, rownames( geno_subset ) ), geno_subset )
+colnames( geno_subset )[ 1 ] = 'id'
+
+# add id column to phen datayeas
+metabolome_data_w = cbind( metabolome_data, rownames( metabolome_data )  )
+colnames( metabolome_data_w )[ dim( metabolome_data_w )[2] ] = 'id'
+
+# write qtl files
+write.table( geno_subset, file =  "./qtl_endometabolome_23042015/gen.csvs", sep = ",", col.names = T, row.names = F, quote=F )
+write.table( metabolome_data_w, file =  "./qtl_endometabolome_23042015/phen.csvs", sep = ",", col.names = T, row.names = F, quote=F )
+
+# read.cross to import data into rqtl
+genphen = read.cross( format = "csvs", genfile = "./qtl_endometabolome_23042015/gen.csvs" , phefile=  "./qtl_endometabolome_23042015/phen.csvs", genotypes = c( "1","2" ) )
+
+genphen = calc.genoprob( genphen,step = 0 )
+qtls = c( lapply( seq( 1,26 ),function( i ) { scanone( genphen, pheno.col = i ) } ) )
+# permuations to determine qtl sig cutoff
+qtls_permuted = c( lapply( seq( 1,26 ),function( i ) { scanone( genphen, pheno.col = i, n.perm = 1000, n.cluster = 20 ) } ) )
+
+# Make table of putative QTLs for yeastmine
+qtl_table = c()
+permute_alpha = 0.05
+for ( i in seq( 1, length(qtls) ) ) {
+	phe = colnames( genphen$pheno )[ i ]
+	qtl_threshold = summary( qtls_permuted[[ i ]], alpha = permute_alpha )[ 1 ]
+	phe_qtls = summary( qtls[[ i ]] , qtl_threshold )
+	if ( dim( phe_qtls )[ 1 ] > 0 ) {
+		# format table entry
+		add_info = c()
+		for ( n in rownames( phe_qtls ) ) {
+			add_info = rbind( add_info, as.data.frame( ranges( mrk[ n ] ) ) )
+		}
+		phe_qtls = cbind( phe, phe_qtls[ add_info$names, ], add_info )
+		phe_qtls$pos = NULL
+		qtl_table = rbind( qtl_table, phe_qtls )
+	}
+}
+# sort by lod_score, phe, chr, start
+qtl_table = arrange( qtl_table, desc( lod ), phe, chr, start )
+
+# write table
+write.table( qtl_table, file =  "./qtl_endometabolome_23042015/qtls.txt", sep = "\t", col.names = T, row.names = F, quote=F )
+
+#-------------------------------------------------------------------#
+# RF-QTL 
+#-------------------------------------------------------------------#
+
+# load RF functions
+source( "./qtl_endometabolome_23042015/rfqtl_functions.R" )
+
+cl = makeSOCKcluster( 20 )
+clusterExport( cl, "rfsf" )
+
+ff = function(y, x, ntree ) {
+	rf = randomForest::randomForest(y = y, x = x, ntree = ntree)
+	sf = rfsf( rf )
+}
+
+# data
+x = t( geno )[ rownames( metabolome_data),  ]
+y = t( metabolome_data )
+corr = estBias(x, 10000, verbose = F)
+sf = parApply(cl, y, 1, ff, x, 1000 )
+sf = t(sf - corr)
+
+# single core way
+y = metabolome_data[,"ARG"]
+rf = randomForest(y = y, x = x, ntree = 2000)
+sf = rfsf(rf)
+sf.corr = sf - corr
+sf.corr[sf.corr < 0] = 0
+
+# sig
+sf.null = numeric()
+for (i in 1:10) {
+	rf.null = randomForest(y = sample(y), x = x, ntree = 2000)
+	tmp = rfsf(rf.null) - corr
+	tmp[tmp < 0] = 0
+	sf.null = c(sf.null, tmp)
+	print(i)
+}
+pnull = ecdf(sf.null)
+P = 1 - pnull(sf)
+Q = p.adjust(P, "fdr")
+names( which( sf>=Q ) )
+
+
+# plot
+par(mfrow = c(2, 1))
+plot(sf["ARG",], type = "h", ylab = "adj. selection frequency", main = "RFSF, ARG")
+plot(sf["SUC",], type = "h", ylab = "adj. selection frequency", main = "RFSF, SUC")
+
+
+#-------------------------------------------------------------------#
+# Plot
+#-------------------------------------------------------------------#
 
 # Cluster metabolome data ---------------------------------------------------------
 metabolome_data_clustx = hclust( dist( metabolome_data ) )
@@ -134,59 +239,6 @@ response <- py$plotly(data, kwargs=list(filename="Strains, Spearman Correlation"
 url <- response$url
 
 #-------------------------------------------------------------------#
-# Rqtl 
-#-------------------------------------------------------------------#
-
-# the data format for rqtl really sucks...
-
-# subset genotype data on metabolite data. transpose it.
-geno_subset = t( geno[ ,rownames( metabolome_data ) ] )
-# add chr num to markers
-geno_subset = rbind( gsub('chr','', as.character( seqnames( mrk[ colnames( geno_subset ) ] ) ) ), geno_subset )
-geno_subset = cbind( c( NULL, rownames( geno_subset ) ), geno_subset )
-colnames( geno_subset )[ 1 ] = 'id'
-
-# add id column to phen datayeas
-metabolome_data_w = cbind( metabolome_data, rownames( metabolome_data )  )
-colnames( metabolome_data_w )[ dim( metabolome_data_w )[2] ] = 'id'
-
-# write qtl files
-write.table( geno_subset, file =  "./qtl_endometabolome_23042015/gen.csvs", sep = ",", col.names = T, row.names = F, quote=F )
-write.table( metabolome_data_w, file =  "./qtl_endometabolome_23042015/phen.csvs", sep = ",", col.names = T, row.names = F, quote=F )
-
-# read.cross to import data into rqtl
-genphen = read.cross( format = "csvs", genfile = "./qtl_endometabolome_23042015/gen.csvs" , phefile=  "./qtl_endometabolome_23042015/phen.csvs", genotypes = c( "1","2" ) )
-
-genphen = calc.genoprob( genphen,step = 0 )
-qtls = c( lapply( seq( 1,26 ),function( i ) { scanone( genphen, pheno.col = i ) } ) )
-# permuations to determine qtl sig cutoff
-qtls_permuted = c( lapply( seq( 1,26 ),function( i ) { scanone( genphen, pheno.col = i, n.perm = 1000, n.cluster = 20 ) } ) )
-
-# Make table of putative QTLs for yeastmine
-qtl_table = c()
-permute_alpha = 0.05
-for ( i in seq( 1, length(qtls) ) ) {
-	phe = colnames( genphen$pheno )[ i ]
-	qtl_threshold = summary( qtls_permuted[[ i ]], alpha = permute_alpha )[ 1 ]
-	phe_qtls = summary( qtls[[ i ]] , qtl_threshold )
-	if ( dim( phe_qtls )[ 1 ] > 0 ) {
-		# format table entry
-		add_info = c()
-		for ( n in rownames( phe_qtls ) ) {
-			add_info = rbind( add_info, as.data.frame( ranges( mrk[ n ] ) ) )
-		}
-		phe_qtls = cbind( phe, phe_qtls[ add_info$names, ], add_info )
-		phe_qtls$pos = NULL
-		qtl_table = rbind( qtl_table, phe_qtls )
-	}
-}
-# sort by lod_score, phe, chr, start
-qtl_table = arrange( qtl_table, desc( lod ), phe, chr, start )
-
-# write table
-write.table( qtl_table, file =  "./qtl_endometabolome_23042015/qtls.txt", sep = "\t", col.names = T, row.names = F, quote=F )
-
-#-------------------------------------------------------------------#
 # Analyse QTL effects 
 #-------------------------------------------------------------------#
 
@@ -200,13 +252,24 @@ write.table( qtl_table, file =  "./qtl_endometabolome_23042015/qtls.txt", sep = 
 #
 # 1. ARG
 #
-genotype = geno[ "mrk_9421", rownames( arg_data ) ]
+genotype = t( geno[ c("mrk_9420","mrk_9421","mrk_9437","mrk_13402"), rownames( metabolome_data ) ] )
+genotype[ genotype == 1 ] = 
 arg_data = cbind( metabolome_data[ , "ARG", drop = F ], genotype )
+
+x_1 = c( )
+x_2 = c( )
+y_1 = c( )
+y_2 = c( )
+for (i in c("mrk_9420","mrk_9421","mrk_9437","mrk_13402") ) {
+	x_1 = c( x_1, rep( i, sum( arg_data[ , i ] == 1 ) ) )
+	x_2 = c( x_2, rep( i, sum( arg_data[ , i ] == 2 ) ) )
+}
 
 py <- plotly()
 data <- list(
   list(
     y = arg_data[ arg_data[ , "genotype" ] == 1, "ARG" ], 
+    x = x
     boxpoints = "all", 
     jitter = 0.3, 
     pointpos = 0, 
@@ -215,6 +278,7 @@ data <- list(
   ),
   list(
     y = arg_data[ arg_data[ , "genotype" ] == 2, "ARG" ], 
+    x = x
     boxpoints = "all", 
     jitter = 0.3, 
     pointpos = 0, 
