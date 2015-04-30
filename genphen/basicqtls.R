@@ -92,44 +92,63 @@ source( "./qtl_endometabolome_23042015/rfqtl_functions.R" )
 cl = makeSOCKcluster( 20 )
 clusterExport( cl, "rfsf" )
 
-ff = function(y, x, ntree ) {
+ff = function(y, x, ntree, corr, alpha ) {
+	# actual data
 	rf = randomForest::randomForest(y = y, x = x, ntree = ntree)
-	sf = rfsf( rf )
+	sf = rfsf( rf ) - corr
+	# permuted background
+	sf.null = numeric()
+	for (i in 1:10) {
+		rf.null = randomForest::randomForest( y = sample( y ), x = x, ntree = ntree )
+		tmp = rfsf( rf.null ) - corr
+		tmp[ tmp < 0 ] = 0
+		sf.null = c( sf.null, tmp )
+	}
+	pnull = ecdf(sf.null)
+	P = 1 - pnull(sf)
+	Q = p.adjust(P, "fdr")
+	to_r = list()
+	to_r$qtls = sf[ which( Q <= alpha ) ]
+	to_r$sf = sf
+	to_r$Q = Q
+	to_r$ntree = ntree
+	to_r$alpha = alpha
+	return( to_r )
 }
 
 # data
-x = t( geno )[ rownames( metabolome_data),  ]
-y = t( metabolome_data )
 corr = estBias(x, 10000, verbose = F)
-sf = parApply(cl, y, 1, ff, x, 1000 )
-sf = t(sf - corr)
+endometabolome_rfqtls = parApply(cl, t( metabolome_data ), 1, ff, t( geno )[ rownames( metabolome_data),  ], 2000, corr, 0.05 )
 
-# single core way
-y = metabolome_data[,"ARG"]
-rf = randomForest(y = y, x = x, ntree = 2000)
-sf = rfsf(rf)
-sf.corr = sf - corr
-sf.corr[sf.corr < 0] = 0
-
-# sig
-sf.null = numeric()
-for (i in 1:10) {
-	rf.null = randomForest(y = sample(y), x = x, ntree = 2000)
-	tmp = rfsf(rf.null) - corr
-	tmp[tmp < 0] = 0
-	sf.null = c(sf.null, tmp)
-	print(i)
+rfqtl_table = c()
+for ( i in names(endometabolome_rfqtls ) ) {
+	tmp_qtls = endometabolome_rfqtls[[i]]$qtls
+	if ( length( tmp_qtls ) > 0 ) {
+		# format table entry
+		add_info = c()
+		for ( n in names( tmp_qtls ) ) {
+			chr = gsub( "chr", "", as.character( seqnames( mrk[ n ] ) ) )
+			add_info = rbind( add_info, cbind( chr, as.data.frame( ranges( mrk[ n ] ) ) ) )
+		}
+		phe = i
+		selection_freq = tmp_qtls[ add_info$names ]
+		tmp_qtls = cbind( phe, selection_freq, add_info )
+		rfqtl_table = rbind( rfqtl_table, tmp_qtls )
+	}
 }
-pnull = ecdf(sf.null)
-P = 1 - pnull(sf)
-Q = p.adjust(P, "fdr")
-names( which( sf>=Q ) )
+# sort by lod_score, phe, chr, start
+rfqtl_table = arrange( rfqtl_table, phe, desc( selection_freq ), chr, start )
 
+# write table
+write.table( rfqtl_table, file =  "./qtl_endometabolome_23042015/rf_qtls.txt", sep = "\t", col.names = T, row.names = F, quote=F )
+
+# save
+save( rfqtl_table, endometabolome_rfqtls, file = "./qtl_endometabolome_23042015/rf_qtls.RData" )
 
 # plot
-par(mfrow = c(2, 1))
-plot(sf["ARG",], type = "h", ylab = "adj. selection frequency", main = "RFSF, ARG")
-plot(sf["SUC",], type = "h", ylab = "adj. selection frequency", main = "RFSF, SUC")
+# par(mfrow = c(2, 1))
+# plot(sf["ARG",], type = "h", ylab = "adj. selection frequency", main = "RFSF, ARG")
+# plot(sf["SUC",], type = "h", ylab = "adj. selection frequency", main = "RFSF, SUC")
 
 
 #-------------------------------------------------------------------#
@@ -242,27 +261,41 @@ url <- response$url
 # Analyse QTL effects 
 #-------------------------------------------------------------------#
 
-# endometabolome QTLs
+# endometabolome rQTLs
 #   phe chr      lod  start    end width     names
 # 1 ARG  13 4.705359  44287  44503   217  mrk_9421
 # 2 SUC  16 4.210699 922017 922017     1 mrk_13643
 # 3 LYS  15 4.136895  70894  70894     1 mrk_11483
 # 4 GLN  15 3.752371 485898 485898     1 mrk_12115
 
+# endometabolome rf_QTLs
+#    phe selection_freq chr  start    end width     names
+# 1  ARG    0.008146087  13  44287  44503   217  mrk_9421
+# 2  ARG    0.006678967  13  43096  43166    71  mrk_9420
+# 3  ARG    0.005760963  16 699992 700480   489 mrk_13402
+# 4  ARG    0.004877374  13  63358  63947   590  mrk_9437
+# 5  ARG    0.004843013  13  56748  56748     1  mrk_9435
+# 6  ASN    0.008546134  02 295710 296082   373   mrk_581
+# 7  GLU    0.006683078  15 493331 493377    47 mrk_12139
+# 8  GLN    0.006000438  15 485898 485898     1 mrk_12115
+# 9  MET    0.006332202  15 493331 493377    47 mrk_12139
+# 10 TYR    0.005174024  15 480144 480336   193 mrk_12104
+
 #
 # 1. ARG
 #
-genotype = t( geno[ c("mrk_9420","mrk_9421","mrk_9437","mrk_13402"), rownames( metabolome_data ) ] )
-genotype[ genotype == 1 ] = 
+mrks = rfqtl_table[ rfqtl_table$phe == "ARG", "names" ]
+genotype = t( geno[ mrks, rownames( metabolome_data ) ] )
 arg_data = cbind( metabolome_data[ , "ARG", drop = F ], genotype )
 
 x_1 = c( )
 x_2 = c( )
 y_1 = c( )
 y_2 = c( )
-for (i in c("mrk_9420","mrk_9421","mrk_9437","mrk_13402") ) {
+for (i in mrks ) {
 	x_1 = c( x_1, rep( i, sum( arg_data[ , i ] == 1 ) ) )
 	x_2 = c( x_2, rep( i, sum( arg_data[ , i ] == 2 ) ) )
+	y_1 = c( y_1,  )
 }
 
 py <- plotly()
