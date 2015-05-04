@@ -295,14 +295,15 @@ y_2 = c( )
 for (i in mrks ) {
 	x_1 = c( x_1, rep( i, sum( arg_data[ , i ] == 1 ) ) )
 	x_2 = c( x_2, rep( i, sum( arg_data[ , i ] == 2 ) ) )
-	y_1 = c( y_1,  )
+	y_1 = c( y_1, arg_data[ , "ARG" ][arg_data[ , i ] == 1] )
+  y_2 = c( y_2, arg_data[ , "ARG" ][arg_data[ , i ] == 2] )
 }
 
 py <- plotly()
 data <- list(
   list(
-    y = arg_data[ arg_data[ , "genotype" ] == 1, "ARG" ], 
-    x = x
+    y = y_1, 
+    x = x_1,
     boxpoints = "all", 
     jitter = 0.3, 
     pointpos = 0, 
@@ -310,8 +311,8 @@ data <- list(
     name = "S288c"
   ),
   list(
-    y = arg_data[ arg_data[ , "genotype" ] == 2, "ARG" ], 
-    x = x
+    y = y_2, 
+    x = x_2,
     boxpoints = "all", 
     jitter = 0.3, 
     pointpos = 0, 
@@ -319,7 +320,16 @@ data <- list(
     name = "YJM789"
   )
 ) 
-layout <- list(title = "Arg level by variant at mrk_9421")
+layout <- list(
+  title = "ARG-related QTLs", 
+  boxmode="group",
+  xaxis = list(
+    title ="QTL"
+    ),
+  yaxis = list(
+    title = "ARG Level (unknown units)"
+    )
+  )
 response <- py$plotly(data, kwargs=list(layout=layout, filename="ARG QTL, Arg level", fileopt="overwrite"))
 url <- response$url
 
