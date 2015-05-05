@@ -22,12 +22,49 @@ library( rtracklayer )
 library( plyr )
 library( ColorPalettes )
 library( randomForest )
-library( snow )
+#library( snow )
+library( parallel )
+options("mc.cores"=20) 
+
+# Functions ---------------------------------------------------
+source("/g/steinmetz/brooks/git/R-tools/quantile_normalize.R")
 
 # Load data ---------------------------------------------------------
 # NOTE: metabolome data was cleaned up. for strains < 10, a leading zero was added, e.g. 01B
 metabolome_data = read.table( "./qtl_endometabolome_23042015/seg_endometabolome.txt", sep = "\t", header = T, row.names = 1, dec = "," )
 load( "./qtl_endometabolome_23042015/geno_mrk.RData" )
+
+# check distribution of the data
+
+# apply shapiro-wilk test for normality
+
+# raw
+norm_test = p.adjust( apply( metabolome_data, 2, function(i) { shapiro.test( i )$p.value } ), "fdr" )
+# 13/26 are not normal
+
+# log10
+norm_test_log = p.adjust( apply( log10( metabolome_data ), 2, function(i) { shapiro.test( i )$p.value } ), "fdr" )
+# 8/26 are not normal
+
+# zscore
+norm_test_zscore = p.adjust( apply( apply( metabolome_data, 2, scale, center=TRUE, scale=TRUE ), 2, function(i) { shapiro.test( i )$p.value } ), "fdr" )
+# 13/26 are not normal
+
+# quantile normalize 
+norm_test_quant = p.adjust( apply( quantile_normalize( metabolome_data ), 2, function(i) { shapiro.test( i )$p.value } ), "fdr" )
+# 0/26 are not normal
+
+# quantile normalize / zscore
+norm_test_quant_zscore = p.adjust( apply( apply( quantile_normalize( metabolome_data ), 2, scale, center=TRUE, scale=TRUE ), 2, function(i) { shapiro.test( i )$p.value } ), "fdr" )
+# 0/26 are not normal
+
+# quantile normalize / zscore
+# USE THIS!
+metabolite_quant_zscore = apply( quantile_normalize( metabolome_data ), 2, scale, center=TRUE, scale=TRUE )
+rownames( metabolite_quant_zscore ) = rownames( metabolome_data )
+
+# as noted by Chenchen, log transform seems to take care of this
+
 
 #-------------------------------------------------------------------#
 # Rqtl 
@@ -43,7 +80,9 @@ geno_subset = cbind( c( NULL, rownames( geno_subset ) ), geno_subset )
 colnames( geno_subset )[ 1 ] = 'id'
 
 # add id column to phen datayeas
-metabolome_data_w = cbind( metabolome_data, rownames( metabolome_data )  )
+# 4/5/2015 change to quant_zscore norm
+# metabolome_data_w = cbind( metabolome_data, rownames( metabolome_data )  )
+metabolome_data_w = cbind( metabolite_quant_zscore, rownames( metabolite_quant_zscore )  )
 colnames( metabolome_data_w )[ dim( metabolome_data_w )[2] ] = 'id'
 
 # write qtl files
@@ -54,7 +93,7 @@ write.table( metabolome_data_w, file =  "./qtl_endometabolome_23042015/phen.csvs
 genphen = read.cross( format = "csvs", genfile = "./qtl_endometabolome_23042015/gen.csvs" , phefile=  "./qtl_endometabolome_23042015/phen.csvs", genotypes = c( "1","2" ) )
 
 genphen = calc.genoprob( genphen,step = 0 )
-qtls = c( lapply( seq( 1,26 ),function( i ) { scanone( genphen, pheno.col = i ) } ) )
+qtls = c( mclapply( seq( 1,26 ),function( i ) { scanone( genphen, pheno.col = i ) } ) )
 # permuations to determine qtl sig cutoff
 qtls_permuted = c( lapply( seq( 1,26 ),function( i ) { scanone( genphen, pheno.col = i, n.perm = 1000, n.cluster = 20 ) } ) )
 
@@ -80,7 +119,8 @@ for ( i in seq( 1, length(qtls) ) ) {
 qtl_table = arrange( qtl_table, desc( lod ), phe, chr, start )
 
 # write table
-write.table( qtl_table, file =  "./qtl_endometabolome_23042015/qtls.txt", sep = "\t", col.names = T, row.names = F, quote=F )
+write.table( qtl_table, file =  "./qtl_endometabolome_23042015/qtls_04052014.txt", sep = "\t", col.names = T, row.names = F, quote=F )
+
 
 #-------------------------------------------------------------------#
 # RF-QTL 
@@ -89,11 +129,12 @@ write.table( qtl_table, file =  "./qtl_endometabolome_23042015/qtls.txt", sep = 
 # load RF functions
 source( "./qtl_endometabolome_23042015/rfqtl_functions.R" )
 
-cl = makeSOCKcluster( 20 )
-clusterExport( cl, "rfsf" )
+#cl = makeSOCKcluster( 20 )
+#clusterExport( cl, "rfsf" )
 
-ff = function(y, x, ntree, corr, alpha ) {
+ff = function(index, data, x, ntree, corr, alpha ) {
 	# actual data
+  y = data[,index]
 	rf = randomForest::randomForest(y = y, x = x, ntree = ntree)
 	sf = rfsf( rf ) - corr
 	# permuted background
@@ -117,8 +158,9 @@ ff = function(y, x, ntree, corr, alpha ) {
 }
 
 # data
-corr = estBias(x, 10000, verbose = F)
-endometabolome_rfqtls = parApply(cl, t( metabolome_data ), 1, ff, t( geno )[ rownames( metabolome_data),  ], 2000, corr, 0.05 )
+corr = estBias(metabolite_quant_zscore, 10000, verbose = F)
+#endometabolome_rfqtls = parApply(cl, t( metabolome_data ), 1, ff, t( geno )[ rownames( metabolome_data),  ], 2000, corr, 0.05 )
+endometabolome_rfqtls = mclapply(colnames( metabolite_quant_zscore ), ff, y = metabolite_quant_zscore[ ,i ], x = t( geno )[ rownames( metabolome_data),  ], ntree = 2000, corr = corr, alpha = 0.05 )
 
 rfqtl_table = c()
 for ( i in names(endometabolome_rfqtls ) ) {
@@ -140,7 +182,9 @@ for ( i in names(endometabolome_rfqtls ) ) {
 rfqtl_table = arrange( rfqtl_table, phe, desc( selection_freq ), chr, start )
 
 # write table
-write.table( rfqtl_table, file =  "./qtl_endometabolome_23042015/rf_qtls.txt", sep = "\t", col.names = T, row.names = F, quote=F )
+#write.table( rfqtl_table, file =  "./qtl_endometabolome_23042015/rf_qtls.txt", sep = "\t", col.names = T, row.names = F, quote=F )
+write.table( rfqtl_table, file =  "./qtl_endometabolome_23042015/rf_qtls_04052014.txt", sep = "\t", col.names = T, row.names = F, quote=F )
+
 
 # save
 save( rfqtl_table, endometabolome_rfqtls, file = "./qtl_endometabolome_23042015/rf_qtls.RData" )
@@ -161,7 +205,7 @@ metabolome_data_clusty = hclust( dist( t( metabolome_data ) ) )
 
 # Plot metabolite data
 
-py <- plotly()
+py = plotly()
 
 #
 # raw data
@@ -172,7 +216,7 @@ z = as.matrix( metabolome_data[ metabolome_data_clustx$order, metabolome_data_cl
 rownames( z ) = NULL
 colnames( z ) = NULL
 
-data <- list(
+data = list(
   list(
     z = z, 
     x = colnames( metabolome_data ), 
@@ -182,15 +226,15 @@ data <- list(
   )
 )
 
-response <- py$plotly(data, kwargs=list(filename="Endometabolome", fileopt="overwrite"))
-url <- response$url
+response = py$plotly(data, kwargs=list(filename="Endometabolome", fileopt="overwrite"))
+url = response$url
 
 # log
 z_log = log( as.matrix( metabolome_data[ metabolome_data_clustx$order, metabolome_data_clusty$order ] ) )
 rownames( z_log ) = NULL
 colnames( z_log ) = NULL
 
-data <- list(
+data = list(
   list(
     z = z_log, 
     x = colnames( metabolome_data ), 
@@ -200,7 +244,25 @@ data <- list(
   )
 )
 
-response <- py$plotly(data, kwargs=list(filename="Endometabolome_log", fileopt="overwrite"))
+response = py$plotly(data, kwargs=list(filename="Endometabolome_log", fileopt="overwrite"))
+url = response$url
+
+
+data = lapply( colnames( metabolite_quant_zscore ), function(i) {
+    out = list()
+    out$x = metabolite_quant_zscore[ ,i ]
+    out$opacity = 0.75
+    out$type = "histogram"
+    out$name = i
+    return(out)
+    } ) 
+layout <- list( 
+  barmode = "overlay",
+  title = "Distribution of Endometabolite Measurements (Quantile normalized, Z-score)", 
+  xaxis = list(title = "Metabolite Level (Z-score)"), 
+  yaxis = list(title = "Count") 
+  )
+response <- py$plotly(data, kwargs=list(layout=layout, filename="endometabolome histogram", fileopt="overwrite"))
 url <- response$url
 
 #
@@ -216,7 +278,7 @@ z = as.matrix( metabolite_cor[ metabolite_cor_clustx$order, metabolite_cor_clust
 rownames( z ) = NULL
 colnames( z ) = NULL
 
-data <- list(
+data = list(
   list(
     z = z, 
     x = colnames( metabolite_cor ), 
@@ -229,8 +291,8 @@ data <- list(
   )
 )
 
-response <- py$plotly(data, kwargs=list(filename="Endometabolome, Spearman Correlation", fileopt="overwrite"))
-url <- response$url
+response = py$plotly(data, kwargs=list(filename="Endometabolome, Spearman Correlation", fileopt="overwrite"))
+url = response$url
 
 # strains
 strain_cor = cor( t( metabolome_data ), method="spearman" )
@@ -241,7 +303,7 @@ z = as.matrix( strain_cor[ strain_cor_clustx$order, strain_cor_clusty$order ] )
 rownames( z ) = NULL
 colnames( z ) = NULL
 
-data <- list(
+data = list(
   list(
     z = z, 
     x = colnames( strain_cor ), 
@@ -254,8 +316,8 @@ data <- list(
   )
 )
 
-response <- py$plotly(data, kwargs=list(filename="Strains, Spearman Correlation", fileopt="overwrite"))
-url <- response$url
+response = py$plotly(data, kwargs=list(filename="Strains, Spearman Correlation", fileopt="overwrite"))
+url = response$url
 
 #-------------------------------------------------------------------#
 # Analyse QTL effects 
@@ -299,8 +361,8 @@ for (i in mrks ) {
   y_2 = c( y_2, arg_data[ , "ARG" ][arg_data[ , i ] == 2] )
 }
 
-py <- plotly()
-data <- list(
+py = plotly()
+data = list(
   list(
     y = y_1, 
     x = x_1,
@@ -320,7 +382,7 @@ data <- list(
     name = "YJM789"
   )
 ) 
-layout <- list(
+layout = list(
   title = "ARG-related QTLs", 
   boxmode="group",
   xaxis = list(
@@ -330,8 +392,8 @@ layout <- list(
     title = "ARG Level (unknown units)"
     )
   )
-response <- py$plotly(data, kwargs=list(layout=layout, filename="ARG QTL, Arg level", fileopt="overwrite"))
-url <- response$url
+response = py$plotly(data, kwargs=list(layout=layout, filename="ARG QTL, Arg level", fileopt="overwrite"))
+url = response$url
 
 #
 # 2. SUC
@@ -339,8 +401,8 @@ url <- response$url
 genotype = geno[ "mrk_13643", rownames( arg_data ) ]
 arg_data = cbind( metabolome_data[ , "SUC", drop = F ], genotype )
 
-py <- plotly()
-data <- list(
+py = plotly()
+data = list(
   list(
     y = arg_data[ arg_data[ , "genotype" ] == 1, "SUC" ], 
     boxpoints = "all", 
@@ -358,9 +420,9 @@ data <- list(
     name = "YJM789"
   )
 ) 
-layout <- list(title = "Suc level by variant at mrk_13643")
-response <- py$plotly(data, kwargs=list(layout=layout, filename="SUC QTL, Suc level", fileopt="overwrite"))
-url <- response$url
+layout = list(title = "Suc level by variant at mrk_13643")
+response = py$plotly(data, kwargs=list(layout=layout, filename="SUC QTL, Suc level", fileopt="overwrite"))
+url = response$url
 
 #-------------------------------------------------------------------#
 # Load genomes 

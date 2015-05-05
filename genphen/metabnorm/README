@@ -1,0 +1,5 @@
+Here we distribute
+
+(1) The R code to perform the normalization. The file is called normfunctions.R.
+(2) Example data, contained in the file NMR.RData.
+(3) Instructions and examples on how to run the code, either in a Sweave file, MetabNormMixed.Rnw, or in a pdf, MetabNormMixed.pdf.
