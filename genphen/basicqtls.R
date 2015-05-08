@@ -24,46 +24,59 @@ library( ColorPalettes )
 library( randomForest )
 #library( snow )
 library( parallel )
-options("mc.cores"=20) 
+options("mc.cores"=26) 
 
 # Functions ---------------------------------------------------
-source("/g/steinmetz/brooks/git/R-tools/quantile_normalize.R")
+source( "/g/steinmetz/brooks/git/R-tools/quantile_normalize.R" )
+source( "/g/steinmetz/brooks/git/steinmetz-lab/genphen/metabnorm/normfunctions.R" )
 
 # Load data ---------------------------------------------------------
 # NOTE: metabolome data was cleaned up. for strains < 10, a leading zero was added, e.g. 01B
 metabolome_data = read.table( "./qtl_endometabolome_23042015/seg_endometabolome.txt", sep = "\t", header = T, row.names = 1, dec = "," )
+# log the data
+metabolome_data = log10( metabolome_data )
+metabolome_data_quant = t(quantile_normalize(t(metabolome_data)))
+
+#              #
+# USE THIS ONE
+#              #
+metabolome_data_mixednorm = t( normalizeMixed( t( metabolome_data ), cohort = NULL, batch = NULL ) )
+
 load( "./qtl_endometabolome_23042015/geno_mrk.RData" )
 
 # check distribution of the data
 
 # apply shapiro-wilk test for normality
 
-# raw
+# raw log10
 norm_test = p.adjust( apply( metabolome_data, 2, function(i) { shapiro.test( i )$p.value } ), "fdr" )
-# 13/26 are not normal
-
-# log10
-norm_test_log = p.adjust( apply( log10( metabolome_data ), 2, function(i) { shapiro.test( i )$p.value } ), "fdr" )
 # 8/26 are not normal
 
 # zscore
 norm_test_zscore = p.adjust( apply( apply( metabolome_data, 2, scale, center=TRUE, scale=TRUE ), 2, function(i) { shapiro.test( i )$p.value } ), "fdr" )
-# 13/26 are not normal
+# 8/26 are not normal
 
 # quantile normalize 
-norm_test_quant = p.adjust( apply( quantile_normalize( metabolome_data ), 2, function(i) { shapiro.test( i )$p.value } ), "fdr" )
-# 0/26 are not normal
+norm_test_quant = p.adjust( apply( metabolome_data_quant, 2, function(i) { shapiro.test( i )$p.value } ), "fdr" )
+# 21/26 are not normal
 
 # quantile normalize / zscore
-norm_test_quant_zscore = p.adjust( apply( apply( quantile_normalize( metabolome_data ), 2, scale, center=TRUE, scale=TRUE ), 2, function(i) { shapiro.test( i )$p.value } ), "fdr" )
-# 0/26 are not normal
+norm_test_quant_zscore = p.adjust( apply( apply( metabolome_data_quant, 2, scale, center=TRUE, scale=TRUE ), 2, function(i) { shapiro.test( i )$p.value } ), "fdr" )
+# 21/26 are not normal
 
-# quantile normalize / zscore
-# USE THIS!
-metabolite_quant_zscore = apply( quantile_normalize( metabolome_data ), 2, scale, center=TRUE, scale=TRUE )
-rownames( metabolite_quant_zscore ) = rownames( metabolome_data )
+# boxplot(t(metabolome_data),main="Strains, Log10(Value)",xlab="Strain",las=2, ylab = "Metabolite Level",ylim=c(0,5))
+# boxplot(t(metabolome_data_quant),main="Strains, Quantile Normalized",xlab="Strain",las=2,ylab = "Metabolite Level", ylim=c(0,5))
 
-# as noted by Chenchen, log transform seems to take care of this
+# boxplot((metabolome_data),main="Metabolites, Log10(Value)",xlab="Metabolite",las=2, ylab = "Metabolite Level", ylim=c(0,5))
+# boxplot((metabolome_data_quant),main="Metabolites, Quantile Normalized",xlab="Metabolite",ylab = "Metabolite Level", las=2,ylim=c(0,5))
+
+# boxplot(t(metabolome_data_mixednorm),main="Strains, Mix-Norm",xlab="Strain",las=2,ylab = "Metabolite Level", ylim=c(0,5))
+# boxplot((metabolome_data_mixednorm),main="Metabolites, Mix-Norm",xlab="Metabolite",las=2, ylab = "Metabolite Level", ylim=c(0,5))
+
+# reduced metabolite correlations
+# m_cor = cor(metabolome_data)[upper.tri(cor(metabolome_data))]
+# m_cor_mixednorm = cor(metabolome_data_mixednorm)[upper.tri(cor(metabolome_data_mixednorm))]
+#boxplot(list( m_cor,m_cor_mixednorm ),main="Metabolite Correlation",xlab="Normalization method",las=1, ylab = "Metabolite Correlation, Pearson", ylim=c(-1,1),names=list("Log10","Mixed Model"))
 
 
 #-------------------------------------------------------------------#
@@ -82,7 +95,7 @@ colnames( geno_subset )[ 1 ] = 'id'
 # add id column to phen datayeas
 # 4/5/2015 change to quant_zscore norm
 # metabolome_data_w = cbind( metabolome_data, rownames( metabolome_data )  )
-metabolome_data_w = cbind( metabolite_quant_zscore, rownames( metabolite_quant_zscore )  )
+metabolome_data_w = cbind( metabolome_data_mixednorm, rownames( metabolome_data_mixednorm )  )
 colnames( metabolome_data_w )[ dim( metabolome_data_w )[2] ] = 'id'
 
 # write qtl files
@@ -134,6 +147,7 @@ source( "./qtl_endometabolome_23042015/rfqtl_functions.R" )
 
 ff = function(index, data, x, ntree, corr, alpha ) {
 	# actual data
+  #cat( paste( index, "\n" ) )
   y = data[,index]
 	rf = randomForest::randomForest(y = y, x = x, ntree = ntree)
 	sf = rfsf( rf ) - corr
@@ -158,9 +172,10 @@ ff = function(index, data, x, ntree, corr, alpha ) {
 }
 
 # data
-corr = estBias(metabolite_quant_zscore, 10000, verbose = F)
+corr = estBias( metabolome_data_mixednorm, 10000, verbose = F )
 #endometabolome_rfqtls = parApply(cl, t( metabolome_data ), 1, ff, t( geno )[ rownames( metabolome_data),  ], 2000, corr, 0.05 )
-endometabolome_rfqtls = mclapply(colnames( metabolite_quant_zscore ), ff, y = metabolite_quant_zscore[ ,i ], x = t( geno )[ rownames( metabolome_data),  ], ntree = 2000, corr = corr, alpha = 0.05 )
+endometabolome_rfqtls = mclapply( colnames( metabolome_data_mixednorm ), ff, data = metabolome_data_mixednorm, x = t( geno )[ rownames( metabolome_data_mixednorm ),  ], ntree = 2000, corr = corr, alpha = 0.05 )
+names( endometabolome_rfqtls ) = colnames( metabolome_data_mixednorm )
 
 rfqtl_table = c()
 for ( i in names(endometabolome_rfqtls ) ) {
@@ -211,40 +226,68 @@ py = plotly()
 # raw data
 #
 
-# normal
-z = as.matrix( metabolome_data[ metabolome_data_clustx$order, metabolome_data_clusty$order ] )
+# log
+y = metabolome_data_clusty$labels[metabolome_data_clusty$order]
+x = metabolome_data_clustx$labels[metabolome_data_clustx$order]
+z = as.matrix( metabolome_data[ x, y ] )
 rownames( z ) = NULL
 colnames( z ) = NULL
 
 data = list(
   list(
     z = z, 
-    x = colnames( metabolome_data ), 
-    y = rownames( metabolome_data ), 
+    x = y, 
+    y = x, 
     colorscale = "Jet",
-    type = "heatmap"
-  )
-)
-
-response = py$plotly(data, kwargs=list(filename="Endometabolome", fileopt="overwrite"))
-url = response$url
-
-# log
-z_log = log( as.matrix( metabolome_data[ metabolome_data_clustx$order, metabolome_data_clusty$order ] ) )
-rownames( z_log ) = NULL
-colnames( z_log ) = NULL
-
-data = list(
-  list(
-    z = z_log, 
-    x = colnames( metabolome_data ), 
-    y = rownames( metabolome_data ), 
-    colorscale = "Jet",
+    zauto = F,
+    zmin = 0,
+    zmax = 5, 
     type = "heatmap"
   )
 )
 
 response = py$plotly(data, kwargs=list(filename="Endometabolome_log", fileopt="overwrite"))
+url = response$url
+
+
+data = lapply( colnames( metabolite_quant_zscore ), function(i) {
+    out = list()
+    out$x = metabolite_quant_zscore[ ,i ]
+    out$opacity = 0.75
+    out$type = "histogram"
+    out$name = i
+    return(out)
+    } ) 
+layout <- list( 
+  barmode = "overlay",
+  title = "Distribution of Endometabolite Measurements (Quantile normalized, Z-score)", 
+  xaxis = list(title = "Metabolite Level (Z-score)"), 
+  yaxis = list(title = "Count") 
+  )
+response <- py$plotly(data, kwargs=list(layout=layout, filename="endometabolome histogram", fileopt="overwrite"))
+url <- response$url
+
+# mixed model normalized
+y = metabolome_data_clusty$labels[metabolome_data_clusty$order]
+x = metabolome_data_clustx$labels[metabolome_data_clustx$order]
+z = as.matrix( metabolome_data_mixednorm[ x, y ] )
+rownames( z ) = NULL
+colnames( z ) = NULL
+
+data = list(
+  list(
+    z = z, 
+    x = y, 
+    y = x, 
+    colorscale = "Jet",
+    zauto = F,
+    zmin = 0,
+    zmax = 5, 
+    type = "heatmap"
+  )
+)
+
+response = py$plotly(data, kwargs=list(filename="Endometabolome_mixednorm", fileopt="overwrite"))
 url = response$url
 
 
