@@ -1,0 +1,23 @@
+mkdir ABC-SysBio-Tutorial
+cd ABC-SysBio-Tutorial
+
+mkdir paramInference
+cd paramInference
+
+wget http://www.nature.com/nprot/journal/v9/n2/extref/nprot.2014.025-S3.zip
+unzip nprot.2014.025-S3.zip 
+
+abc-sysbio-sbml-sum --files mRNAselfReg1.sbml --input_file_name input_file1.xml
+
+wget http://www.nature.com/nprot/journal/v9/n2/extref/nprot.2014.025-S4.zip
+unzip nprot.2014.025-S4.zip 
+
+# modify input_file1.xml
+
+run-abc-sysbio -i input_file1.xml -of=results –f –sd=2
+
+mkdir ~/local
+mkdir ~/local/bin
+mkdir ~/local/lib
+mkdir ~/local/include
+./configure --with-python --prefix=/home/brooks/local 

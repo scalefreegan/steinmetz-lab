@@ -16,6 +16,13 @@
 
 # Import packages ---------------------------------------------------
 library( ggplot2 )
+library( plotly )
+library( dplyr )
+library( reshape2 )
+
+# Import functions ---------------------------------------------------
+source( "/g/steinmetz/brooks/git/steinmetz-lab/genphen/metabnorm/normfunctions.R" )
+
 
 # NOTE: this function is specific to data format supplied by Nicole, which looks like this:
 # Intracellulare concentration [µM]												
@@ -26,6 +33,8 @@ library( ggplot2 )
 # 3	2579.87	2098.17	2552.03	3352.06	2661.11	2612.89	2529.99	1581.68	1648.46	1807.51	1589.14	31.8
 # 4	2153.68	2157.96	2081.88	2047.92	2089.03	2078.23	1968.13	1341.41	1277.06	1430.45	1237.51	79.68
 # 5	1609.98	1692.87	1625.89	1511.57	1674.03	1644.89	1489.67	1198.9	1207.58	1238.84	1175.75	29.49
+
+# Custom functions ---------------------------------------------------
 
 processData = function( f, metaboliteRow = 1, strainRow = 2, dataRows = NULL, dataRowsLabels = NULL, ignore_col = 1, ... ) {
 	data = read.table(f,sep="\t", ...)
@@ -85,25 +94,208 @@ processData = function( f, metaboliteRow = 1, strainRow = 2, dataRows = NULL, da
 	return(out)
 }
 
+calc_deriv = function(df) {
+	# calc first order finite difference
+	# order df by time
+	df = arrange( df,time )
+	endo_rate = diff( df$endo_quant_log )
+	exo_rate = diff( df$exo_quant_log )
+	time = sapply( seq( 2, length( df$time ) ), function(i) { 
+		# change to ceil to keep time labeling consistent
+		ceiling( mean( as.numeric( levels( df$time )[ df$time[ c( i-1,i ) ] ] ) ) )
+		} )
+	out = data.frame( metabolite = df$metabolite[1], strain = df$strain[1], parent = df$parent[1], time = time, endo_rate = endo_rate, exo_rate = exo_rate )
+	return(out)
+}
+
+rel1 = function(df) {
+	# order df by time
+	df = arrange( df,time )
+	df$endo_quant_rel = df$endo_quant_log/filter(df,time==min(as.numeric(levels(df$time))))$endo_quant_log
+	df$exo_quant_rel = df$exo_quant_log/filter(df,time==min(as.numeric(levels(df$time))))$exo_quant_log
+	return(df)
+}
+
+
+
+
+# Load and process data ---------------------------------------------------
+
 f1 = "./dynamic_metabolome_08052014/Endometabolome_ParentalStrains.txt"
-endodata = processData(f1,skip=1,dataRowsLabels = seq(16,20) )
-pdf("./dynamic_metabolome_08052014/endometabolome.pdf", width=11.5,height=8)
-ggplot(data = endodata, aes(x = data_label, y = data, group = parent,colour=parent)) + 
-	geom_point() + 
-	geom_smooth() + 
-	facet_wrap( ~ metabolite, scales="free_y") + 
-	scale_x_discrete(name="Time (hr)") +
-    scale_y_continuous(name=expression(paste("Level (",mu,"M)")))
-dev.off()
+endodata = processData( f1,skip=1,dataRowsLabels = seq( 16,20 ) )
+endodata$endo_quant_log = endodata$data
+endodata$endo_quant_log[ endodata$endo_quant_log<1 ] = endodata$endo_quant_log[ endodata$endo_quant_log<1 ] + 1
+endodata$endo_quant_log = log2( endodata$endo_quant_log )
+# rename columns
+colnames( endodata )[ which( names( endodata ) == "data_label" ) ] = "time"
+colnames( endodata )[ which( names( endodata ) == "data" ) ] = "endo_quant"
 
 f2 = "./dynamic_metabolome_08052014/Exometabolome_ParentalStrains.txt"
 exodata = processData(f2,skip=1,dataRowsLabels = seq(16,20) )
-pdf("./dynamic_metabolome_08052014/exometabolome.pdf", width=11.5,height=8)
-ggplot(data = exodata, aes(x = data_label, y = data, group = parent,colour=parent)) + 
+exodata$exo_quant_log = exodata$data
+exodata$exo_quant_log[ exodata$exo_quant_log<1 ] = exodata$exo_quant_log[ exodata$exo_quant_log<1 ] + 1
+exodata$exo_quant_log = log2( exodata$exo_quant_log )
+# rename columns
+names( exodata )[ which( names( exodata ) == "data_label" ) ] = "time"
+names( exodata )[ which( names( exodata ) == "data" ) ] = "exo_quant"
+
+f3 = "./dynamic_metabolome_08052014/growth_ParentalStrains.txt"
+growthdata = processData(f3,skip=0,dataRowsLabels = seq(16,20) )
+# rename attributes
+levels(growthdata$metabolite)[1] <- "cellconc_1|ml"
+levels(growthdata$metabolite)[2] <- "biovolume_ul|ml"
+levels(growthdata$metabolite)[3] <- "singlecellvol_fl"
+# rename columns
+colnames( growthdata )[ which( names( growthdata ) == "metabolite" ) ] = "variable"
+colnames( growthdata )[ which( names( growthdata ) == "data_label" ) ] = "time"
+colnames( growthdata )[ which( names( growthdata ) == "data" ) ] = "value"
+# cast to wide format
+growthdata <- dcast( growthdata, strain + parent + time ~ variable, value.var = "value" )
+
+# merge data
+data = merge( endodata, exodata, all = TRUE )
+data = merge( data, growthdata , all = TRUE )
+
+# Compute addtional stats ---------------------------------------------------
+
+#normalize
+# endodata = endodata %>%
+# 	group_by( metabolite ) %>%
+
+# calc relative levels
+data = data %>%
+	group_by( metabolite, strain ) %>%
+	arrange() %>%
+	do(rel1( . ) )
+
+# calc derivative
+data_dt = data %>%
+	group_by( metabolite, strain ) %>%
+	arrange() %>%
+	do(calc_deriv( . ) )
+data = merge( data, data_dt , all = TRUE )
+
+# filter for metabolites measured in both strains
+data_complete = data %>%
+	group_by( metabolite ) %>%
+	do({
+	if( sum(!levels(.$parent) %in% .$parent)>=1) {
+		df = data.frame()
+	} else {
+		#print("in")
+		df = .
+	}
+})
+
+data_complete_long = melt( data_complete )
+
+# Save data and env ---------------------------------------------------
+
+save( data, data_complete, data_complete_long, file="./dynamic_metabolome_08052014/data.RData" )
+
+# Plot overall data trends ---------------------------------------------------
+
+pdf("./dynamic_metabolome_08052014/metabolome.pdf", width=11.5,height=8)
+# box plot of each metabolite
+# endoboxplot <- ggplot(data = endodata, aes(x = metabolite, y = log(data))) + 
+# 	geom_violin(scale="width",fill="gray") +
+# 	scale_x_discrete(name="") +
+# 	scale_y_continuous(name=expression(paste("Level [ log10(",mu,"M) ]"))) +
+# 	theme(axis.text.x=element_text(angle = -45, hjust = 0))
+
+# Log2 metaboblites, Endo and Exo
+ggplot(data = filter( data_complete_long, variable == "endo_quant_log" | variable == "exo_quant_log" ), aes(x = time, y = value, group = interaction(variable,parent),colour=parent, shape=variable, linetype=variable, fill=parent, alpha=variable)) + 
+  	geom_point() +
+	geom_smooth() + 
+	facet_wrap( ~ metabolite, scales="free_y") + 
+	scale_x_discrete(name="Time (hr)") +
+    scale_y_continuous(name=expression(paste("Level log2(",mu,"M)"))) +
+    ggtitle("Endo- and Exo- Metabolome Levels Across Strains") +
+    scale_alpha_manual(values=c(.5,.25))   
+# Rel t0 metaboblites, Endo 
+ggplot(data = filter( data_complete_long, variable == "endo_quant_rel" ), aes(x = time, y = value, group = parent,colour=parent, fill=parent)) +  
 	geom_point() + 
 	geom_smooth() + 
 	facet_wrap( ~ metabolite, scales="free_y") + 
 	scale_x_discrete(name="Time (hr)") +
-    scale_y_continuous(name=expression(paste("Level (",mu,"M)")))
+    scale_y_continuous(name="Relative Level") +
+    ggtitle("Endo- Metabolome Levels Across Strains") 
+# Rel t0 metaboblites, Exo
+ggplot(data = filter( data_complete_long, variable == "exo_quant_rel" ), aes(x = time, y = value, group = parent,colour=parent, fill=parent)) +
+	geom_point() + 
+	geom_smooth() + 
+	facet_wrap( ~ metabolite, scales="free_y") + 
+	scale_x_discrete(name="Time (hr)") +
+    scale_y_continuous(name="Relative Level") +
+    ggtitle("Exo- Metabolome Levels Across Strains")
+# Rates metaboblites, Endo
+d = filter( data_complete_long, variable == "endo_rate" )
+d = d[ complete.cases(d), ]
+ggplot(data = d, aes(x = time, y = value, group = parent,colour=parent, fill=parent)) +
+	geom_point() + 
+	geom_smooth() + 
+	facet_wrap( ~ metabolite, scales="free_y") + 
+	scale_x_discrete(name="Time (hr)") +
+    scale_y_continuous(name="Rate of Change (d[uM]/dt)") +
+    ggtitle("Endo- Metabolome Rate of Change Across Strains")
+# Rates metaboblites, Exo 
+d = filter( data_complete_long, variable == "exo_rate" )
+d = d[ complete.cases(d), ]
+ggplot(data = d, aes(x = time, y = value, group = parent,colour=parent, fill=parent)) +
+	geom_point() + 
+	geom_smooth() + 
+	facet_wrap( ~ metabolite, scales="free_y") + 
+	scale_x_discrete(name="Time (hr)") +
+    scale_y_continuous(name="Rate of Change (d[uM[/dt)") +
+    ggtitle("Exo- Metabolome Rate of Change Across Strains")
+# Rates metaboblites, Exo 
+ggplot(data = filter( data_complete_long, variable == "cellconc_1|ml" | variable == "biovolume_ul|ml" | variable == "singlecellvol_fl" ) %>% distinct(strain,time,variable), aes(x = time, y = value, group = parent, colour=parent)) + 
+	geom_point() + 
+	geom_smooth() + 
+	facet_wrap( ~ variable, scales="free_y") +
+	scale_x_discrete(name="Time (hr)") +
+    scale_y_continuous(name="Relative measurement") 
 dev.off()
+
+# Plot data reproducibility ---------------------------------------------------
+
+# everything expect s1/y1 data
+rel21_data = filter( data, !strain=="S1" & !strain=="Y1" ) %>% 
+	rowwise() %>%
+	do({
+		parent = .$parent
+		if (parent == "YJM789") {
+			strain = "Y1"
+		} else if (parent == "S288c") {
+			strain = "S1"
+		} else {
+			print("FAIL!")
+			return(data.frame())
+		}
+		filtered_data = filter(data, metabolite == .$metabolite, time == .$time)
+		# don't know why i have to do this twice...
+		filtered_data = filtered_data[filtered_data$strain==strain,]
+		df = data.frame(., endo_ref = filtered_data$endo_quant, exo_ref = filtered_data$exo_quant)
+		return(df)
+		})
+
+pdf("./dynamic_metabolome_08052014/data_qc.pdf", width=11.5,height=8)
+
+ggplot( rel21_data, aes( x = endo_ref, y = endo_quant, group = parent, colour = parent ) ) +
+	geom_point() + 
+	geom_abline() +
+    scale_y_continuous(name="Replicates, Metabolite Levels (uM)") +
+    scale_x_continuous(name="S1, Metabolite Levels (uM)") +
+    ggtitle("Metabolite Reproducibility")
+  
+ggplot( rel21_data, aes( x = log2( endo_ref ), y = log2( endo_quant ), group = parent, colour = parent ) ) +
+	geom_point() + 
+	geom_abline() +
+    scale_y_continuous(name="Replicates, Metabolite Levels log2(uM)") +
+    scale_x_continuous(name="S1, Metabolite Levels log2(uM)")  +
+    ggtitle("Metabolite Reproducibility, Log Scale")
+
+dev.off()
+
+
 
