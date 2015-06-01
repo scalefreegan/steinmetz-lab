@@ -24,7 +24,14 @@ library( ColorPalettes )
 library( randomForest )
 #library( snow )
 library( parallel )
-options("mc.cores"=26) 
+options("mc.cores"=26)
+
+library( ggplot2 ) 
+library( ggbio )
+
+# yeast genome sequence
+library("BSgenome.Scerevisiae.UCSC.sacCer3")
+genome = BSgenome.Scerevisiae.UCSC.sacCer3
 
 # Functions ---------------------------------------------------
 source( "/g/steinmetz/brooks/git/R-tools/quantile_normalize.R" )
@@ -43,6 +50,8 @@ metabolome_data_quant = t(quantile_normalize(t(metabolome_data)))
 metabolome_data_mixednorm = t( normalizeMixed( t( metabolome_data ), cohort = NULL, batch = NULL ) )
 
 load( "./qtl_endometabolome_23042015/geno_mrk.RData" )
+
+# QC data ---------------------------------------------------
 
 # check distribution of the data
 
@@ -77,6 +86,15 @@ norm_test_quant_zscore = p.adjust( apply( apply( metabolome_data_quant, 2, scale
 # m_cor = cor(metabolome_data)[upper.tri(cor(metabolome_data))]
 # m_cor_mixednorm = cor(metabolome_data_mixednorm)[upper.tri(cor(metabolome_data_mixednorm))]
 #boxplot(list( m_cor,m_cor_mixednorm ),main="Metabolite Correlation",xlab="Normalization method",las=1, ylab = "Metabolite Correlation, Pearson", ylim=c(-1,1),names=list("Log10","Mixed Model"))
+
+
+# QC genotype ---------------------------------------------------
+
+# asses allele frequencies
+
+g_1 = apply( geno, 1, function(x) { sum(x==1) })
+g_2 = apply( geno, 1, function(x) { sum(x==2) })
+
 
 
 #-------------------------------------------------------------------#
