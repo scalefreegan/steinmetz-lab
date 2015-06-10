@@ -21,10 +21,9 @@ library( GenomicRanges )
 library( rtracklayer )
 library( plyr )
 library( ColorPalettes )
-library( randomForest )
 #library( snow )
 library( parallel )
-options("mc.cores"=26)
+options("mc.cores"=20)
 
 library( ggplot2 ) 
 library( ggbio )
@@ -32,6 +31,9 @@ library( ggbio )
 # yeast genome sequence
 library("BSgenome.Scerevisiae.UCSC.sacCer3")
 genome = BSgenome.Scerevisiae.UCSC.sacCer3
+
+# load GRanges file
+load("/g/steinmetz/brooks/git/steinmetz-lab/general/s288c_GRanges.RData")
 
 # Functions ---------------------------------------------------
 source( "/g/steinmetz/brooks/git/R-tools/quantile_normalize.R" )
@@ -95,62 +97,208 @@ norm_test_quant_zscore = p.adjust( apply( apply( metabolome_data_quant, 2, scale
 g_1 = apply( geno, 1, function(x) { sum(x==1) })
 g_2 = apply( geno, 1, function(x) { sum(x==2) })
 
+# ggbio way
+p <- ggbio( trackWidth = 1, buffer = 0, radius = 20 ) + 
+  circle(yeast_gr, geom = "ideo", fill = "gray70") +
+  circle(yeast_gr, geom = "scale", size = 2) +
+  circle(yeast_gr, geom = "text", aes(label = seqnames), vjust = 0, size = 3)
 
+# circlize way
+df = as.data.frame(yeast_gr)
+mrk_df = as.data.frame(mrk)
+chr_name_ttable = levels(df$seqnames)
+names(chr_name_ttable) = 
+
+circos.par(gap.degree = 2)
+circos.genomicInitialize(df, track.height = .1)
+circos.genomicTrackPlotRegion(ylim = c(0, 1),
+bg.col = rep("#838B8B", dim(df)[1]),
+bg.border = NA, track.height = 0.05)
 
 #-------------------------------------------------------------------#
 # Rqtl 
 #-------------------------------------------------------------------#
 
-# the data format for rqtl really sucks...
+genotype = geno
+phenotype = metabolome_data_mixednorm
+marker_info = mrk
 
-# subset genotype data on metabolite data. transpose it.
-geno_subset = t( geno[ ,rownames( metabolome_data ) ] )
-# add chr num to markers
-geno_subset = rbind( gsub('chr','', as.character( seqnames( mrk[ colnames( geno_subset ) ] ) ) ), geno_subset )
-geno_subset = cbind( c( NULL, rownames( geno_subset ) ), geno_subset )
-colnames( geno_subset )[ 1 ] = 'id'
+PCA <- function(mat) eigen(cov(apply(mat, 2, function(i) (i - mean(i))/sd(i))))
 
-# add id column to phen datayeas
-# 4/5/2015 change to quant_zscore norm
-# metabolome_data_w = cbind( metabolome_data, rownames( metabolome_data )  )
-metabolome_data_w = cbind( metabolome_data_mixednorm, rownames( metabolome_data_mixednorm )  )
-colnames( metabolome_data_w )[ dim( metabolome_data_w )[2] ] = 'id'
+removePrincipalComponent <- function(
+  # remove one or more principal components from data matrix
+  matAdjust = 'Centered, variance scaled matrix',
+  meanList = 'Column means of original (unadjusted) matrix',
+  eigenList = 'List of eigenvalues and eigenvectors of adjust matrix covariance matrix',
+  n = 'selected PC\'s to remove',
+  specific_select = 'If True: n == 1:n, if False: just n\'th columns') {
 
-# write qtl files
-write.table( geno_subset, file =  "./qtl_endometabolome_23042015/gen.csvs", sep = ",", col.names = T, row.names = F, quote=F )
-write.table( metabolome_data_w, file =  "./qtl_endometabolome_23042015/phen.csvs", sep = ",", col.names = T, row.names = F, quote=F )
+  if (length(n) > ncol(matAdjust)) stop('N is higher than the number of PC\'s')
+  if (!specific_select & length(n) > 1) stop('Use a single number when selecting up to n\'th PC')
+  if (!specific_select) n <- 1:n
 
-# read.cross to import data into rqtl
-genphen = read.cross( format = "csvs", genfile = "./qtl_endometabolome_23042015/gen.csvs" , phefile=  "./qtl_endometabolome_23042015/phen.csvs", genotypes = c( "1","2" ) )
-
-genphen = calc.genoprob( genphen,step = 0 )
-qtls = c( mclapply( seq( 1,26 ),function( i ) { scanone( genphen, pheno.col = i ) } ) )
-# permuations to determine qtl sig cutoff
-qtls_permuted = c( lapply( seq( 1,26 ),function( i ) { scanone( genphen, pheno.col = i, n.perm = 1000, n.cluster = 20 ) } ) )
-
-# Make table of putative QTLs for yeastmine
-qtl_table = c()
-permute_alpha = 0.05
-for ( i in seq( 1, length(qtls) ) ) {
-	phe = colnames( genphen$pheno )[ i ]
-	qtl_threshold = summary( qtls_permuted[[ i ]], alpha = permute_alpha )[ 1 ]
-	phe_qtls = summary( qtls[[ i ]] , qtl_threshold )
-	if ( dim( phe_qtls )[ 1 ] > 0 ) {
-		# format table entry
-		add_info = c()
-		for ( n in rownames( phe_qtls ) ) {
-			add_info = rbind( add_info, as.data.frame( ranges( mrk[ n ] ) ) )
-		}
-		phe_qtls = cbind( phe, phe_qtls[ add_info$names, ], add_info )
-		phe_qtls$pos = NULL
-		qtl_table = rbind( qtl_table, phe_qtls )
-	}
+  to_r = t(eigenList$vectors[,-n] %*% (t(eigenList$vectors[,-n]) %*% t(matAdjust))) + (matrix(meanList, nrow = nrow(matAdjust), ncol = ncol(matAdjust), byrow=T))
+  colnames(to_r) = colnames(matAdjust) 
+  return(to_r)
 }
-# sort by lod_score, phe, chr, start
-qtl_table = arrange( qtl_table, desc( lod ), phe, chr, start )
 
-# write table
-write.table( qtl_table, file =  "./qtl_endometabolome_23042015/qtls_04052014.txt", sep = "\t", col.names = T, row.names = F, quote=F )
+runQTL <- function(
+    # Streamline rQTL
+    # Format standard matrix/genotype data for rQTL
+    # Run rQTL scanone analysis with optional methods,
+    # permute_sig and pca
+    genotype, # a n x m genotype matrix containing (eg 1,2) at 'n' genotype markers in 'm' strains 
+    phenotype, # a n x m phenotype matrix containing measurements of 'm' phenotypes in 'n' strains
+    marker_info, # GRanges object with information about genetic markers (chromosome and location)
+    permute = T, # compute significance of each QTL LOD by permutation 
+    pca = F, # maximize QTL detection by removing confounders using PCA 
+    permute_alpha = 0.05,
+    save_file = ""){
+  # subset genotype data on metabolite data. transpose it.
+  if ( !sum(colnames(genotype)%in%rownames(phenotype))>0 ) {
+    cat("ERROR:Strain names in genotype matrix (columns) do not match strain names in phenotype matrix (rows\n")
+    return(NULL)
+  }
+  genotype_subset = t( genotype[ ,rownames( metabolome_data ) ] )
+  # add chr num to markers
+  genotype_subset = rbind( gsub('chr','', as.character( seqnames( marker_info[ colnames( genotype_subset ) ] ) ) ), genotype_subset )
+  genotype_subset = cbind( c( NULL, rownames( genotype_subset ) ), genotype_subset )
+  colnames( genotype_subset )[ 1 ] = 'id'
+  # add id column to phen data
+  phenotype = cbind( phenotype, rownames( phenotype )  )
+  colnames( phenotype )[ dim( phenotype )[2] ] = 'id'
+  # write rqtl files
+  write.table( genotype_subset, file =  ".tmpgen", sep = ",", col.names = T, row.names = F, quote=F )
+  write.table( phenotype, file =  ".tmpphen", sep = ",", col.names = T, row.names = F, quote=F )
+  # read.cross to import data into rqtl
+  cat("Creating rQTL cross object for genotype/phenotype data\n")
+  genphen = try( read.cross( format = "csvs", ".", genfile = ".tmpgen" , phefile=  ".tmpphen", genotypes = c( "1","2" ) ) )
+  if ( class(genphen)!="try-error" ) {
+    # clean up
+    file.remove(c(".tmpgen",".tmpphen"))
+  } else {
+    cat("ERROR: Could not create rQTL cross object from genotype and phenotype data\n")
+    return(NULL)
+  }
+  genphen = calc.genoprob( genphen,step = 0 )
+  if (pca) {
+    cat("Removing principal components to increase number of detected QTLs\n")
+    pc_removed = 0
+    # as a first approximation, use lod score > 2.5 as a "true" QTL
+    # since running permutation is expensive
+    phenotype = genphen$pheno[,colnames(genphen$pheno)!="id"]
+    qtls = sum( unlist( mclapply( seq( 1,26 ),function( i ) { sum(scanone( genphen, pheno.col = i )$lod >= 2.5) } ) ) )
+    qtls_mod = 0
+    pca <- PCA(phenotype)
+    phenotype_mod <- removePrincipalComponent(
+      matAdjust = apply(phenotype, 2, function(i) (i - mean(i))/sd(i)),
+      meanList = apply(phenotype, 2, mean),
+      eigenList = pca,
+      n = 1,
+      specific_select = TRUE
+    )
+    genphen_mod = genphen
+    genphen_mod$pheno = phenotype_mod
+    qtls_mod = sum( unlist( mclapply( seq( 1,26 ),function( i ) { sum(scanone( genphen_mod, pheno.col = i )$lod >= 2.5) } ) ) )
+    while (qtls_mod>qtls) {
+      pc_removed = pc_removed + 1
+      phenotype = phenotype_mod
+      qtls = qtls_mod
+      pca <- PCA(phenotype)
+      phenotype_mod <- removePrincipalComponent(
+        matAdjust = apply(phenotype, 2, function(i) (i - mean(i))/sd(i)),
+        meanList = apply(phenotype, 2, mean),
+        eigenList = pca,
+        n = 1,
+        specific_select = TRUE
+      )
+      genphen_mod = genphen
+      genphen_mod$pheno = phenotype_mod
+      qtls_mod = sum( unlist( mclapply( seq( 1,26 ),function( i ) { sum(scanone( genphen_mod, pheno.col = i )$lod >= 2.5) } ) ) )
+    }
+    if (pc_removed>0) {
+      pca <- PCA(phenotype)
+      phenotype <- removePrincipalComponent(
+        matAdjust = apply(phenotype, 2, function(i) (i - mean(i))/sd(i)),
+        meanList = apply(phenotype, 2, mean),
+        eigenList = pca,
+        n = 1:pc_removed,
+        specific_select = TRUE
+      )
+    }
+    to_r = list()
+    genphen$pheno = phenotype
+    to_r$qtls = c( mclapply( seq( 1,26 ),function( i ) { scanone( genphen, pheno.col = i ) } ) )
+    names(to_r$qtls) = colnames(genphen$phen)
+    to_r$pc_removed = pc_removed
+    to_r$phenotype = phenotype
+  } else {
+    to_r$qtls = c( mclapply( seq( 1,26 ),function( i ) { scanone( genphen, pheno.col = i ) } ) )
+    names(to_r$qtls) = colnames(genphen$phen)
+  }
+
+  to_r$cross = genphen
+  if (permute) {
+    # permuations to determine qtl sig cutoff
+    to_r$qtls_permuted = c( lapply( seq( 1,26 ),function( i ) { scanone( genphen, pheno.col = i, n.perm = 1000, n.cluster = 20 ) } ) )
+    names(to_r$qtls_permuted) = colnames(genphen$phen)
+    to_r$sig_qtls = list()
+    to_r$qtls_threshold = list()
+    for ( i in seq( 1, length(to_r$qtls) ) ) {
+      phe = colnames( genphen$pheno )[ i ]
+      to_r$qtls_threshold[[phe]] = summary( qtls_permuted[[ i ]], alpha = permute_alpha )[ 1 ]
+      phe_qtls = summary( to_r$qtls[[ i ]] , to_r$qtl_threshold[[phe]] )
+      if ( dim( phe_qtls )[ 1 ] > 0 ) {
+        # format table entry
+        add_info = c()
+        for ( n in rownames( phe_qtls ) ) {
+          add_info = rbind( add_info, as.data.frame( ranges( marker_info[ n ] ) ) )
+        }
+        phe_qtls = cbind( phe, phe_qtls[ add_info$names, ], add_info )
+        phe_qtls$pos = NULL
+        to_r$sig_qtls[[phe]] =  phe_qtls
+      }
+    }
+    to_r$permute_alpha = permute_alpha
+  }
+  if (save_file!="") {
+    qtl_list = to_r
+    save(qtl_list,file=save_file)
+  }
+  return(to_r)
+}
+
+myqtls = runQTL(genotype = geno, 
+    phenotype = metabolome_data_mixednorm,
+    marker_info = mrk,
+    permute = T, 
+    pca = T, 
+    permute_alpha = 0.1,
+    save_file = "./qtl_endometabolome_23042015/rqtls.rda")
+
+# # Make table of putative QTLs for yeastmine
+# qtl_table = c()
+# permute_alpha = 0.05
+# for ( i in seq( 1, length(qtls) ) ) {
+# 	phe = colnames( genphen$pheno )[ i ]
+# 	qtl_threshold = summary( qtls_permuted[[ i ]], alpha = permute_alpha )[ 1 ]
+# 	phe_qtls = summary( qtls[[ i ]] , qtl_threshold )
+# 	if ( dim( phe_qtls )[ 1 ] > 0 ) {
+# 		# format table entry
+# 		add_info = c()
+# 		for ( n in rownames( phe_qtls ) ) {
+# 			add_info = rbind( add_info, as.data.frame( ranges( mrk[ n ] ) ) )
+# 		}
+# 		phe_qtls = cbind( phe, phe_qtls[ add_info$names, ], add_info )
+# 		phe_qtls$pos = NULL
+# 		qtl_table = rbind( qtl_table, phe_qtls )
+# 	}
+# }
+# # sort by lod_score, phe, chr, start
+# qtl_table = arrange( qtl_table, desc( lod ), phe, chr, start )
+
+# # write table
+# write.table( qtl_table, file =  "./qtl_endometabolome_23042015/qtls_04052014.txt", sep = "\t", col.names = T, row.names = F, quote=F )
 
 
 #-------------------------------------------------------------------#
@@ -158,41 +306,78 @@ write.table( qtl_table, file =  "./qtl_endometabolome_23042015/qtls_04052014.txt
 #-------------------------------------------------------------------#
 
 # load RF functions
-source( "./qtl_endometabolome_23042015/rfqtl_functions.R" )
+
+# DO NOT USE THIS AS OF 5/6/2015. Massive memory leak
+#library( parallelRandomForest )
+# randomForestSRC package contains fcns for interactions
+library(randomForestSRC)
+
+#source( "./qtl_endometabolome_23042015/rfqtl_functions.R" )
+# load functions rewritten for rfsrc 
+source( "./qtl_endometabolome_23042015/rfsrcqtl_functions.R" )
 
 #cl = makeSOCKcluster( 20 )
 #clusterExport( cl, "rfsf" )
 
-ff = function(index, data, x, ntree, corr, alpha ) {
-	# actual data
-  #cat( paste( index, "\n" ) )
-  y = data[,index]
-	rf = randomForest::randomForest(y = y, x = x, ntree = ntree)
-	sf = rfsf( rf ) - corr
+
+ff = function(index, y, x, ntree, corr, alpha,interaction=F,... ) {
+	# one metabolite data
+  y = y[,index]
+  # composite data/genotype data frame
+  data = as.data.frame( cbind( y[rownames(x)] , x ) )
+  rf = randomForestSRC::rfsrc( V1 ~ ., data=data, ntree=ntree, var.used="all.trees",forest=TRUE)
+	sf = rfsf( rf ) 
+  sf = sf - corr[ names(sf) ]
 	# permuted background
 	sf.null = numeric()
 	for (i in 1:10) {
-		rf.null = randomForest::randomForest( y = sample( y ), x = x, ntree = ntree )
-		tmp = rfsf( rf.null ) - corr
+    permuted_data = data
+    permuted_data[,1] = sample( permuted_data[,1] )
+		rf.null = randomForestSRC::rfsrc( V1 ~ ., data=permuted_data, ntree=ntree, var.used="all.trees")
+		tmp = rfsf( rf.null ) 
+    tmp = tmp - corr[ names(tmp) ]
 		tmp[ tmp < 0 ] = 0
 		sf.null = c( sf.null, tmp )
 	}
 	pnull = ecdf(sf.null)
 	P = 1 - pnull(sf)
 	Q = p.adjust(P, "fdr")
+  names(Q) = names(sf)
 	to_r = list()
+  to_r$rf = rf
 	to_r$qtls = sf[ which( Q <= alpha ) ]
 	to_r$sf = sf
 	to_r$Q = Q
 	to_r$ntree = ntree
 	to_r$alpha = alpha
+  if (interaction) {
+    try({
+    # compute pairwise interaction
+    # use method="maxsubtree"
+    # to reduce computation time only consider only QTLs or top 5 predictors
+    if ( length( to_r$qtls )>0 ){
+      to_test = to_r$qtls
+    } else {
+      to_test = names( sort( to_r$Q ) )[1:5] 
+    }
+    to_r$interaction = randomForestSRC::find.interaction( rf,  xvar.names = to_test, method="vimp" )
+    })
+  }
 	return( to_r )
 }
 
 # data
-corr = estBias( metabolome_data_mixednorm, 10000, verbose = F )
+# corr = estBias( metabolome_data_mixednorm, 10000, verbose = F )
+x = t( geno )[ rownames( metabolome_data_mixednorm ),  ]
+# do 10000
+if (file.exists("./qtl_endometabolome_23042015/rf_mrkbias.RData") ) {
+  load("./qtl_endometabolome_23042015/rf_mrkbias.RData")
+} else {
+  corr = estBias( x, 10000, verbose = T )
+  save(corr,file="./qtl_endometabolome_23042015/rf_mrkbias.RData")
+}
 #endometabolome_rfqtls = parApply(cl, t( metabolome_data ), 1, ff, t( geno )[ rownames( metabolome_data),  ], 2000, corr, 0.05 )
-endometabolome_rfqtls = mclapply( colnames( metabolome_data_mixednorm ), ff, data = metabolome_data_mixednorm, x = t( geno )[ rownames( metabolome_data_mixednorm ),  ], ntree = 2000, corr = corr, alpha = 0.05 )
+endometabolome_rfqtls = lapply( colnames( metabolome_data_mixednorm ), ff, y = metabolome_data_mixednorm, x = x, ntree = 2000, corr = corr, alpha = 0.05, interaction = T )
 names( endometabolome_rfqtls ) = colnames( metabolome_data_mixednorm )
 
 rfqtl_table = c()
