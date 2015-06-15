@@ -173,7 +173,7 @@ runQTL <- function(
   # read.cross to import data into rqtl
   cat("Creating rQTL cross object for genotype/phenotype data\n")
   genphen = try( read.cross( format = "csvs", ".", genfile = ".tmpgen" , phefile=  ".tmpphen", genotypes = c( "1","2" ) ) )
-  if ( class(genphen)!="try-error" ) {
+  if ( class(genphen)[1]!="try-error" ) {
     # clean up
     file.remove(c(".tmpgen",".tmpphen"))
   } else {
@@ -187,7 +187,7 @@ runQTL <- function(
     # as a first approximation, use lod score > 2.5 as a "true" QTL
     # since running permutation is expensive
     phenotype = genphen$pheno[,colnames(genphen$pheno)!="id"]
-    qtls = sum( unlist( mclapply( seq( 1,26 ),function( i ) { sum(scanone( genphen, pheno.col = i )$lod >= 2.5) } ) ) )
+    qtls = sum( unlist( mclapply( seq(1,dim(phenotype)[2]),function( i ) { sum(scanone( genphen, pheno.col = i )$lod >= 2.5) } ) ) )
     qtls_mod = 0
     pca <- PCA(phenotype)
     phenotype_mod <- removePrincipalComponent(
@@ -199,7 +199,7 @@ runQTL <- function(
     )
     genphen_mod = genphen
     genphen_mod$pheno = phenotype_mod
-    qtls_mod = sum( unlist( mclapply( seq( 1,26 ),function( i ) { sum(scanone( genphen_mod, pheno.col = i )$lod >= 2.5) } ) ) )
+    qtls_mod = sum( unlist( mclapply( seq(1,dim(phenotype)[2]),function( i ) { sum(scanone( genphen_mod, pheno.col = i )$lod >= 2.5) } ) ) )
     while (qtls_mod>qtls) {
       pc_removed = pc_removed + 1
       phenotype = phenotype_mod
@@ -214,7 +214,7 @@ runQTL <- function(
       )
       genphen_mod = genphen
       genphen_mod$pheno = phenotype_mod
-      qtls_mod = sum( unlist( mclapply( seq( 1,26 ),function( i ) { sum(scanone( genphen_mod, pheno.col = i )$lod >= 2.5) } ) ) )
+      qtls_mod = sum( unlist( mclapply( seq(1,dim(phenotype)[2]),function( i ) { sum(scanone( genphen_mod, pheno.col = i )$lod >= 2.5) } ) ) )
     }
     if (pc_removed>0) {
       pca <- PCA(phenotype)
@@ -228,35 +228,35 @@ runQTL <- function(
     }
     to_r = list()
     genphen$pheno = phenotype
-    to_r$qtls = c( mclapply( seq( 1,26 ),function( i ) { scanone( genphen, pheno.col = i ) } ) )
+    to_r$qtls = c( mclapply( seq(1,dim(phenotype)[2]),function( i ) { scanone( genphen, pheno.col = i ) } ) )
     names(to_r$qtls) = colnames(genphen$phen)
     to_r$pc_removed = pc_removed
     to_r$phenotype = phenotype
   } else {
-    to_r$qtls = c( mclapply( seq( 1,26 ),function( i ) { scanone( genphen, pheno.col = i ) } ) )
+    to_r$qtls = c( mclapply( seq(1,dim(phenotype)[2]),function( i ) { scanone( genphen, pheno.col = i ) } ) )
     names(to_r$qtls) = colnames(genphen$phen)
   }
 
   to_r$cross = genphen
   if (permute) {
     # permuations to determine qtl sig cutoff
-    to_r$qtls_permuted = c( lapply( seq( 1,26 ),function( i ) { scanone( genphen, pheno.col = i, n.perm = 1000, n.cluster = 20 ) } ) )
+    to_r$qtls_permuted = lapply(seq(1,dim(phenotype)[2]), function(i){scanone( genphen, pheno.col = i, n.perm = 1000, n.cluster = 20 )})
     names(to_r$qtls_permuted) = colnames(genphen$phen)
     to_r$sig_qtls = list()
-    to_r$qtls_threshold = list()
-    for ( i in seq( 1, length(to_r$qtls) ) ) {
-      phe = colnames( genphen$pheno )[ i ]
-      to_r$qtls_threshold[[phe]] = summary( qtls_permuted[[ i ]], alpha = permute_alpha )[ 1 ]
-      phe_qtls = summary( to_r$qtls[[ i ]] , to_r$qtl_threshold[[phe]] )
+    to_r$qtls_threshold = summary(myqtls$qtls_permuted,permute_alpha)
+    for ( i in names(to_r$qtls) ) {
+      #phe_qtls = summary( to_r$qtls[[ i ]] , to_r$qtls_threshold[,i] )
+      summary(to_r$qtls[[ i ]], format="allpeaks", perms=to_r$qtls_permuted[[ i ]],
+        alpha=permute_alpha, pvalues=TRUE)
       if ( dim( phe_qtls )[ 1 ] > 0 ) {
         # format table entry
         add_info = c()
         for ( n in rownames( phe_qtls ) ) {
           add_info = rbind( add_info, as.data.frame( ranges( marker_info[ n ] ) ) )
         }
-        phe_qtls = cbind( phe, phe_qtls[ add_info$names, ], add_info )
+        phe_qtls = cbind( i, phe_qtls[ add_info$names, ], add_info )
         phe_qtls$pos = NULL
-        to_r$sig_qtls[[phe]] =  phe_qtls
+        to_r$sig_qtls[[i]] =  phe_qtls
       }
     }
     to_r$permute_alpha = permute_alpha
@@ -275,6 +275,14 @@ myqtls = runQTL(genotype = geno,
     pca = T, 
     permute_alpha = 0.1,
     save_file = "./qtl_endometabolome_23042015/rqtls.rda")
+
+# # write table
+write.table( do.call(rbind,myqtls$sig_qtls), file =  "./qtl_endometabolome_23042015/qtls_15062014.txt", sep = "\t", col.names = T, row.names = F, quote=F )
+
+pdf("./qtl_endometabolome_23042015/rqtl_correlation.pdf")
+  tmp = do.call(rbind,lapply(myqtls$qtls,function(i)i[,"lod"]))
+  pheatmap(cor(t(tmp)),breaks=seq(-1,1,len=100))
+dev.off()
 
 # # Make table of putative QTLs for yeastmine
 # qtl_table = c()
@@ -401,7 +409,7 @@ rfqtl_table = arrange( rfqtl_table, phe, desc( selection_freq ), chr, start )
 
 # write table
 #write.table( rfqtl_table, file =  "./qtl_endometabolome_23042015/rf_qtls.txt", sep = "\t", col.names = T, row.names = F, quote=F )
-write.table( rfqtl_table, file =  "./qtl_endometabolome_23042015/rf_qtls_04052014.txt", sep = "\t", col.names = T, row.names = F, quote=F )
+write.table( rfqtl_table, file =  "./qtl_endometabolome_23042015/rf_qtls_15062014.txt", sep = "\t", col.names = T, row.names = F, quote=F )
 
 
 # save
@@ -412,6 +420,33 @@ save( rfqtl_table, endometabolome_rfqtls, file = "./qtl_endometabolome_23042015/
 # plot(sf["ARG",], type = "h", ylab = "adj. selection frequency", main = "RFSF, ARG")
 # plot(sf["SUC",], type = "h", ylab = "adj. selection frequency", main = "RFSF, SUC")
 
+# plot interaction differences across all tested interactions
+# looking for very low/high differences
+interaction_diffs = unlist(lapply(endometabolome_rfqtls,function(i){i$interaction[,"Difference"]}))
+interaction_diffs_ecdf = ecdf( interaction_diffs )
+sig_interactions = sort( interaction_diffs[ c( which( interaction_diffs < quantile(interaction_diffs_ecdf,.05) ), which( interaction_diffs > quantile(interaction_diffs_ecdf,.95) ) ) ] )
+sig_interactions_separable = do.call( rbind,lapply( names( sig_interactions ), function(i) {
+    info = mrk[strsplit( strsplit(i,"\\.")[[1]][2], ":")[[1]]]
+    if ( length(runValue(seqnames(info))) > 1 ) {
+        cbind(i,as.data.frame(info),sig_interactions[i])
+      } else if ( ( start(ranges(info)[2]) - end(ranges(info)[1]) ) > 5000) {
+        cbind(i,as.data.frame(info),sig_interactions[i])
+        } else {
+        return(NULL)
+      }
+  }) )
+write.table( sig_interactions_separable, file =  "./qtl_endometabolome_23042015/sig_interactions_15062014.txt", sep = "\t", col.names = T, row.names = T, quote=F )
+h = hist(interaction_diffs,100, plot=F)
+cuts <- cut(h$breaks, c(-Inf,quantile(interaction_diffs_ecdf,.05),quantile(
+  interaction_diffs_ecdf,.95),Inf))
+pdf("./qtl_endometabolome_23042015/rf_qtl_interactions.pdf")
+  plot(h, col=c("red","white","red")[cuts], main = "RF-QTL Pairwise Interactions, All metabolites", xlab = "Paired - Additive Importance")
+dev.off()
+
+pdf("./qtl_endometabolome_23042015/rf_qtl_correlation.pdf")
+  tmp = do.call(rbind,lapply(endometabolome_rfqtls,function(i)i$sf))
+  pheatmap(cor(t(tmp)),breaks=seq(-1,1,len=100))
+dev.off()
 
 #-------------------------------------------------------------------#
 # Plot
