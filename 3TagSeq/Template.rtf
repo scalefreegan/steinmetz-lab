@@ -1,0 +1,599 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1138\cocoasubrtf230
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fnil\fcharset0 Menlo-Regular;\f2\fnil\fcharset0 Menlo-Bold;
+}
+{\colortbl;\red255\green255\blue255;\red0\green68\blue254;\red0\green61\blue204;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww16200\viewh13200\viewkind0
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural
+
+\f0\b\fs24 \cf0 LEGEND\
+\
+Software/Script used\
+
+\b0 \cf2 \ul \ulc2 User Input\cf0 \ulc0 \
+\ulnone \
+######## 3' Tfile pipeline ###########\
+\
+
+\b Step1: Demultiplexing
+\b0  \
+____________________________________________________________________________\
+Here the fwd and rev reads are reversed because the downstream analysis is such, there is no particular reason for this \
+\
+designFile contains\
+\
+barcode	fwd	rev\
+CGTGAT	library1_revereseReads.fastq	library1_forwardReads.fastq\
+AAGCTA	library2_revereseReads.fastq	library2_forwardReads.fastq\
+..\
+____________________________________________________________________________\
+\
+	\
+/g/software/bin/python2.7-with-htseq	
+\b /g/steinmetz/project/Tag-seq/src/sortByTagsPE.py
+\b0 	\cf3 \ul \ulc3 /g/steinmetz/incoming/solexa/<LaneName>/<Seq_2>.txt.gz\cf0 \ulnone 	\cf3 \ul \ulc3 /g/steinmetz/incoming/solexa/<LaneName>/<Seq_1>.txt.gz\cf0 \ulnone 	\cf3 designFile\cf0 \
+\
+
+\b Step2: Alignment\
+
+\b0 I would run this in the background screen, so that you can let the cluster take care of this. Screen is a program which will run a dummy session for you and you can run this and detach from it at any time (while the job is still running in the background). I can show you this \
+\
+ Important flags\
+-t 25 : defines the number of clusters you want to run in parallel for the alignement\
+-m \cf3 \ul \ulc3 1 \cf0 \ulnone : defines the number of mismatches you allow, this is usually 1 mismatch per 40 bps of read length so this will be 2-3 if you have 105 bps\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural
+
+\b \cf2 \ul \ulc2 $i 
+\b0 \cf0 \ulnone : the demultiplexed fastq files from the previous step\
+\
+for i in *_t*.fastq;\
+do	echo	$i;\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural
+
+\b \cf0 /g/huber/users/jgehring/software/gmap/bin-sch/gmap-2012-01-11/bin/snap
+\b0 	-t \cf3 \ul \ulc3 25\cf0 \ulnone  --quality-protocol=sanger	-A sam	-m \cf3 \ul \ulc3 1\cf0 \ulnone 	-B 5	-n 5	--nofails	-D /g/steinmetz/project/3Stability/sequence/indices/gsnap/s288c-R64_pombe-V14_ivts	-d s288c-R64_pombe-V14_ivts 
+\b \cf2 \ul \ulc2 $i
+\b0 \cf0 \ulnone  > `basename $i .fastq`.sam; done\
+\
+\
+
+\b Step4: Flaggin uniquely aligning sequences\
+
+\b0 I would run this in a special way to run the jobs in parallel by adding a "&" I can show you this when you run the alignment. Gives you the stats of the aligning reads.\
+\
+for i in *_t*fwd.sam;\
+ do echo $i;\
+
+\b  /g/software/bin/python2.7-with-htseq
+\b0 	
+\b /g/steinmetz/project/3Stability/src/filterAlignment.py
+\b0 	--samfile \cf3 \ul \ulc3 $i\cf0 \ulnone 	--outfile `basename $i .sam`_uniquelyAligned.sam	--outinfo	`basename $i .sam`_uniquelyAligned.info &\
+ done\
+\
+
+\b Step4: Flaggin uniquely aligning sequences\
+
+\b0 Segregates alignments by strand. \
+\
+for i in *_t*fwd_uniquelyAligned.sam;\
+do echo $i;\
+
+\b /g/software/bin/python2.7-with-htseq	/g/steinmetz/project/Tag-seq/src/divideByStrand.py 
+\b0 \cf2 \ul \ulc2 $i\cf0 \ulnone 	`basename $i .sam`_plus.sam `basename $i .sam`_minus.sam \
+done\
+\
+
+\b Step5: \
+
+\b0 Converts sam files to more compact bam file format which aids faster computation, sorts it by chromosomes and indexes the alignment to like (blast does) to aid in calculating genome coverage.\
+\
+\
+for i in *_t*fwd_uniquelyAligned_*.sam;\
+ do echo $i;\
+
+\b  samtools
+\b0  
+\b view
+\b0  -bS -o `basename $i .sam`.bam $i &\
+done\
+\
+for i in *_t*fwd_uniquelyAligned_*.bam;\
+ do echo $i;\
+
+\b  samtools sort
+\b0  $i `basename $i .bam`.sorted &\
+done\
+\
+for i in *_t*fwd_uniquelyAligned_*.sorted.bam;\
+ do echo $i; samtools index $i  &\
+done\
+\
+
+\b Step6: \
+
+\b0 Collapses the reads to a single base pair\
+\pard\tx560\pardeftab560\pardirnatural
+\cf3 \ul \ulc3 \CocoaLigature0 -5 :\cf0 \ulnone \CocoaLigature1  specify the end of the read to collapse, since we start with reading after the T our 3' ends lie in the 5' end of the reads\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural
+\cf0 \
+for i in *_t*fwd_uniquelyAligned_*.sorted.bam;\CocoaLigature0 \
+\pard\tx560\pardeftab560\pardirnatural
+\cf0 do genomeCoverageBed -5 -bg -ibam $i -g /g/steinmetz/project/3Stability/annotation/pombe-v14-genes.gtf > `basename $i .bam`.bedgraph &\
+ done \CocoaLigature1 \
+\
+########## Calculations of Halflives in R ############\
+\pard\tx560\pardeftab560\pardirnatural
+
+\f1 \cf0 \CocoaLigature0 library(LSD)\
+library(genefilter)\
+library(ggplot2)\
+library(gplots)\
+library(IRanges)\
+\
+setwd('/tmpdata/ishaan/130814_phenan/bedgraph')\
+\pard\tx560\pardeftab560\pardirnatural
+
+\f0 \cf0 \CocoaLigature1 \
+minus = c(\
+"phenan_130814_TGGTCA_t0_1_fwd_uniquelyAligned_plus.sorted.bedgraph",\
+"phenan_130814_CACTGT_t5_1_fwd_uniquelyAligned_plus.sorted.bedgraph",\
+"phenan_130814_ATTGGC_t10_1_fwd_uniquelyAligned_plus.sorted.bedgraph",\
+"phenan_130814_GATCTG_t20_1_fwd_uniquelyAligned_plus.sorted.bedgraph",\
+"phenan_130814_TTAATT_t40_1_fwd_uniquelyAligned_plus.sorted.bedgraph",\
+\
+"phenan_130814_CCTCCC_t0_2_fwd_uniquelyAligned_plus.sorted.bedgraph",\
+"phenan_130814_TATATC_t5_2_fwd_uniquelyAligned_plus.sorted.bedgraph",\
+"phenan_130814_TGCCGA_t10_2_fwd_uniquelyAligned_plus.sorted.bedgraph",\
+"phenan_130814_TGACAT_t20_2_fwd_uniquelyAligned_plus.sorted.bedgraph",\
+"phenan_130814_CGCCTG_t40_2_fwd_uniquelyAligned_plus.sorted.bedgraph"\
+)\
+\
+plus = c(\
+"phenan_130814_TGGTCA_t0_1_fwd_uniquelyAligned_minus.sorted.bedgraph",\
+"phenan_130814_CACTGT_t5_1_fwd_uniquelyAligned_minus.sorted.bedgraph",\
+"phenan_130814_ATTGGC_t10_1_fwd_uniquelyAligned_minus.sorted.bedgraph",\
+"phenan_130814_GATCTG_t20_1_fwd_uniquelyAligned_minus.sorted.bedgraph",\
+"phenan_130814_TTAATT_t40_1_fwd_uniquelyAligned_minus.sorted.bedgraph",\
+\
+"phenan_130814_CCTCCC_t0_2_fwd_uniquelyAligned_minus.sorted.bedgraph",\
+"phenan_130814_TATATC_t5_2_fwd_uniquelyAligned_minus.sorted.bedgraph",\
+"phenan_130814_TGCCGA_t10_2_fwd_uniquelyAligned_minus.sorted.bedgraph",\
+"phenan_130814_TGACAT_t20_2_fwd_uniquelyAligned_minus.sorted.bedgraph",\
+"phenan_130814_CGCCTG_t40_2_fwd_uniquelyAligned_minus.sorted.bedgraph"\
+)\
+\
+\pard\tx560\pardeftab560\pardirnatural
+
+\f1 \cf0 \CocoaLigature0 data_minus = vector("list",10)\
+data_plus = vector("list",10)\
+\
+for(x in 1:10) \{\
+\
+data_minus[[x]] = read.delim(file=minus[x],header=F,stringsAsFactors=F)\
+colnames(data_minus[[x]]) = c("chr","start","end","count")\
+data_plus[[x]] = read.delim(file=plus[x],header=F,stringsAsFactors=F)\
+colnames(data_plus[[x]]) = c("chr","start","end","count")\
+\
+\}\
+\
+\
+for(i in 1:10)\{\
+chr = data_minus[[i]][,1] \
+data_minus[[i]]$organism = sapply(chr,function(x) unlist(strsplit(x,"_"))[1] )\
+newchr = sapply(chr,function(x) unlist(strsplit(x,"_"))[2] )\
+data_minus[[i]]$chr = newchr\
+\
+chr = data_plus[[i]][,1] \
+data_plus[[i]]$organism = sapply(chr,function(x) unlist(strsplit(x,"_"))[1] )\
+newchr = sapply(chr,function(x) unlist(strsplit(x,"_"))[2] )\
+data_plus[[i]]$chr = newchr\
+\
+print(i)\
+\}\
+\
+for( i in 1:10) \{\
+data_plus[[i]][,1] = paste(data_plus[[i]][,1],"+",sep=".")\
+data_minus[[i]][,1] = paste(data_minus[[i]][,1],"-",sep=".")\
+\
+colnames(data_plus[[i]]) = c("space","start","end","count","organism")\
+colnames(data_minus[[i]]) = c("space","start","end","count","organism")\
+\
+\}\
+\
+Sc_plus = vector("list",10)\
+pombe_plus = vector("list",10)\
+Sc_minus = vector("list",10)\
+pombe_minus = vector("list",10)\
+\
+for( i in 1:10)\{\
+\
+	Sc_plus[[i]] = data_plus[[i]][which(data_plus[[i]]$organism != "pombe"),1:4]\
+	pombe_plus[[i]] = data_plus[[i]][which(data_plus[[i]]$organism == "pombe"),1:4]\
+\
+	Sc_minus[[i]] = data_minus[[i]][which(data_minus[[i]]$organism != "pombe"),1:4]\
+	pombe_minus[[i]] = data_minus[[i]][which(data_minus[[i]]$organism == "pombe"),1:4]\
+\
+\}\
+\
+ainoCollapse = function( inp, window,dump=F) \{\
+     start = inp$start\
+     chr = inp$space\
+     data = inp$count\
+\
+     nextDistance = start[-1] - start[-length(start)]\
+     outData = c()\
+     rn = c()\
+     index=1\
+     colIndex = 1;\
+	 flag=FALSE\
+     while( index < length(data) )\{         \
+\
+         maxIndex = colIndex\
+         outRow = data[colIndex]\
+			colIndex = index\
+			index = index+1\
+\
+         if(dump) print( paste(index,outData) )\
+\
+         while(nextDistance[colIndex] < window+1 & chr[colIndex] == chr[index] & index < length(data) )\{\
+             outRow = c(outRow,data[index])\
+             if( data[index] > data[maxIndex] ) maxIndex=index\
+             colIndex=index\
+             index = index+1        \
+             #if\
+			 if(dump) print(paste(index,colIndex,maxIndex))\
+         \}\
+         if(length(outRow)>1)\
+             outRow = sum(outRow,na.rm=T)  \
+             \
+         rn = c(rn,maxIndex)\
+         outData = c(outData, outRow)\
+         colIndex= index\
+         if(colIndex %% 10000 == 0 ) print(colIndex)\
+		 \
+     \}\
+    outData = cbind( inp[rn,1:2] , outData) \
+    outData\
+\}\
+\
+\
+Sc_collapsed_dat_minus = vector("list",10)\
+Sc_collapsed_dat_plus = vector("list",10)\
+\
+ for(i in 1:10) \{ \
+Sc_collapsed_dat_minus[[i]] = ainoCollapse(Sc_minus[[i]],3)\
+Sc_collapsed_dat_plus[[i]] = ainoCollapse(Sc_plus[[i]],3)\
+\}\
+\
+sapply( 1:10, function(x) nrow(Sc_collapsed_dat_minus[[x]]) )\
+sapply( 1:10, function(x) nrow(Sc_collapsed_dat_plus[[x]]) )\
+\
+Sc_collapsed_data = vector("list",10)\
+pombe = vector("list",10)\
+for(i in 1:10 )\{\
+ Sc_collapsed_data[[i]]=rbind(Sc_collapsed_dat_minus[[i]],Sc_collapsed_dat_plus[[i]])\
+ pombe[[i]] = rbind(pombe_minus[[i]],pombe_plus[[i]])\
+\}\
+\
+######## Section : Filtering Isoform data ##################\
+\
+library(IRanges)\
+\
+# constructing space vector for mapping of the replicates\
+\
+for(i in 1:10)\
+Sc_collapsed_data[[i]]$space = paste(Sc_collapsed_data[[i]]$space,Sc_collapsed_data[[i]]$start,sep=".")\
+\
+maps = vector("list",5)\
+for(i in 1:5)\
+maps[[i]] = match( Sc_collapsed_data[[2*i-1]]$space, Sc_collapsed_data[[2*i]]$space )\
+\
+combinedSpace=c()\
+for(i in 1:10) combinedSpace= c( combinedSpace, Sc_collapsed_data[[i]]$space)\
+str(combinedSpace)\
+\
+combinedSpace = unique(combinedSpace)\
+str(combinedSpace)\
+\pard\tx560\pardeftab560\pardirnatural
+
+\f0 \cf0 \CocoaLigature1 \
+\pard\tx560\pardeftab560\pardirnatural
+
+\f1 \cf0 \CocoaLigature0 #### Constructing the data frame from the data and applying filters for count cut-offs #####\
+\
+data = data.frame( \
+space = combinedSpace, \
+rep1t0 = rep(0,length(combinedSpace)),\
+rep1t5 = rep(0,length(combinedSpace)),\
+rep1t10 = rep(0,length(combinedSpace)),\
+rep1t20 = rep(0,length(combinedSpace)),\
+rep1t40 = rep(0,length(combinedSpace)),\
+rep2t0 = rep(0,length(combinedSpace)),\
+rep2t5 = rep(0,length(combinedSpace)),\
+rep2t10 = rep(0,length(combinedSpace)),\
+rep2t20 = rep(0,length(combinedSpace)),\
+rep2t40 = rep(0,length(combinedSpace))\
+)\
+\
+for( i in 1:10 ) \{\
+    id2id = match( data$space, Sc_collapsed_data[[i]]$space )\
+    data[,i+1] = Sc_collapsed_data[[i]]$outData[id2id]    \
+\}\
+\
+firstNA = !is.na(data$rep1t0)  & !is.na(data$rep2t0)\
+data1 = data[firstNA,]\
+str(data1)\
+secondNA = !is.na(data1$rep1t5)  & !is.na(data1$rep1t5)\
+data12 = data1[secondNA,]\
+str(data12)\
+firstThresh = (data12$rep1t0) > 10  & (data12$rep2t0) >10\
+data12_10 = data12[which(firstThresh),]\
+str(data12_10)\
+\
+data12_10$rep1t0[which(is.na(data12_10$rep1t0))] = 0
+\f0 \CocoaLigature1 \
+
+\f1 \CocoaLigature0 data12_10$rep1t5[which(is.na(data12_10$rep1t5))] = 0\
+data12_10$rep1t10[which(is.na(data12_10$rep1t10))] = 0\
+data12_10$rep1t20[which(is.na(data12_10$rep1t20))] = 0\
+data12_10$rep1t40[which(is.na(data12_10$rep1t40))] = 0\
+\
+data12_10$rep2t0[which(is.na(data12_10$rep2t0))] = 0
+\f0 \CocoaLigature1 \
+
+\f1 \CocoaLigature0 data12_10$rep2t5[which(is.na(data12_10$rep2t5))] = 0\
+data12_10$rep2t10[which(is.na(data12_10$rep2t10))] = 0\
+data12_10$rep2t20[which(is.na(data12_10$rep2t20))] = 0\
+data12_10$rep2t40[which(is.na(data12_10$rep2t40))] = 0\
+\
+#################  Dispersion Estimates And Half-lives calculations ###########\
+library("vsn")\
+library("DESeq")\
+\
+data.cds = newCountDataSet(data12_10[,-1], conditions = rep(c("t0", "t5", "t10","t20", "t40" ),2))\
+sampleNames(data.cds)\
+conditions(data.cds)\
+\
+tmp.sizes = rep(0,10)\
+for(i in 1:10) tmp.sizes[i] = sum(pombe[[i]]$count)\
+\
+tmp.sizes[1:5] = tmp.sizes[1:5]/800000 # adjusting size factors for replicate 1 close to 1\
+tmp.sizes[6:10] = tmp.sizes[6:10]/540000 # adjusting size factors for replicate 2 close to 1\
+\
+sizeFactors(data.cds) = tmp.sizes\
+\
+data.cds = estimateDispersions( data.cds, method="per-condition", sharingMode="fit-only")\
+\
+	for( k in 1:5)\{\
+	eval(parse(text = paste("dispFunc", levels(conditions(data.cds))[k] ," <- ",\
+	"fitInfo( data.cds, name= levels(conditions(data.cds))[k])$dispFunc" , sep = "") ))\
+\
+	\}\
+\
+#### compute variances for the log2-transformed normalized counts using the formula:\
+#### var(log2(counts)) = (1/counts + dispersion)/ln(2)^2 based on the delta method\
+\
+\
+variances.log2 <- data.frame( matrix(NA, nrow = dim(data.cds)[1], ncol = dim(data.cds)[2], \
+dimnames = list(featureNames(data.cds), sampleNames(data.cds)) ))\
+\
+idx = vector("list",5)\
+disp = vector("list",5)\
+timePoints = c( "t0","t5","t10","t20","t40")\
+dispFunct = \
+c(dispFunct0,   dispFunct5,	dispFunct10,  dispFunct20,  dispFunct40)  \
+\
+\
+for( k in 1:5) \{\
+### obtain dispersions for timePoint indexed at 'k' position in 'timePoints' vector\
+idx[[k]] = conditions(data.cds) == timePoints[k]\
+disp[[k]] = apply(counts(data.cds, normalized=T)[, idx[[k]]], MARGIN = 2, dispFunct[[k]])\
+\
+### obtain variances for timePoint indexed at 'k' position in 'timePoints' vector\
+variances.log2[, idx[[k]] ] = (1/counts(data.cds, normalized=T)[, idx[[k]] ] + disp[[k]] )/log(2)^2\
+print(head(variances.log2[, idx[[k]] ]))\
+\
+\}\
+\
+library(LSD)\
+\
+ss = sample(1:nrow(data12_10),1e4)\
+for( i in 1:5 )\{\
+heatpairs( as.matrix(log2(data12_10[ss,c(i+1,i+6)])) ,xlim=c(0,15), ylim=c(0,15) )\
+readline( prompt="Enter to see next plot" )\
+\}\
+\
+\pard\tx560\pardeftab560\pardirnatural
+
+\f2\b \cf0 ### Calculating half-lives now ##############
+\f1\b0 \
+X = rep( c(0,5,10,20,40),2 )\
+Y <- log2(counts(data.cds, normalized=T) )\
+Z <- vector("list", nrow(Y))\
+\
+for( i in 1:nrow(Y) )\{\
+W <- 1/as.vector(variances.log2[i, ], mode = "numeric")\
+Z[[i]] = lm(Y[i,]~X,weights=W) \
+if( i%% 1000 == 0 ) print(i)\
+\}\
+\
+test = c()\
+\
+for( i in 1:length(Z) ) \{\
+\
+ifelse ( dim(summary(Z[[i]])$coefficients)[1] > 1 ,\
+ test <- rbind( test, summary(Z[[i]])$coefficients[2,1:2] ),\
+ test <- rbind(test,c(0,0) ) \
+	)\
+\}\
+\
+dim(test)\
+\
+test = data.frame(test)\
+test$space = as.character(data12_10[,1])\
+\
+test2 = test[ which( test$Estimate <0 & is.finite(test$Std..Error)  ), ]\
+
+\f2\b \
+########### Sourcing functions from old scripts #########\
+\
+\pard\tx560\pardeftab560\pardirnatural
+
+\f1\b0 \cf0 source('/g/steinmetz/project/3Stability/scripts/old_functions.R')
+\f2\b \
+
+\f1\b0 \
+\
+\pard\tx560\pardeftab560\pardirnatural
+
+\f2\b \cf0 ############### Ranges data for every isoform with calculated half-lives #########
+\f1\b0 \
+\
+Ranges_isoforms <- RangedData( \
+    IRanges(start = as.numeric(substring(test2$space,9,18)), width=1 ), \
+    space = substring(test2$space,1,7), \
+    value = cbind(test2$Estimate,test2$Std..Error)\
+)\
+\
+\
+\
+
+\f2\b ########### Full Gene annotation #########\
+\
+\pard\tx560\pardeftab560\pardirnatural
+
+\f1\b0 \cf0 source('/g/steinmetz/project/3Stability/scripts/prepareFullRanges.R')
+\f2\b \
+\
+########### RBP data ############
+\f1\b0 \
+\
+source('/g/steinmetz/project/3Stability/scripts/prepareRBPRanges.R')\
+\
+\pard\tx560\pardeftab560\pardirnatural
+
+\f2\b \cf0 \
+###### SPLITTING ISOFORMS PER ANNOTATED TRANSCRIPT
+\f1\b0 \
+\
+isoformsPerUTR3 = overlapList( Ranges_isoforms,Ranges_full)\
+\
+# Checking for proper mapping, if proper the there should be some genes with more than 1 isoform\
+sum(sapply(isoformsPerUTR3, function(x) length(x) ) > 1)\
+\
+df_utr3 = getRangesDataframe(Ranges_full)\
+df_utr3$name = Ranges_full@values@unlistData[,1]\
+df_utr3$strand = substring( rownames(df_utr3) ,7,7 )\
+\
+\
+df_isoform = getRangesDataframe(Ranges_isoforms)\
+asliData = as.matrix(Ranges_isoforms@values@unlistData)\
+columnKaNaam = c("slope","se")\
+df_isoform = data.frame( cbind(df_isoform,asliData))\
+colnames(df_isoform)[-c(1:3)] = columnKaNaam\
+\
+transcript2cds = match(df_utr3$name, onlyCDS$name )\
+\
+
+\f2\b ############# Checking the existence of requirements ########
+\f1\b0 \
+\
+exists("isoformsPerUTR3")\
+exists("rbpPerUTR3")\
+\
+exists("df_rbp")\
+exists("df_isoform")\
+exists("df_utr3")\
+\
+
+\f2\b ########### Splitting isoforms by RBPs ###########################
+\f1\b0 \
+\
+withRBP = vector( "list",14)\
+withoutRBP = vector( "list",14)\
+names(withRBP) = unique(df_rbp$name)\
+names(withoutRBP) = unique(df_rbp$name)\
+\
+for(i in 1:length(rbpPerUTR3))\{\
+    isoformIndex = isoformsPerUTR3[[i]]\
+    direction = substring( rownames(df_utr3)[i] , 7,7) == "+" \
+    for( rbpIndex in rbpPerUTR3[[i]] )\{\
+   ifelse(direction ,\
+        where <- df_isoform$start[isoformIndex] > df_rbp$start[rbpIndex],\
+        where <- df_isoform$start[isoformIndex] < df_rbp$start[rbpIndex]\
+        )\
+        \
+    withList = isoformIndex[which(where)]\
+    withoutList = isoformIndex[which(!where)]\
+        names(withList) = NULL\
+        names(withoutList) = NULL\
+    rbpName= df_rbp$name[rbpIndex]\
+    existingWith = unlist(withRBP[rbpName][[1]])\
+    existingWithout = unlist(withoutRBP[rbpName][[1]])\
+        \
+    newWith = list( c(existingWith, withList) )\
+    newWithout = list( c(existingWithout, withoutList) )\
+    \
+    withRBP[rbpName] = newWith\
+    withoutRBP[rbpName] = newWithout\
+        \
+    \}\
+    \
+\}\
+unique_withRBP = sapply(names(withRBP), function(x) (unique(withRBP[[x]])) )\
+unique_withoutRBP = sapply(names(withoutRBP), function(x) (unique(withoutRBP[[x]])) )\
+\
+new_withoutRBP = vector("list",14)\
+names(new_withoutRBP) = names(withRBP)\
+\
+ for( x in names(unique_withRBP) )\
+ new_withoutRBP[[x]] = setdiff( unique_withoutRBP[[x]], unique_withRBP[[x]])  \
+\
+## Checking the lists of withRBP and withoutRBP\
+\
+(sapply(unique_withRBP, function(x) length(x) ) )\
+(sapply(new_withoutRBP, function(x) length(x) ) )\
+
+\f2\b ############# Checking for RBP specific function #############
+\f1\b0 \
+\
+with = matrix(data=NA, nrow=14,ncol=2)\
+rownames(with) = names(withRBP)\
+without = matrix(data=NA, nrow=14,ncol=2)\
+rownames(without) = names(withRBP)\
+\
+for(i in names(withRBP) ) \{ \
+\
+if(length(new_withoutRBP[[i]]) >0 )\
+ ss = summary( lm( df_isoform$slope[ new_withoutRBP[[i]] ]~1,weights= 1/df_isoform$se[new_withoutRBP[[i]] ]^2) )\
+  without[i,] = ss$coefficients[1:2]\
+ \
+if(length(unique_withRBP[[i]]) >0 ) \
+ ss = summary( lm( df_isoform$slope[ unique_withRBP[[i]] ]~1,weights= 1/df_isoform$se[unique_withRBP[[i]] ]^2) )\
+  with[i,] = ss$coefficients[1:2]\
+  \
+   \}\
+   \
+test=rep(NA,14)\
+names(test) = names(withRBP)\
+\
+\
+checkSlopes = function(s1,sd1,s2,sd2)\{\
+eta = (s1-s2)/sqrt(sd1^2+sd2^2)\
+pval = 2-2*pnorm(abs(eta))\
+pval\
+\}\
+\
+\
+ for(i in names(withRBP) )\
+ test[i] = (checkSlopes(with[i,1],with[i,2],without[i,1],without[i,2]))\
+ \
+ final = data.frame(name=names(withRBP), halflivesWith= -log(2)/with[,1],\
+halflivesWO = -log(2)/without[,1], pvalWith = p.adjust(test,method="BH"), \
+numWith = sapply(unique_withRBP,function(x) length(x) ),\
+numWO = sapply(new_withoutRBP,function(x) length(x) ),\
+ withSlope = with[,1], withoutSlope = without[,1],\
+  withError = with[,2], withoutError = without[,2]\
+ )\
+\
+\
+}

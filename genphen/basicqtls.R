@@ -97,17 +97,29 @@ norm_test_quant_zscore = p.adjust( apply( apply( metabolome_data_quant, 2, scale
 g_1 = apply( geno, 1, function(x) { sum(x==1) })
 g_2 = apply( geno, 1, function(x) { sum(x==2) })
 
-# ggbio way
-p <- ggbio( trackWidth = 1, buffer = 0, radius = 20 ) + 
-  circle(yeast_gr, geom = "ideo", fill = "gray70") +
-  circle(yeast_gr, geom = "scale", size = 2) +
-  circle(yeast_gr, geom = "text", aes(label = seqnames), vjust = 0, size = 3)
+# # ggbio way
+# p <- ggbio( trackWidth = 1, buffer = 0, radius = 20 ) + 
+#   circle(yeast_gr, geom = "ideo", fill = "gray70") +
+#   circle(yeast_gr, geom = "scale", size = 2) +
+#   circle(yeast_gr, geom = "text", aes(label = seqnames), vjust = 0, size = 3)
 
 # circlize way
+library(circlize)
 df = as.data.frame(yeast_gr)
 mrk_df = as.data.frame(mrk)
-chr_name_ttable = levels(df$seqnames)
-names(chr_name_ttable) = 
+chr_name_ttable = sapply(df$seqnames,function(i){
+  i_sub = sub("chr","",i)
+  if (i_sub != "M") {
+    return(paste("chr",sprintf("%02d", as.numeric(as.roman(i_sub))),sep=""))
+  } else {
+    return(levels(i)[i])
+  }
+})
+names(chr_name_ttable) = levels(df$seqnames)
+
+# change chr names
+df$altname = df$seqnames
+df$seqnames = chr_name_ttable[df$seqnames]
 
 circos.par(gap.degree = 2)
 circos.genomicInitialize(df, track.height = .1)
@@ -246,7 +258,7 @@ runQTL <- function(
     to_r$qtls_threshold = summary(myqtls$qtls_permuted,permute_alpha)
     for ( i in names(to_r$qtls) ) {
       #phe_qtls = summary( to_r$qtls[[ i ]] , to_r$qtls_threshold[,i] )
-      summary(to_r$qtls[[ i ]], format="allpeaks", perms=to_r$qtls_permuted[[ i ]],
+      phe_qtls = summary(to_r$qtls[[ i ]], format="allpeaks", perms=to_r$qtls_permuted[[ i ]],
         alpha=permute_alpha, pvalues=TRUE)
       if ( dim( phe_qtls )[ 1 ] > 0 ) {
         # format table entry
