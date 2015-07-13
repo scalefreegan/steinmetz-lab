@@ -105,6 +105,8 @@ clustANDscore = function(data, genotypes,...) {
   #permuted = permute(genotypes,clustering$clustering)
   genotype_template = rownames(data)
   names(genotype_template) = genotype_template
+  # store permutations with same genotype composition
+  permute_library = list()
   to_r = do.call(rbind,mclapply(seq(1:dim(genotypes)[1]),function(x){
     genotype_vector=sapply(genotype_template,function(i){
       if (class(try(genotypes[x,i],silent=T))!="try-error"){
@@ -115,7 +117,11 @@ clustANDscore = function(data, genotypes,...) {
     })
     genotype_vector = genotype_vector[!is.na(genotype_vector)]
     one_score = score(clustering$clustering,genotype_vector)
-    permuted = permute(genotype_vector,clustering$clustering)
+    genotype_composition = paste(sort(c(sum(genotype_vector==1),sum(genotype_vector==2))),collapse ="_")
+    if (!genotype_composition%in%names(permute_library)) {
+      permute_library[[genotype_composition]] = permute(genotype_vector,clustering$clustering)
+    }
+    permuted = permute_library[[genotype_composition]]
     matrix(c(one_score,permuted(one_score)),nrow=1,ncol=2,dimnames=list(rownames(genotypes)[x],c("score","pval")))
   }))
 }
