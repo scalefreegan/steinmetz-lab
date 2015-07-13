@@ -1,3 +1,29 @@
+#' Converts GRanges object to matrix with real coordinates
+#'
+#' Some more info
+#'
+#' @param x An \code{m x n} matrix of peak intensities where the rows, \code{m},
+#'  contains individuals, (e.g., strains)
+#'  and the columns, \code{n}, contains observations (e.g., positions)
+#' @param nresamples Number of resamples to compute.
+#' @param alpha Significance level at which to reject the null hypothesis, Default = 0.01
+#' @return A count value at which the null hypothesis can be rejected given \code{alpha}.
+#' @examples
+#' # S. cerevisiae chr01 3' isoform counts
+#' x = subsetByOverlaps(tx3_counts_chr01,tx_3utr_annotations_yeast_chr01[1])
+#' x = t(as.matrix(mcols(x)))
+#' find_sigCounts(x)
+#' @export
+#'
+granges2matrix = function(x) {
+  starts = start(x)
+  m = matrix(0,nrow = length(starts) ,ncol = length(colnames(mcols(x))),
+             dimnames = list(starts,colnames(mcols(x))))
+  tmp_m = as.matrix(mcols(x))
+  rownames(tmp_m) = starts
+  m[rownames(tmp_m),colnames(tmp_m)] = tmp_m[rownames(tmp_m),colnames(tmp_m)]
+}
+
 #' Find significant counts in data matrix by resampling
 #'
 #' The function \code{\link{find_sigCounts}} returns a count cutoff at a specified
