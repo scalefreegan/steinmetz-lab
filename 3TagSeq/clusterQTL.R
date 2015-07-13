@@ -1,4 +1,6 @@
 library(MASS)
+library( GenomicRanges )
+
 set.seed(1)
 
 # files 

@@ -1,0 +1,12 @@
+base
+clustQTL
+BiocGenerics
+S4Vectors
+IRanges
+GenomeInfoDb
+GenomicRanges
+cluster
+ggplot2
+ggbio
+pheatmap
+XVector

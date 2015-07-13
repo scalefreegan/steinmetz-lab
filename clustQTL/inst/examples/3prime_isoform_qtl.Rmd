@@ -1,0 +1,84 @@
+---
+title: "3'-isoform with clustQTL"
+author: "Aaron Brooks"
+date: "July 8, 2015"
+output: html_document
+---
+*Example doc for detection of 3'-isoform QTLs with clustQTL.*
+
+In this example, I use 3'-isoform data for chr01, since that's what is included with the clustQTL package. 
+
+```{r load_packages, include=FALSE}
+library(clustQTL)
+library(GenomicRanges)
+library(ggbio)
+library(pheatmap)
+```
+
+```{r, cache=TRUE}
+gene = "YAL041W"
+data = t(as.matrix(mcols(subsetByOverlaps(tx3_counts_chr01,tx_3utr_annotations_yeast_chr01[gene]))))
+# need to clean up data names
+rnames = sapply( sub("X","",sapply( rownames(data), function(i) strsplit(i,"_")[[1]][1] ) ), function(i) {
+		if (nchar(i)==2){ 
+			i = paste("0",i,sep="")
+		} 
+		i
+	} )
+rownames(data) = rnames
+# remove insig peaks
+peak_cutoff = find_sigCounts( data )
+data_o = data
+data[ , colSums(data)<peak_cutoff ] = 0
+```
+
+Before and after removing insignificant peaks
+
+```{r, echo=FALSE,fig.height=4,fig.width=8}
+matplot(t(data_o),type="l",main="Before filtering peaks",xlab="3' Position",ylab="Sequencing Counts")
+matplot(t(data),type="l",main="After filtering peaks",xlab="3' Position",ylab="Sequencing Counts")
+```
+
+```{r, cache=TRUE} 
+data = data[rownames(data)%in%colnames(genotypes_yeast),]
+clust_qtl = clustANDscore(data,genotypes_yeast,distance="cosine")
+```
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE,fig.height=4,fig.width=8}
+plotManhattan(clust_qtl,markers_yeast, gene,trx_annot=tx_3utr_annotations_yeast_chr01)
+```
+
+```{r, cache=TRUE} 
+peaks = findQTLPeaks(clust_qtl,markers_yeast)
+
+peak_genotypes = do.call(rbind,lapply(names(peaks),function(i){getGenotypes(i,genotypes_yeast)}))
+rownames(peak_genotypes) = names(peaks)
+
+# test whether QTL looks "real"
+
+# peak to analyze
+x = 1
+
+A = names(which(peak_genotypes[x,] == 1))
+A = intersect( A, rownames(data) )
+B = names(which(peak_genotypes[x,] == 2))
+B = intersect( B, rownames(data) )
+
+# correlation
+all_cor = cor(t(data[c(A,B),]),use="pair",method="pearson")
+in_a = all_cor[A,A]
+in_b = all_cor[B,B]
+out_ab = all_cor[A,B]
+out_ba = all_cor[B,A]
+
+mean(in_a[upper.tri(in_a)],na.rm=T)
+mean(in_b[upper.tri(in_b)],na.rm=T)
+mean(out_ab[upper.tri(out_ab)],na.rm=T)
+mean(out_ba[upper.tri(out_ba)],na.rm=T)
+
+data = data[which(apply(data,1,sum)>0,useNames=T),]
+```
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE,fig.height=4,fig.width=8}
+pheatmap(cosineDist(data[c(A,B),]),cluster_cols=F,cluster_rows=T,scale="row",annotation_row=data.frame(rbind(cbind(A,"S"),cbind(B,"Y")),row.names=1))
+```

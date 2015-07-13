@@ -1,0 +1,29 @@
+---
+title: "ERCC Spike In Analysis"
+author: "Aaron Brooks"
+date: "July 9, 2015"
+output: html_document
+---
+
+Analysis of ERCC spike in controls to determine thresholds etc to apply to T-fill data to maximize reliability of poly(A) site calls.
+
+```{r,include=FALSE}
+library(GenomicRanges)
+library(parallel)
+library(Biostrings)
+library(rtracklayer)
+
+load("/g/steinmetz/project/GenPhen/data/3tagseq/all/mergedCounts.rda")
+ercc_polyAnnot = import("/g/steinmetz/project/GenPhen/data/3tagseq/genome/ERCC/ERCC_polyASite.bed")
+# get ERCC genes
+ercc = cts[grep("ERC*",seqnames(cts)),]
+
+data = rowSums(as.matrix(mcols(ercc[which(seqnames(ercc)=="ERCC002"),])))
+names(data) = start(ranges(ercc[which(seqnames(ercc)=="ERCC002"),]))
+plot(x=names(data),y=data,type="l")
+
+# analyze for 
+
+
+```
+
