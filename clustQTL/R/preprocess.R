@@ -26,10 +26,11 @@ granges2matrix = function(x, annot = NULL) {
     m = matrix(0,nrow = length(seq(min(starts),max(starts))) ,ncol = length(colnames(mcols(x))),
                dimnames = list(seq(min(starts),max(starts)),colnames(mcols(x))))
   }
-
-  tmp_m = as.matrix(mcols(x))
+  tmp_m = as.data.frame(mcols(x))
+  tmp_m = as.matrix(tmp_m)
   rownames(tmp_m) = starts
   m[rownames(tmp_m),colnames(tmp_m)] = tmp_m[rownames(tmp_m),colnames(tmp_m)]
+  return(m)
 }
 
 #' Find significant counts in data matrix by resampling

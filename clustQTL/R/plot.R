@@ -24,7 +24,7 @@ format4manhattan = function( qtls, mrk, nresample = 10000 ) {
 #' @export
 #'
 plotManhattan = function( qtls, mrk, qtl_name = "", trx_annot = NULL,
-                          cutoff = 3, gene_annot_range = c(5000,5000) ) {
+                          cutoff = 3, gene_annot_range = c(5000,5000),... ) {
   library(ggbio)
   mrk2 = format4manhattan( qtls,mrk )
   if ( (qtl_name!="") & ( !is.null(trx_annot) ) ) {
@@ -36,10 +36,10 @@ plotManhattan = function( qtls, mrk, qtl_name = "", trx_annot = NULL,
     names(trx_granges) = qtl_name
     plotGrandLinear(mrk2, aes(y = p),spaceline = TRUE,cutoff=cutoff,
                     ylab="-log10(pval)",main=qtl_name,ylim=c(0,4.5),
-                    highlight.gr = trx_granges)
+                    highlight.gr = trx_granges,...)
   } else {
     plotGrandLinear(mrk2, aes(y = p),spaceline = TRUE,cutoff=cutoff,
-                    ylab="-log10(pval)",main=qtl_name,ylim=c(0,4.5))
+                    ylab="-log10(pval)",main=qtl_name,ylim=c(0,4.5),...)
   }
 
   #return(mrk2)

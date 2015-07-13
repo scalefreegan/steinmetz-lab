@@ -5,7 +5,7 @@
 \title{Permute}
 \usage{
 plotManhattan(qtls, mrk, qtl_name = "", trx_annot = NULL, cutoff = 3,
-  gene_annot_range = c(5000, 5000))
+  gene_annot_range = c(5000, 5000), ...)
 }
 \arguments{
 \item{data}{}

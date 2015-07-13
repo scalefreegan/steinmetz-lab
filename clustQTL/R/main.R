@@ -67,10 +67,12 @@ score = function(clusters, genotype_vector,score_method = c("hamming")[1], verbo
 #' permute()
 #' @export
 #'
-permute = function(genotypes,clusters,nresample = 10000,...) {
+permute = function(genotype_vector,clusters,nresample = 10000,...) {
   # order clusters and genotypes_vector
   ecdf(unlist(mclapply(1:nresample,function(i){
-    genotype_vector = genotypes[sample(seq(1,dim(genotypes)[1]),1),]
+    # can not do this globally as before because of biases
+    # in genotype dist at some locations
+    #genotype_vector = genotypes[sample(seq(1,dim(genotypes)[1]),1),]
     names(genotype_vector) = sample(names(genotype_vector))
     score(clusters,genotype_vector)
   })))
@@ -100,7 +102,7 @@ clustANDscore = function(data, genotypes,...) {
   data = data[intersect(colnames(genotypes),rownames(data)),]
   #covariate_clust = cluster(covariates)
   clustering = cluster(data,...)
-  permuted = permute(genotypes,clustering$clustering)
+  #permuted = permute(genotypes,clustering$clustering)
   genotype_template = rownames(data)
   names(genotype_template) = genotype_template
   to_r = do.call(rbind,mclapply(seq(1:dim(genotypes)[1]),function(x){
@@ -113,6 +115,7 @@ clustANDscore = function(data, genotypes,...) {
     })
     genotype_vector = genotype_vector[!is.na(genotype_vector)]
     one_score = score(clustering$clustering,genotype_vector)
+    permuted = permute(genotype_vector,clustering$clustering)
     matrix(c(one_score,permuted(one_score)),nrow=1,ncol=2,dimnames=list(rownames(genotypes)[x],c("score","pval")))
   }))
 }

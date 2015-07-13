@@ -4,7 +4,7 @@
 \alias{permute}
 \title{Permute}
 \usage{
-permute(genotypes, clusters, nresample = 10000, ...)
+permute(genotype_vector, clusters, nresample = 10000, ...)
 }
 \arguments{
 \item{data}{}

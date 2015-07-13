@@ -15,10 +15,15 @@ library(ggbio)
 library(pheatmap)
 ```
 
-```{r, cache=TRUE}
-#gene = "YAL041W"
-gene = sample(names(tx_3utr_annotations_yeast_chr01),1)
-data = granges2matrix(subsetByOverlaps(tx3_counts_chr01,tx_3utr_annotations_yeast_chr01[gene]),tx_3utr_annotations_yeast_chr01[gene,]) 
+```{r, cache=FALSE}
+gene = "YAL041W"
+#gene = sample(names(tx_3utr_annotations_yeast_chr01),1)
+x = subsetByOverlaps(tx3_counts_chr01,tx_3utr_annotations_yeast_chr01[gene])
+data = t(granges2matrix(x))
+# log transform
+data[data==0] = NA
+data = log2(data)
+data[is.na(data)] = 0
 # need to clean up data names
 rnames = sapply( sub("X","",sapply( rownames(data), function(i) strsplit(i,"_")[[1]][1] ) ), function(i) {
 		if (nchar(i)==2){ 
@@ -40,7 +45,7 @@ matplot(t(data_o),type="l",main="Before filtering peaks",xlab="3' Position",ylab
 matplot(t(data),type="l",main="After filtering peaks",xlab="3' Position",ylab="Sequencing Counts")
 ```
 
-```{r, cache=TRUE} 
+```{r, cache=FALSE} 
 data = data[rownames(data)%in%colnames(genotypes_yeast),]
 clust_qtl = clustANDscore(data,genotypes_yeast,distance="cosine")
 ```
@@ -49,7 +54,7 @@ clust_qtl = clustANDscore(data,genotypes_yeast,distance="cosine")
 plotManhattan(clust_qtl,markers_yeast, gene,trx_annot=tx_3utr_annotations_yeast_chr01)
 ```
 
-```{r, cache=TRUE} 
+```{r, cache=FALSE} 
 peaks = findQTLPeaks(clust_qtl,markers_yeast)
 
 peak_genotypes = do.call(rbind,lapply(names(peaks),function(i){getGenotypes(i,genotypes_yeast)}))
@@ -81,5 +86,5 @@ data = data[which(apply(data,1,sum)>0,useNames=T),]
 ```
 
 ```{r, echo=FALSE,message=FALSE,warning=FALSE,fig.height=4,fig.width=8}
-pheatmap(cosineDist(data[c(A,B),]),cluster_cols=F,cluster_rows=T,scale="row",annotation_row=data.frame(rbind(cbind(A,"S"),cbind(B,"Y")),row.names=1))
+pheatmap(data[c(A,B),],cluster_cols=F,clustering_distance_rows=as.dist(cosineDist(data[c(A,B),])),scale="none",annotation_row=data.frame(rbind(cbind(A,"S"),cbind(B,"Y")),row.names=1))
 ```
