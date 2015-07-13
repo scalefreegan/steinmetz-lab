@@ -15,10 +15,18 @@
 #' find_sigCounts(x)
 #' @export
 #'
-granges2matrix = function(x) {
+granges2matrix = function(x, annot = NULL) {
   starts = start(x)
-  m = matrix(0,nrow = length(starts) ,ncol = length(colnames(mcols(x))),
-             dimnames = list(starts,colnames(mcols(x))))
+  if (!is.null(annot)) {
+    m = matrix(0,nrow = length(seq(start(annot),end(annot))) ,
+                               ncol = length(colnames(mcols(x))),
+                               dimnames = list(seq(start(annot),end(annot)),
+                                               colnames(mcols(x))))
+  } else {
+    m = matrix(0,nrow = length(seq(min(starts),max(starts))) ,ncol = length(colnames(mcols(x))),
+               dimnames = list(seq(min(starts),max(starts)),colnames(mcols(x))))
+  }
+
   tmp_m = as.matrix(mcols(x))
   rownames(tmp_m) = starts
   m[rownames(tmp_m),colnames(tmp_m)] = tmp_m[rownames(tmp_m),colnames(tmp_m)]

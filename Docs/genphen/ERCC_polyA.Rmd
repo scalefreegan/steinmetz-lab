@@ -19,7 +19,7 @@ ercc_polyAnnot = import("/g/steinmetz/project/GenPhen/data/3tagseq/genome/ERCC/E
 ercc = cts[grep("ERC*",seqnames(cts)),]
 
 data = rowSums(as.matrix(mcols(ercc[which(seqnames(ercc)=="ERCC002"),])))
-names(data) = start(ranges(ercc[which(seqnames(ercc)=="ERCC002"),]))
+names(data) = start(ercc[which(seqnames(ercc)=="ERCC002"),])
 plot(x=names(data),y=data,type="l")
 
 # analyze for 

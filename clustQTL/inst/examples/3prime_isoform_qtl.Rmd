@@ -18,9 +18,7 @@ library(pheatmap)
 ```{r, cache=TRUE}
 #gene = "YAL041W"
 gene = sample(names(tx_3utr_annotations_yeast_chr01),1)
-data = t(as.matrix(mcols(subsetByOverlaps(tx3_counts_chr01,tx_3utr_annotations_yeast_chr01[gene]))))
-# a change
-tmp = granges2matrix(subsetByOverlaps(tx3_counts_chr01,tx_3utr_annotations_yeast_chr01[gene])) 
+data = granges2matrix(subsetByOverlaps(tx3_counts_chr01,tx_3utr_annotations_yeast_chr01[gene]),tx_3utr_annotations_yeast_chr01[gene,]) 
 # need to clean up data names
 rnames = sapply( sub("X","",sapply( rownames(data), function(i) strsplit(i,"_")[[1]][1] ) ), function(i) {
 		if (nchar(i)==2){ 
