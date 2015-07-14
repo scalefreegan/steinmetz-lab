@@ -16,8 +16,8 @@ library(pheatmap)
 ```
 
 ```{r, cache=FALSE}
-gene = "YAL041W"
-#gene = sample(names(tx_3utr_annotations_yeast_chr01),1)
+#gene = "YAL041W"
+gene = sample(names(tx_3utr_annotations_yeast_chr01),1)
 x = subsetByOverlaps(tx3_counts_chr01,tx_3utr_annotations_yeast_chr01[gene])
 data = t(granges2matrix(x))
 # log transform

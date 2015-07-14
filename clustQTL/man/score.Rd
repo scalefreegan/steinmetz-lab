@@ -4,15 +4,14 @@
 \alias{score}
 \title{Score clustering}
 \usage{
-score(clusters, genotype_vector, score_method = c("hamming")[1],
-  verbose = FALSE)
+score(clusters, genotype_vector, verbose = FALSE)
 }
 \arguments{
 \item{data}{}
 }
 \value{
 Score representing distance between the actual clustering
- and the one proposed by model
+ and the one proposed by model using binomial distribution
 }
 \description{
 The function \code{\link{cluster}}

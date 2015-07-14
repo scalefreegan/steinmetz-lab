@@ -29,12 +29,12 @@ cluster = function(data, cluster_method = c("fuzzy")[1],
 #'
 #' @param data
 #' @return Score representing distance between the actual clustering
-#'  and the one proposed by model
+#'  and the one proposed by model using binomial distribution
 #' @examples
 #' score()
 #' @export
 #'
-score = function(clusters, genotype_vector,score_method = c("hamming")[1], verbose=FALSE) {
+score = function(clusters, genotype_vector,verbose=FALSE) {
   # order clusters and genotypes_vector
   clusters = clusters[intersect(names(genotype_vector),names(clusters))]
   genotype_vector = genotype_vector[names(clusters)]
@@ -47,35 +47,14 @@ score = function(clusters, genotype_vector,score_method = c("hamming")[1], verbo
     new_genotype_vector[genotype_vector==2] = 1
     genotype_vector = new_genotype_vector
   }
-  # compute hamming distance
-  if (score_method == "hamming") {
-    if (verbose){
-      cat("Scoring by Hamming distance\n")
-    }
-    score = sum(clusters!=genotype_vector)
-  }
+  # compute pval by exact binomial test
+  # calc hypothesized prob success given
+  # genotype vector and cluster composition
+  # p(1,1) + p(2,2)
+  p_hyp = sum(clusters==1)/length(clusters)*sum(genotype_vector==1)/length(genotype_vector) +
+    sum(clusters==2)/length(clusters)*sum(genotype_vector==2)/length(genotype_vector)
+  score = binom.test(sum(clusters==genotype_vector),length(clusters),p_hyp,"greater")
   return(score)
-}
-
-#' Permute
-#'
-#' The function \code{\link{cluster}}
-#'
-#' @param data
-#' @return permuted scores
-#' @examples
-#' permute()
-#' @export
-#'
-permute = function(genotype_vector,clusters,nresample = 10000,...) {
-  # order clusters and genotypes_vector
-  ecdf(unlist(mclapply(1:nresample,function(i){
-    # can not do this globally as before because of biases
-    # in genotype dist at some locations
-    #genotype_vector = genotypes[sample(seq(1,dim(genotypes)[1]),1),]
-    names(genotype_vector) = sample(names(genotype_vector))
-    score(clusters,genotype_vector)
-  })))
 }
 
 #' Cluster and Score
@@ -105,8 +84,6 @@ clustANDscore = function(data, genotypes,...) {
   #permuted = permute(genotypes,clustering$clustering)
   genotype_template = rownames(data)
   names(genotype_template) = genotype_template
-  # store permutations with same genotype composition
-  permute_library = list()
   to_r = do.call(rbind,mclapply(seq(1:dim(genotypes)[1]),function(x){
     genotype_vector=sapply(genotype_template,function(i){
       if (class(try(genotypes[x,i],silent=T))!="try-error"){
@@ -117,11 +94,10 @@ clustANDscore = function(data, genotypes,...) {
     })
     genotype_vector = genotype_vector[!is.na(genotype_vector)]
     one_score = score(clustering$clustering,genotype_vector)
-    genotype_composition = paste(sort(c(sum(genotype_vector==1),sum(genotype_vector==2))),collapse ="_")
-    if (!genotype_composition%in%names(permute_library)) {
-      permute_library[[genotype_composition]] = permute(genotype_vector,clustering$clustering)
-    }
-    permuted = permute_library[[genotype_composition]]
-    matrix(c(one_score,permuted(one_score)),nrow=1,ncol=2,dimnames=list(rownames(genotypes)[x],c("score","pval")))
+    o = cbind(one_score$statistic[[1]],one_score$p.value)
+    colnames(o) = c("matches","pval")
+    return(o)
   }))
+  to_r[,"pval"] = p.adjust(to_r[,"pval"],method = "BH")
+  return(to_r)
 }
