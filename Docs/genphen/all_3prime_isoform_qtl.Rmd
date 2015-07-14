@@ -1,0 +1,118 @@
+---
+title: "3'-isoform with clustQTL"
+author: "Aaron Brooks"
+date: "July 8, 2015"
+output: html_document
+---
+*Example doc for detection of 3'-isoform QTLs with clustQTL.*
+
+In this example, I use all 3'-isoform data
+
+```{r load_packages, include=TRUE}
+library(clustQTL)
+library(GenomicRanges)
+library(ggbio)
+library(pheatmap)
+library( parallel )
+options("mc.cores"=20)
+
+load("/g/steinmetz/project/GenPhen/data/3tagseq/all/mergedCounts.rda")
+load("/g/steinmetz/project/GenPhen/data/3tagseq/counts.rda")
+
+load( "/g/steinmetz/brooks/genphen/qtl_endometabolome_23042015/geno_mrk.RData" )
+
+g = makeGRangesFromDataFrame(tx_3utr,
+        seqnames.field=c("seqnames"),
+        start.field=c("start"),
+        end.field=c("end"))
+mcols(g) = tx_3utr[,6:21]
+tx_3utr = g
+names(tx_3utr) = mcols(tx_3utr)$Name
+
+#gene = "YAL041W"
+pb <- txtProgressBar(min = 0, max = length(names(tx_3utr)), style = 3)
+clust_qtls = lapply(seq(1,length(names(tx_3utr))), function(j) {
+  setTxtProgressBar(pb, j)
+  gene = names(tx_3utr)[j]
+  o = try({
+    #print(gene)
+    x = subsetByOverlaps(cts,tx_3utr[gene])
+    data = t(granges2matrix(x))
+    # log transform
+    data[data==0] = NA
+    data = log2(data)
+    data[is.na(data)] = 0
+    # need to clean up data names
+    rnames = sapply( sub("X","",sapply( rownames(data), 
+                                        function(i) strsplit(i,"_")[[1]][1] ) ), function(i) {
+    		if (nchar(i)==2){ 
+    			i = paste("0",i,sep="")
+    		} 
+    		i
+    	} )
+    rownames(data) = rnames
+    # remove insig peaks
+    peak_cutoff = find_sigCounts( data )
+    data_o = data
+    data[ , colSums(data)<peak_cutoff ] = 0
+    data = data[rownames(data)%in%colnames(genotypes_yeast),]
+    to_r = list()
+    to_r$data = data
+    to_r$qtl = clustANDscore(data,genotypes_yeast,distance="cosine")
+    return(to_r)
+  },silent=T)
+  if (class(o) == "try-error") {
+    return(NULL)
+  } else if (is.na(min(o[,2]))) {
+    return(NULL)
+  } else{
+    return(o)
+  }
+})
+close(pb)
+names(clust_qtls) = names(tx_3utr)
+clust_qtls = clust_qtls[!sapply(clust_qtls,is.null)]
+save(clust_qtls,file="./clust_qtl.rda")
+qtl_genes = names(which(sapply(clust_qtls,function(i){min(as.numeric(i$qtl[,2]))})<.05))
+
+```
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE,fig.height=4,fig.width=8}
+gene = qtl_genes[6]
+plotManhattan(clust_qtls[[gene]]$qtl,markers_yeast, gene,trx_annot=tx_3utr,cutoff=2)
+```
+
+```{r, cache=FALSE} 
+peaks = findQTLPeaks(clust_qtls[[gene]]$qtl,markers_yeast)
+
+peak_genotypes = do.call(rbind,lapply(names(peaks),function(i){getGenotypes(i,genotypes_yeast)}))
+rownames(peak_genotypes) = names(peaks)
+
+# test whether QTL looks "real"
+
+# peak to analyze
+x = 1
+
+A = names(which(peak_genotypes[x,] == 1))
+A = intersect( A, rownames(clust_qtls[[gene]]$data) )
+B = names(which(peak_genotypes[x,] == 2))
+B = intersect( B, rownames(clust_qtls[[gene]]$data) )
+
+# correlation
+all_cor = cor(t(clust_qtls[[gene]]$data[c(A,B),]),use="pair",method="pearson")
+in_a = all_cor[A,A]
+in_b = all_cor[B,B]
+out_ab = all_cor[A,B]
+out_ba = all_cor[B,A]
+
+mean(in_a[upper.tri(in_a)],na.rm=T)
+mean(in_b[upper.tri(in_b)],na.rm=T)
+mean(out_ab[upper.tri(out_ab)],na.rm=T)
+mean(out_ba[upper.tri(out_ba)],na.rm=T)
+
+data = clust_qtls[[gene]]$data[which(apply(clust_qtls[[gene]]$data,1,sum)>0,useNames=T),]
+```
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE,fig.height=4,fig.width=8}
+pheatmap(data[c(A,B),],cluster_cols=F,clustering_distance_rows=as.dist(cosineDist(data[c(A,B),])),scale="none",annotation_row=data.frame(rbind(cbind(A,"S"),cbind(B,"Y")),row.names=1))
+```

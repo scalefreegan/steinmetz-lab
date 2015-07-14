@@ -76,7 +76,7 @@ clustANDscore = function(data, genotypes,...) {
   # rownames(data) = new_names[!is.na(new_names)]
   # only keep data with at least one positive value
   # otherwise will bias clustering
-  data = data[which(apply(data,1,sum)>0,useNames=T),]
+  # data = data[which(apply(data,1,sum)>0,useNames=T),]
   # only use data for clustering
   data = data[intersect(colnames(genotypes),rownames(data)),]
   #covariate_clust = cluster(covariates)
