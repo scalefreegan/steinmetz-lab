@@ -73,7 +73,7 @@ close(pb)
 names(clust_qtls) = names(tx_3utr)
 clust_qtls = clust_qtls[!sapply(clust_qtls,is.null)]
 save(clust_qtls,file="./clust_qtl.rda")
-qtl_genes = names(which(sapply(clust_qtls,function(i){min(as.numeric(i$qtl[,2]))})<.05))
+qtl_genes = sort(unlist(sapply(clust_qtls,function(i){min(as.numeric(i$qtl[,2]))})))
 
 ```
 
