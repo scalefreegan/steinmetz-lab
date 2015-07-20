@@ -1,9 +1,7 @@
 # EMBL Project Summary
 ###### Aaron Brooks
 ###### Advisor: Lars Steinmetz, EMBL Heidelberg
-###### 15.07.2015
-
-## Deciphering Causal Pathways That Mediate Genetic Effects on Multiomic Molecular Profiles
+#### Deciphering Causal Pathways That Mediate Genetic Effects on Multiomic Molecular Profiles
 
 *with Chenchen Zhu (EMBL), Nicole Paczia (ICSB), Carole Linster (ICSB), and Oliver Stegle (EMBL-EBI)*
 
@@ -21,4 +19,15 @@ Goals:
 - Place identified QTLs within the context of macromolecular networks to implicate pathways that can be targeted to modify the effect of a QTL
 - Validate several intervention points using targeted allele replacement/deletion (e.g. CRISPR-Cas9)
 
-[View on Github](https://github.com/scalefreegan/steinmetz-lab/blob/master/Docs/general/EMBL_project_summary.md)
+<br>
+
+\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+
+Aaron Brooks (Postdoctoral Fellow)
+
+<br>
+\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+
+Lars Steinmetz (Associate Head of Unit and Senior Scientist)
+
+[View on Github](https://github.com/scalefreegan/steinmetz-lab/blob/master/Docs/general/EMBL_Summary/EMBL_project_summary.md)

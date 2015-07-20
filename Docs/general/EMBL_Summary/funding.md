@@ -14,3 +14,17 @@
 \* DYNAMO is a continuation of FNR Core
 
 \*\* Fellowships include: Human Frontiers Science Program  (HFSP) postdoctoral fellowship, Marie Skłodowska-Curie Individual Fellowship, and EMBO Longterm Fellowship
+
+<br>
+
+\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+
+Aaron Brooks (Postdoctoral Fellow)
+
+<br>
+
+\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+
+Lars Steinmetz (Associate Head of Unit and Senior Scientist)
+
+[View on Github](https://github.com/scalefreegan/steinmetz-lab/blob/master/Docs/general/EMBL_Summary/funding.md)
