@@ -1,4 +1,4 @@
-# EMBL Project Summaries
+# EMBL Project Summary
 ###### Aaron Brooks
 ###### Advisor: Lars Steinmetz, EMBL Heidelberg
 ###### 15.07.2015
