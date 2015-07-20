@@ -1,0 +1,37 @@
+```
+gene = qtl_genes[633]
+
+plotManhattan(clust_qtls[[gene]]$qtl,markers_yeast, gene,trx_annot=tx_3utr,cutoff=2)
+
+peaks = findQTLPeaks(clust_qtls[[gene]]$qtl,markers_yeast)
+
+peak_genotypes = do.call(rbind,lapply(names(peaks),function(i){getGenotypes(i,genotypes_yeast)}))
+rownames(peak_genotypes) = names(peaks)
+
+# test whether QTL looks "real"
+
+# peak to analyze
+x = 1
+
+A = names(which(peak_genotypes[x,] == 1))
+B = names(which(peak_genotypes[x,] == 2))
+
+#data = clust_qtls[[gene]]$data[which(apply(clust_qtls[[gene]]$data,1,sum)>0,useNames=T),]
+data = clust_qtls[[gene]]$data
+A = intersect( A, rownames(data) )
+B = intersect( B, rownames(data) )
+
+# correlation
+all_cor = cor(t(clust_qtls[[gene]]$data[c(A,B),]),use="pair",method="pearson")
+in_a = all_cor[A,A]
+in_b = all_cor[B,B]
+out_ab = all_cor[A,B]
+out_ba = all_cor[B,A]
+
+mean(in_a[upper.tri(in_a)],na.rm=T)
+mean(in_b[upper.tri(in_b)],na.rm=T)
+mean(out_ab[upper.tri(out_ab)],na.rm=T)
+mean(out_ba[upper.tri(out_ba)],na.rm=T)
+
+pheatmap(data[c(A,B),],cluster_cols=F,clustering_distance_rows=as.dist(cosineDist(data[c(A,B),])),scale="none",annotation_row=data.frame(rbind(cbind(A,"S"),cbind(B,"Y")),row.names=1))
+```
