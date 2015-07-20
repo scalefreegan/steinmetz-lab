@@ -3,7 +3,7 @@
 ###### Advisor: Lars Steinmetz, EMBL Heidelberg
 ###### 15.07.2015
 
-## Project 1: Deciphering Causal Pathways That Mediate Genetic Effects on Multiomic Molecular Profiles 
+## Deciphering Causal Pathways That Mediate Genetic Effects on Multiomic Molecular Profiles 
 
 *with Chenchen Zhu (EMBL), Nicole Paczia (ICSB), Carole Linster (ICSB), and Oliver Stegle (EMBL-EBI)* 
 
