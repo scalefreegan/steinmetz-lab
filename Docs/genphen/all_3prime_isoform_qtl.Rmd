@@ -4,9 +4,13 @@ author: "Aaron Brooks"
 date: "July 8, 2015"
 output: html_document
 ---
-*Example doc for detection of 3'-isoform QTLs with clustQTL.*
+*Global detection of 3'-isoform QTLs with clustQTL.*
 
-In this example, I use all 3'-isoform data
+Analysis of all SxY 3'-isoform data from Chenchen using clustQTL
+
+## Preliminaries
+
+Load files and required packages.
 
 ```{r load_packages, include=TRUE}
 library(clustQTL)
@@ -15,12 +19,9 @@ library(ggbio)
 library(pheatmap)
 library( parallel )
 options("mc.cores"=20)
-
 load("/g/steinmetz/project/GenPhen/data/3tagseq/all/mergedCounts.rda")
 load("/g/steinmetz/project/GenPhen/data/3tagseq/counts.rda")
-
 load( "/g/steinmetz/brooks/genphen/qtl_endometabolome_23042015/geno_mrk.RData" )
-
 g = makeGRangesFromDataFrame(tx_3utr,
         seqnames.field=c("seqnames"),
         start.field=c("start"),
@@ -28,8 +29,13 @@ g = makeGRangesFromDataFrame(tx_3utr,
 mcols(g) = tx_3utr[,6:21]
 tx_3utr = g
 names(tx_3utr) = mcols(tx_3utr)$Name
+```
 
-#gene = "YAL041W"
+## Detect QTLs with clustQTL
+
+Here is the code to compute isoforma QTLs. This takes a day or two to run. To save time, I will load directly from file. 
+
+```{r run_analysis, include=TRUE,eval=FALSE}
 pb <- txtProgressBar(min = 0, max = length(names(tx_3utr)), style = 3)
 clust_qtls = lapply(seq(1,length(names(tx_3utr))), function(j) {
   setTxtProgressBar(pb, j)
@@ -72,13 +78,32 @@ clust_qtls = lapply(seq(1,length(names(tx_3utr))), function(j) {
 close(pb)
 names(clust_qtls) = names(tx_3utr)
 clust_qtls = clust_qtls[!sapply(clust_qtls,is.null)]
-save(clust_qtls,file="./clust_qtl.rda")
-qtl_genes = sort(unlist(sapply(clust_qtls,function(i){min(as.numeric(i$qtl[,2]))})))
-
+save(clust_qtls,file="/g/steinmetz/project/GenPhen/data/3tagseq/clust_qtl.rda")
 ```
 
+## Load QTLs from file
+
+Here I just load the QTLs directly from file to save time.
+
+```{r , include=TRUE}
+load("/g/steinmetz/brooks/3prime_Tfill/clust_qtl.rda")
+qtl_genes = sort(unlist(sapply(clust_qtls,function(i){min(as.numeric(i$qtl[,2]))})))
+```
+
+## Summary stats
+
+In the 3' isoform data from Chenchen (SxY) there are among `r qtl_genes < 0.05` at an FDR of 5%. 
+
+The majority, out of are *cis*-QTLs (i.e. within 5kb of the 3'-UTR itself)
+
+## Plot an example gene
+
+As an example, we will look at the QTLs detected for gene.
+
+Manhattan plot of QTLs for `r names(qtl_genes[1])`
+
 ```{r, echo=FALSE,message=FALSE,warning=FALSE,fig.height=4,fig.width=8}
-gene = qtl_genes[6]
+gene = qtl_genes[1]
 plotManhattan(clust_qtls[[gene]]$qtl,markers_yeast, gene,trx_annot=tx_3utr,cutoff=2)
 ```
 
