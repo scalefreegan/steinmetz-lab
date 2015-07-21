@@ -24,9 +24,13 @@ format4manhattan = function( qtls, mrk, nresample = 10000 ) {
 #' @export
 #'
 plotManhattan = function( qtls, mrk, qtl_name = "", trx_annot = NULL,
-                          cutoff = 3, gene_annot_range = c(5000,5000),... ) {
+                          cutoff = 3, gene_annot_range = c(5000,5000), chr = NULL,... ) {
   library(ggbio)
-  mrk2 = format4manhattan( qtls,mrk )
+  if (is.null(rownames(qtls))) {
+    # assume they are in correct order
+    rownames(qtls) = names(mrk)
+  }
+  mrk2 = biovizBase::transformToGenome(format4manhattan( qtls,mrk ),0)
   if ( (qtl_name!="") & ( !is.null(trx_annot) ) ) {
     # annotate gene
     trx_info = trx_annot[ which(trx_annot$Name == qtl_name), ]
@@ -34,13 +38,24 @@ plotManhattan = function( qtls, mrk, qtl_name = "", trx_annot = NULL,
                           ranges=IRanges(start(ranges(trx_info))-gene_annot_range[1],
                                          end(ranges(trx_info))+gene_annot_range[2]))
     names(trx_granges) = qtl_name
-    plotGrandLinear(mrk2, aes(y = p),spaceline = TRUE,cutoff=cutoff,
+    p = plotGrandLinear(mrk2, aes(y = p),spaceline = TRUE,cutoff=cutoff,
                     ylab="-log10(pval)",main=qtl_name,ylim=c(0,4.5),
                     highlight.gr = trx_granges,...)
   } else {
-    plotGrandLinear(mrk2, aes(y = p),spaceline = TRUE,cutoff=cutoff,
+   p = plotGrandLinear(mrk2, aes(y = p),spaceline = TRUE,cutoff=cutoff,
                     ylab="-log10(pval)",main=qtl_name,ylim=c(0,4.5),...)
-  }
 
-  #return(mrk2)
+  }
+  if (!is.null(chr)) {
+    # chr functionality still not working correctly
+    # some problems with chr breaks
+    # only plot a specific chromosme
+    l1 = min(mcols(mrk2[seqnames(mrk)==chr])$.start)
+    l2 = max(mcols(mrk2[seqnames(mrk)==chr])$.end)
+    #print(paste(l1,l2))
+    p = p + xlim(l1,l2)
+  }
+  p = p + theme(axis.text.x=element_text(angle=-45, hjust=0))
+  p
+  return(p)
 }

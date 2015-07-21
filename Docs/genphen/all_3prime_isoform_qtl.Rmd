@@ -18,7 +18,12 @@ library(GenomicRanges)
 library(ggbio)
 library(pheatmap)
 library( parallel )
+library(Peaks)
+library.dynam('Peaks', 'Peaks', lib.loc=NULL) 
 options("mc.cores"=20)
+```
+
+```{r data, cache=TRUE}
 load("/g/steinmetz/project/GenPhen/data/3tagseq/all/mergedCounts.rda")
 load("/g/steinmetz/project/GenPhen/data/3tagseq/counts.rda")
 load( "/g/steinmetz/brooks/genphen/qtl_endometabolome_23042015/geno_mrk.RData" )
@@ -29,11 +34,14 @@ g = makeGRangesFromDataFrame(tx_3utr,
 mcols(g) = tx_3utr[,6:21]
 tx_3utr = g
 names(tx_3utr) = mcols(tx_3utr)$Name
+
+load("/g/steinmetz/brooks/3prime_Tfill/clust_qtl.rda")
+
 ```
 
 ## Detect QTLs with clustQTL
 
-Here is the code to compute isoforma QTLs. This takes a day or two to run. To save time, I will load directly from file. 
+Here is the code to compute isoform QTLs. This takes a day or two to run. To save time, I will load directly from file. 
 
 ```{r run_analysis, include=TRUE,eval=FALSE}
 pb <- txtProgressBar(min = 0, max = length(names(tx_3utr)), style = 3)
@@ -83,29 +91,55 @@ save(clust_qtls,file="/g/steinmetz/project/GenPhen/data/3tagseq/clust_qtl.rda")
 
 ## Load QTLs from file
 
-Here I just load the QTLs directly from file to save time.
+Here I've just load the QTLs directly from file above to save time.
 
 ```{r , include=TRUE}
-load("/g/steinmetz/brooks/3prime_Tfill/clust_qtl.rda")
 qtl_genes = sort(unlist(sapply(clust_qtls,function(i){min(as.numeric(i$qtl[,2]))})))
+
+
+####
+#
+# NEED TO CHECK THIS!!
+#
+####
+peak_counts = mclapply(names(clust_qtls),function(i){
+  p = as.numeric(clust_qtls[[i]]$qtl[,2])
+  locs = which(p>0.05)
+  p = -log10(p)
+  p[locs] = 0
+  peaks = SpectrumSearch(p,sigma=50)
+  cis_regions = try(pintersect(mrk[peaks$pos],tx_3utr[i]+10000))
+  if (class(cis_regions)=="try-error") {
+    cis_regions = 0
+  } else {
+    cis_regions = length(cis_regions)
+  }
+  to_r = list()
+  to_r$npeaks = length(peaks$pos)
+  to_r$ncis = cis_regions
+  return(to_r)
+})
+
 ```
 
 ## Summary stats
 
-In the 3' isoform data from Chenchen (SxY) there are among `r qtl_genes < 0.05` at an FDR of 5%. 
+In the 3' isoform data from Chenchen (SxY) there are `r sum(sapply(peak_counts,function(i){i$npeaks}))` among `r sum(qtl_genes < 0.05)` at an FDR of 5% among `r length(peak_counts)`. 
 
-The majority, out of are *cis*-QTLs (i.e. within 5kb of the 3'-UTR itself)
+Many of these are *cis*-QTLs (`r sum(sapply(peak_counts,function(i){i$ncis}))` out of `r sum(sapply(peak_counts,function(i){i$npeaks}))`: i.e. within 20kb of the 3'-UTR annotation itself).
 
 ## Plot an example gene
 
-As an example, we will look at the QTLs detected for gene.
+As an example, we will look at the QTLs detected for gene `r names(qtl_genes)[1]`, the gene with the most significant 3'-clustQTL.
 
-Manhattan plot of QTLs for `r names(qtl_genes[1])`
+Manhattan plot of QTLs for `r names(qtl_genes)[1]`
 
 ```{r, echo=FALSE,message=FALSE,warning=FALSE,fig.height=4,fig.width=8}
-gene = qtl_genes[1]
+gene = names(qtl_genes)[1]
 plotManhattan(clust_qtls[[gene]]$qtl,markers_yeast, gene,trx_annot=tx_3utr,cutoff=2)
 ```
+
+To explore the QTL in a little more detail, we will at the data itself to see if the QTL makes sense. We will focus on the most significant QTL.
 
 ```{r, cache=FALSE} 
 peaks = findQTLPeaks(clust_qtls[[gene]]$qtl,markers_yeast)
@@ -119,9 +153,8 @@ rownames(peak_genotypes) = names(peaks)
 x = 1
 
 A = names(which(peak_genotypes[x,] == 1))
-A = intersect( A, rownames(clust_qtls[[gene]]$data) )
 B = names(which(peak_genotypes[x,] == 2))
-B = intersect( B, rownames(clust_qtls[[gene]]$data) )
+
 
 # correlation
 all_cor = cor(t(clust_qtls[[gene]]$data[c(A,B),]),use="pair",method="pearson")
@@ -136,8 +169,18 @@ mean(out_ab[upper.tri(out_ab)],na.rm=T)
 mean(out_ba[upper.tri(out_ba)],na.rm=T)
 
 data = clust_qtls[[gene]]$data[which(apply(clust_qtls[[gene]]$data,1,sum)>0,useNames=T),]
+A = intersect( A, rownames(data) )
+B = intersect( B, rownames(data) )
 ```
 
+Heatmap. Side bar shows the allele state at the most significant genetic marker. 
+
 ```{r, echo=FALSE,message=FALSE,warning=FALSE,fig.height=4,fig.width=8}
-pheatmap(data[c(A,B),],cluster_cols=F,clustering_distance_rows=as.dist(cosineDist(data[c(A,B),])),scale="none",annotation_row=data.frame(rbind(cbind(A,"S"),cbind(B,"Y")),row.names=1))
+pheatmap(data[c(A,B),],cluster_cols=F,cluster_rows=F,clustering_distance_rows=as.dist(cosineDist(data[c(A,B),])),scale="none",annotation_row=data.frame(rbind(cbind(A,"S"),cbind(B,"Y")),row.names=1))
+```
+
+And a scaled version to emphasize differences
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE,fig.height=4,fig.width=8}
+pheatmap(data[c(A,B),],cluster_cols=F,cluster_rows=F,clustering_distance_rows=as.dist(cosineDist(data[c(A,B),])),scale="none",annotation_row=data.frame(rbind(cbind(A,"S"),cbind(B,"Y")),row.names=1))
 ```

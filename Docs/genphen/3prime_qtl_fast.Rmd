@@ -33,5 +33,5 @@ mean(in_b[upper.tri(in_b)],na.rm=T)
 mean(out_ab[upper.tri(out_ab)],na.rm=T)
 mean(out_ba[upper.tri(out_ba)],na.rm=T)
 
-pheatmap(data[c(A,B),],cluster_cols=F,clustering_distance_rows=as.dist(cosineDist(data[c(A,B),])),scale="none",annotation_row=data.frame(rbind(cbind(A,"S"),cbind(B,"Y")),row.names=1))
+pheatmap(data[c(A,B),],cluster_cols=F,cluster_rows=F,clustering_distance_rows=as.dist(cosineDist(data[c(A,B),])),scale="none",annotation_row=data.frame(rbind(cbind(A,"S"),cbind(B,"Y")),row.names=1))
 ```
