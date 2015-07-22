@@ -50,7 +50,7 @@ plotManhattan = function( qtls, mrk, main = "", trx_annot = NULL,
   mrk2 = biovizBase::transformToGenome(format4manhattan( qtls,mrk ),0)
   if ( (qtl_name!="") & ( !is.null(trx_annot) ) ) {
     # annotate gene
-    trx_info = trx_annot[ which(trx_annot$Name == qtl_name), ]
+    trx_info = trx_annot[ which(trx_annot$Name == main), ]
     trx_granges = GRanges(seqnames=seqnames(trx_info),
                           ranges=IRanges(start(ranges(trx_info))-gene_annot_range[1],
                                          end(ranges(trx_info))+gene_annot_range[2]))
