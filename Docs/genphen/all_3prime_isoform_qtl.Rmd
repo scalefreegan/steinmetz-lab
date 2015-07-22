@@ -6,7 +6,7 @@ output: html_document
 ---
 *Global detection of 3'-isoform QTLs with clustQTL.*
 
-Analysis of all SxY 3'-isoform data from Chenchen using clustQTL
+Analysis of all S288CxYJM (SxY) 3'-isoform data from Chenchen using clustQTL
 
 ## Preliminaries
 
@@ -27,6 +27,7 @@ options("mc.cores"=20)
 load("/g/steinmetz/project/GenPhen/data/3tagseq/all/mergedCounts.rda")
 load("/g/steinmetz/project/GenPhen/data/3tagseq/counts.rda")
 load( "/g/steinmetz/brooks/genphen/qtl_endometabolome_23042015/geno_mrk.RData" )
+load("/g/steinmetz/brooks/3prime_Tfill/clust_qtl.rda")
 g = makeGRangesFromDataFrame(tx_3utr,
         seqnames.field=c("seqnames"),
         start.field=c("start"),
@@ -34,9 +35,6 @@ g = makeGRangesFromDataFrame(tx_3utr,
 mcols(g) = tx_3utr[,6:21]
 tx_3utr = g
 names(tx_3utr) = mcols(tx_3utr)$Name
-
-load("/g/steinmetz/brooks/3prime_Tfill/clust_qtl.rda")
-
 ```
 
 ## Detect QTLs with clustQTL
@@ -108,38 +106,39 @@ peak_counts = mclapply(names(clust_qtls),function(i){
   p = -log10(p)
   p[locs] = 0
   peaks = SpectrumSearch(p,sigma=50)
-  cis_regions = try(pintersect(mrk[peaks$pos],tx_3utr[i]+10000))
-  if (class(cis_regions)=="try-error") {
-    cis_regions = 0
+  cis_regions = names(subsetByOverlaps(mrk,tx_3utr[i]+10000))
+  cis_vals = peaks$y[which(names(mrk)%in%cis_regions)]
+  if (sum(cis_vals>0)>0) {
+    # at least one mrk near gene is sig
+    cis_regions = TRUE
   } else {
-    cis_regions = length(cis_regions)
+    cis_regions = FALSE
   }
   to_r = list()
   to_r$npeaks = length(peaks$pos)
   to_r$ncis = cis_regions
   return(to_r)
 })
-
 ```
 
 ## Summary stats
 
 In the 3' isoform data from Chenchen (SxY) there are `r sum(sapply(peak_counts,function(i){i$npeaks}))` among `r sum(qtl_genes < 0.05)` at an FDR of 5% among `r length(peak_counts)`. 
 
-Many of these are *cis*-QTLs (`r sum(sapply(peak_counts,function(i){i$ncis}))` out of `r sum(sapply(peak_counts,function(i){i$npeaks}))`: i.e. within 20kb of the 3'-UTR annotation itself).
+Many of these are *cis*-QTLs (`r sum(sapply(peak_counts,function(i){i$ncis}))` out of `r sum(sapply(peak_counts,function(i){i$npeaks}))`: i.e. a signifcant QTL within 10kb of the 3'-UTR annotation itself).
 
 ## Plot an example gene
 
 As an example, we will look at the QTLs detected for gene `r names(qtl_genes)[1]`, the gene with the most significant 3'-clustQTL.
 
-Manhattan plot of QTLs for `r names(qtl_genes)[1]`
+Below is Manhattan plot of QTLs for `r names(qtl_genes)[1]` across the entire genome.
 
 ```{r, echo=FALSE,message=FALSE,warning=FALSE,fig.height=4,fig.width=8}
 gene = names(qtl_genes)[1]
 plotManhattan(clust_qtls[[gene]]$qtl,markers_yeast, gene,trx_annot=tx_3utr,cutoff=2)
 ```
 
-To explore the QTL in a little more detail, we will at the data itself to see if the QTL makes sense. We will focus on the most significant QTL.
+To explore the QTL in a little more detail, we inspect the data itself to confirm that the QTL prediction is plausible in context of the raw data. We will focus on the most significant QTL peak.
 
 ```{r, cache=FALSE} 
 peaks = findQTLPeaks(clust_qtls[[gene]]$qtl,markers_yeast)
@@ -154,32 +153,39 @@ x = 1
 
 A = names(which(peak_genotypes[x,] == 1))
 B = names(which(peak_genotypes[x,] == 2))
+```
 
+First, we expect that if we split the data by genotype at the QTL locus, there should be an increase in correlation between 3'-UTR profiles within the genotypes compared to across the genotypes.
 
+Below I report peason correlation. 
+
+```{r, cache=FALSE} 
 # correlation
 all_cor = cor(t(clust_qtls[[gene]]$data[c(A,B),]),use="pair",method="pearson")
 in_a = all_cor[A,A]
 in_b = all_cor[B,B]
 out_ab = all_cor[A,B]
 out_ba = all_cor[B,A]
+```
+Within Genotype 1: `r mean(in_a[upper.tri(in_a)],na.rm=T)`
+Within Genotype 2: `r mean(in_b[upper.tri(in_b)],na.rm=T)`
+Between 1-2:`mean(out_ab[upper.tri(out_ab)],na.rm=T)`
+Between 2-1:`mean(out_ba[upper.tri(out_ba)],na.rm=T)`
 
-mean(in_a[upper.tri(in_a)],na.rm=T)
-mean(in_b[upper.tri(in_b)],na.rm=T)
-mean(out_ab[upper.tri(out_ab)],na.rm=T)
-mean(out_ba[upper.tri(out_ba)],na.rm=T)
+As expected, correlation is higher within the genotype groups than between them. 
 
+Second, we visualize the 3'-UTR profiles as a heatmap. The side bar shows the allele state at the most significant genetic marker. 
+
+In this example it is clear that there is a difference in the 3'-UTR profiles given genotype. Profiles for genotypes with the Y allele are missing prominent peaks in the profiles of this gene with the Y allele. 
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE,fig.height=4,fig.width=8}
 data = clust_qtls[[gene]]$data[which(apply(clust_qtls[[gene]]$data,1,sum)>0,useNames=T),]
 A = intersect( A, rownames(data) )
 B = intersect( B, rownames(data) )
-```
-
-Heatmap. Side bar shows the allele state at the most significant genetic marker. 
-
-```{r, echo=FALSE,message=FALSE,warning=FALSE,fig.height=4,fig.width=8}
 pheatmap(data[c(A,B),],cluster_cols=F,cluster_rows=F,clustering_distance_rows=as.dist(cosineDist(data[c(A,B),])),scale="none",annotation_row=data.frame(rbind(cbind(A,"S"),cbind(B,"Y")),row.names=1))
 ```
 
-And a scaled version to emphasize differences
+Here I include a scaled version to emphasize differences and demonstrate that the phenomenon is not a result of different expression levels (e.g., an eQTL).
 
 ```{r, echo=FALSE,message=FALSE,warning=FALSE,fig.height=4,fig.width=8}
 pheatmap(data[c(A,B),],cluster_cols=F,cluster_rows=F,clustering_distance_rows=as.dist(cosineDist(data[c(A,B),])),scale="none",annotation_row=data.frame(rbind(cbind(A,"S"),cbind(B,"Y")),row.names=1))
