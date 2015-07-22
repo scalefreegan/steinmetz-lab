@@ -23,7 +23,7 @@ library.dynam('Peaks', 'Peaks', lib.loc=NULL)
 options("mc.cores"=20)
 ```
 
-```{r data, cache=TRUE}
+```{r data, cache=FALSE}
 load("/g/steinmetz/project/GenPhen/data/3tagseq/all/mergedCounts.rda")
 load("/g/steinmetz/project/GenPhen/data/3tagseq/counts.rda")
 load( "/g/steinmetz/brooks/genphen/qtl_endometabolome_23042015/geno_mrk.RData" )
