@@ -16,7 +16,7 @@
 #' format4manhattan()
 #' @export
 #'
-_format4manhattan = function(qtls, mrk) {
+format4manhattan = function(qtls, mrk) {
   mrk$p = -log10(qtls[,"pval"])
   return(mrk)
 }
@@ -47,7 +47,7 @@ plotManhattan = function( qtls, mrk, main = "", trx_annot = NULL,
     # assume they are in correct order
     rownames(qtls) = names(mrk)
   }
-  mrk2 = biovizBase::transformToGenome(_format4manhattan( qtls,mrk ),0)
+  mrk2 = biovizBase::transformToGenome(format4manhattan( qtls,mrk ),0)
   if ( (qtl_name!="") & ( !is.null(trx_annot) ) ) {
     # annotate gene
     trx_info = trx_annot[ which(trx_annot$Name == qtl_name), ]
