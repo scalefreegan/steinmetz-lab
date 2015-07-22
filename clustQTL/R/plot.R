@@ -48,7 +48,7 @@ plotManhattan = function( qtls, mrk, main = "", trx_annot = NULL,
     rownames(qtls) = names(mrk)
   }
   mrk2 = biovizBase::transformToGenome(format4manhattan( qtls,mrk ),0)
-  if ( (qtl_name!="") & ( !is.null(trx_annot) ) ) {
+  if ( (main!="") & ( !is.null(trx_annot) ) ) {
     # annotate gene
     trx_info = trx_annot[ which(trx_annot$Name == main), ]
     trx_granges = GRanges(seqnames=seqnames(trx_info),

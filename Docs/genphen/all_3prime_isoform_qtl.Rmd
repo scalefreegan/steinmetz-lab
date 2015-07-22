@@ -174,6 +174,11 @@ Between 2-1:`mean(out_ba[upper.tri(out_ba)],na.rm=T)`
 
 As expected, correlation is higher within the genotype groups than between them. 
 
+Genome-wide, for every QTL the correlations within a genotype have a similar pattern (higher within than between):
+
+```{r, cache=FALSE} 
+```
+
 Second, we visualize the 3'-UTR profiles as a heatmap. The side bar shows the allele state at the most significant genetic marker. 
 
 In this example it is clear that there is a difference in the 3'-UTR profiles given genotype. Profiles for genotypes with the Y allele are missing prominent peaks in the profiles of this gene with the Y allele. 
