@@ -92,7 +92,7 @@ save(clust_qtls,file="/g/steinmetz/project/GenPhen/data/3tagseq/clust_qtl.rda")
 
 Here I've just load the QTLs directly from file above to save time.
 
-```{r, qtlpeaks include=TRUE}
+```{r, qtlpeaks, include=TRUE}
 qtl_genes = sort(unlist(sapply(clust_qtls,function(i){min(as.numeric(i$qtl[,2]))})))
 
 peak_counts_05 = mclapply(names(clust_qtls),function(i){
