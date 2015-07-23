@@ -65,3 +65,26 @@ plotManhattan = function( qtls, mrk, main = "", trx_annot = NULL,
   }
   p + theme(axis.text.x=element_text(angle=-45, hjust=0))
 }
+
+#' Plot peak profiles
+#'
+#' The function \code{\link{cluster}}
+#'
+#' @param qtls A two column matrix with each row containing a pvalue for
+#'  every marker in \code{mrk}
+#' @param mrk A Granges object containing the location of every genetic marker
+#'  tested by clustQTL
+#' @param main String used for plot title
+#' @param trx_annot GRanges. \code{main} show
+#' @param cutoff -log10(pval) signficance cutoff value for QTLs. Used to draw
+#'  horizontal line across plot
+#' @param gene_annot_range
+#' @param cutoff
+#' @return plot
+#' @examples
+#' plotManhattan()
+#' @export
+#'
+plotPeakProfile = function() {
+
+}
