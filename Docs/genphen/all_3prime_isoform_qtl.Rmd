@@ -12,7 +12,7 @@ Analysis of all S288CxYJM (SxY) 3'-isoform data from Chenchen using clustQTL
 
 Load files and required packages.
 
-```{r load_packages, include=TRUE}
+```{r load_packages, include=FALSE,echo=FALSE}
 library(clustQTL)
 library(GenomicRanges)
 library(ggbio)
@@ -24,7 +24,7 @@ library.dynam('Peaks', 'Peaks', lib.loc=NULL)
 library(dplyr)
 ```
 
-```{r data, cache=FALSE}
+```{r data, cache=FALSE,include=FALSE,echo=FALSE}
 load("/g/steinmetz/project/GenPhen/data/3tagseq/all/mergedCounts.rda")
 load("/g/steinmetz/project/GenPhen/data/3tagseq/counts.rda")
 load( "/g/steinmetz/brooks/genphen/qtl_endometabolome_23042015/geno_mrk.RData" )
@@ -92,7 +92,7 @@ save(clust_qtls,file="/g/steinmetz/project/GenPhen/data/3tagseq/clust_qtl.rda")
 
 Here I've just load the QTLs directly from file above to save time.
 
-```{r, qtlpeaks, include=TRUE}
+```{r, qtlpeaks, include=TRUE, include=FALSE,echo=FALSE}
 qtl_genes = sort(unlist(sapply(clust_qtls,function(i){min(as.numeric(i$qtl[,2]))})))
 
 peak_counts_05 = mclapply(names(clust_qtls),function(i){
@@ -130,9 +130,9 @@ names(peak_counts_01) = names(clust_qtls)
 
 ## Summary stats
 
-In the 3' isoform data from Chenchen (SxY) there are `r sum(do.call(c,lapply(peak_counts_05,function(i){i$npeaks})))` QTLs among `r sum(qtl_genes < 0.05)` at an FDR of 5% among `r length(peak_counts_05)` total genes. At FDR of 1% there are `r sum(do.call(c,lapply(peak_counts_01,function(i){i$npeaks})))`
+In the 3' isoform data from Chenchen (SxY) there are `r sum(do.call(c,lapply(peak_counts_05,function(i){i$npeaks})))` QTLs among `r sum(qtl_genes < 0.05)` genes at an FDR of 5% among `r length(peak_counts_05)` total genes. At FDR of 1% there are marginally fewer, `r sum(do.call(c,lapply(peak_counts_01,function(i){i$npeaks})))`.
 
-Many of these are *cis*-QTLs. At FDR 5%, `r sum(do.call(c,lapply(peak_counts_05,function(i){i$cis})))` out of `r sum(do.call(c,lapply(peak_counts_05,function(i){i$npeaks})))` are *cis* (i.e. a signifcant QTL within 10kb of the 3'-UTR annotation itself) while at FDR 1% `r sum(do.call(c,lapply(peak_counts_01,function(i){i$cis})))` out of `r sum(do.call(c,lapply(peak_counts_01,function(i){i$npeaks})))`are *cis*
+Many of these are *cis*-QTLs. At FDR 5%, `r sum(do.call(c,lapply(peak_counts_05,function(i){i$cis})))` out of `r sum(do.call(c,lapply(peak_counts_05,function(i){i$npeaks})))` are *cis* (i.e. a signifcant QTL within 10kb of the 3'-UTR annotation itself) while at FDR 1%, `r sum(do.call(c,lapply(peak_counts_01,function(i){i$cis})))` out of `r sum(do.call(c,lapply(peak_counts_01,function(i){i$npeaks})))` are *cis*.
 
 ## Plot genome-wide QTLs for an example gene
 
@@ -141,7 +141,7 @@ As an example, we will look at the QTLs detected for gene `r names(qtl_genes)[1]
 Below is Manhattan plot of QTLs for `r names(qtl_genes)[1]` across the entire genome.
 
 ```{r, manhattan, echo=FALSE,message=FALSE,warning=FALSE,fig.height=4,fig.width=8}
-gene = names(qtl_genes)[3]
+gene = names(qtl_genes)[1]
 plotManhattan(clust_qtls[[gene]]$qtl,mrk, gene,trx_annot=tx_3utr,cutoff=c(-log10(0.05),-log10(0.01)),cutoff.size=c(1,.25))
 ```
 
@@ -149,7 +149,7 @@ plotManhattan(clust_qtls[[gene]]$qtl,mrk, gene,trx_annot=tx_3utr,cutoff=c(-log10
 
 To explore the QTL in a little more detail, we inspect the data itself to confirm that the QTL prediction is plausible in context of the raw data. We will focus on the most significant QTL peak.
 
-```{r, corr_one, cache=FALSE} 
+```{r, corr_one, cache=FALSE,include=FALSE,echo=FALSE} 
 peaks = findQTLPeaks(clust_qtls[[gene]]$qtl, mrk, pcutoff = .01, peak_sigma = 25, peak_threshold=1)
 
 peak_genotypes = do.call(rbind,lapply(names(peaks),function(i){getGenotypes(i,geno)}))
@@ -170,7 +170,7 @@ First, we expect that if we split the data by genotype at the QTL locus, there s
 
 Below I report peason correlation. 
 
-```{r, corr_one_2, cache=FALSE} 
+```{r, corr_one_2, cache=FALSE,include=FALSE,echo=FALSE} 
 # correlation
 data = clust_qtls[[gene]]$data[which(apply(clust_qtls[[gene]]$data,1,sum)>0,useNames=T),]
 A = intersect( A, rownames(data) )
@@ -190,7 +190,7 @@ As expected, correlation is higher within the genotype groups than between them.
 
 Genome-wide, for every QTL the correlations within a genotype have a similar pattern (higher within than between):
 
-```{r, all_corr, cache=FALSE} 
+```{r, all_corr, cache=FALSE,include=FALSE,echo=FALSE} 
 all_qtl_cor = do.call(rbind,mclapply(names(qtl_genes),function(i){
   #print(i)
   to_r = data.frame()
@@ -252,5 +252,5 @@ pheatmap(data[c(A,B),],cluster_cols=F,cluster_rows=F,clustering_distance_rows=as
 Here I include a scaled version to emphasize differences and demonstrate that the phenomenon is not a result of different expression levels (e.g., an eQTL).
 
 ```{r, echo=FALSE,message=FALSE,warning=FALSE,fig.height=4,fig.width=8}
-pheatmap(data[c(A,B),],cluster_cols=F,cluster_rows=F,clustering_distance_rows=as.dist(cosineDist(data[c(A,B),])),scale="none",annotation_row=data.frame(rbind(cbind(A,"S"),cbind(B,"Y")),row.names=1))
+pheatmap(data[c(A,B),],cluster_cols = F,cluster_rows = F,clustering_distance_rows = as.dist(cosineDist(data[c(A,B),])),scale = "row",annotation_row = data.frame(rbind(cbind(A,"S"), cbind(B,"Y")), row.names=1))
 ```
