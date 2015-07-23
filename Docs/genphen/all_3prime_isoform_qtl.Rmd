@@ -181,10 +181,10 @@ in_b = all_cor[B,B][upper.tri(all_cor[B,B])]
 out_ab = all_cor[A,B][upper.tri(all_cor[A,B])]
 out_ba = all_cor[B,A][upper.tri(all_cor[B,A])]
 ```
-Within Genotype 1: `r mean(in_a,na.rm=T)`
-Within Genotype 2: `r mean(in_b,na.rm=T)`
-Between 1-2:`mean(out_ab,na.rm=T)`
-Between 2-1:`mean(out_ba,na.rm=T)`
+-Within Genotype 1: `r mean(in_a,na.rm=T)`
+-Within Genotype 2: `r mean(in_b,na.rm=T)`
+-Between 1-2:`r mean(out_ab,na.rm=T)`
+-Between 2-1:`r mean(out_ba,na.rm=T)`
 
 As expected, correlation is higher within the genotype groups than between them. 
 
