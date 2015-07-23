@@ -92,7 +92,7 @@ save(clust_qtls,file="/g/steinmetz/project/GenPhen/data/3tagseq/clust_qtl.rda")
 
 Here I've just load the QTLs directly from file above to save time.
 
-```{r , include=TRUE}
+```{r, qtlpeaks include=TRUE}
 qtl_genes = sort(unlist(sapply(clust_qtls,function(i){min(as.numeric(i$qtl[,2]))})))
 
 peak_counts_05 = mclapply(names(clust_qtls),function(i){
@@ -134,7 +134,7 @@ In the 3' isoform data from Chenchen (SxY) there are `r sum(do.call(c,lapply(pea
 
 Many of these are *cis*-QTLs. At FDR 5%, `r sum(do.call(c,lapply(peak_counts_05,function(i){i$cis})))` out of `r sum(do.call(c,lapply(peak_counts_05,function(i){i$npeaks})))` are *cis* (i.e. a signifcant QTL within 10kb of the 3'-UTR annotation itself) while at FDR 1% `r sum(do.call(c,lapply(peak_counts_01,function(i){i$cis})))` out of `r sum(do.call(c,lapply(peak_counts_01,function(i){i$npeaks})))`are *cis*
 
-## Plot an example gene
+## Plot genome-wide QTLs for an example gene
 
 As an example, we will look at the QTLs detected for gene `r names(qtl_genes)[1]`, the gene with the most significant 3'-clustQTL.
 
@@ -144,6 +144,8 @@ Below is Manhattan plot of QTLs for `r names(qtl_genes)[1]` across the entire ge
 gene = names(qtl_genes)[3]
 plotManhattan(clust_qtls[[gene]]$qtl,mrk, gene,trx_annot=tx_3utr,cutoff=c(-log10(0.05),-log10(0.01)),cutoff.size=c(1,.25))
 ```
+
+## QTL Inspection
 
 To explore the QTL in a little more detail, we inspect the data itself to confirm that the QTL prediction is plausible in context of the raw data. We will focus on the most significant QTL peak.
 
@@ -161,6 +163,8 @@ x = 1
 A = names(which(peak_genotypes[x,] == 1))
 B = names(which(peak_genotypes[x,] == 2))
 ```
+
+### In-group vs. Out-group correlation
 
 First, we expect that if we split the data by genotype at the QTL locus, there should be an increase in correlation between 3'-UTR profiles within the genotypes compared to across the genotypes.
 
@@ -218,7 +222,23 @@ all_qtl_cor = do.call(rbind,mclapply(names(qtl_genes),function(i){
 }))
 
 inVout = t.test(all_qtl_cor[all_qtl_cor$type=="in","value"],all_qtl_cor[all_qtl_cor$type=="out","value"])
+t_p = inVout$p.value
+if (p.value==0) {
+  t_p = "< 2.2e-16"
+}
 ```
+
+One-sided Welch two sample t-test soundly rejects null hypothesis at p-val = `r t_p`.
+
+This is clear in boxplot of all pairwise correlations in and between genotypes at a QTL
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE,fig.height=4,fig.width=8}
+p <- ggplot(all_qtl_cor, aes(type, value, fill = value))
+p + geom_boxplot()
+
+```
+
+
 
 Second, we visualize the 3'-UTR profiles as a heatmap. The side bar shows the allele state at the most significant genetic marker. 
 
