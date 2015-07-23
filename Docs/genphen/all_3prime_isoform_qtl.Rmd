@@ -223,7 +223,7 @@ all_qtl_cor = do.call(rbind,mclapply(names(qtl_genes),function(i){
 all_qtl_cor$type = factor(all_qtl_cor$type,levels=c("within","between"))
 inVout = t.test(all_qtl_cor[all_qtl_cor$type=="within","value"],all_qtl_cor[all_qtl_cor$type=="between","value"])
 t_p = inVout$p.value
-if (p.value==0) {
+if (t_p==0) {
   t_p = "< 2.2e-16"
 }
 ```
