@@ -41,13 +41,13 @@ format4manhattan = function(qtls, mrk) {
 #' @export
 #'
 plotManhattan = function( qtls, mrk, main = "", trx_annot = NULL,
-                          cutoff = 3, gene_annot_range = c(5000,5000), chr = NULL,... ) {
+                          cutoff = 3, gene_annot_range = c(1000,1000),... ) {
   library(ggbio)
   if (is.null(rownames(qtls))) {
     # assume they are in correct order
     rownames(qtls) = names(mrk)
   }
-  mrk2 = biovizBase::transformToGenome(format4manhattan( qtls,mrk ),0)
+  mrk2 = format4manhattan( qtls,mrk )
   if ( (main!="") & ( !is.null(trx_annot) ) ) {
     # annotate gene
     trx_info = trx_annot[ which(trx_annot$Name == main), ]
@@ -56,23 +56,12 @@ plotManhattan = function( qtls, mrk, main = "", trx_annot = NULL,
                                          end(ranges(trx_info))+gene_annot_range[2]))
     names(trx_granges) = main
     p = plotGrandLinear(mrk2, aes(y = p),spaceline = TRUE,cutoff=cutoff,
-                    ylab="-log10(pval)",main=main,ylim=c(0,4.5),
+                    ylab="-log10(pval)",main=main,
                     highlight.gr = trx_granges,...)
   } else {
    p = plotGrandLinear(mrk2, aes(y = p),spaceline = TRUE,cutoff=cutoff,
-                    ylab="-log10(pval)",main=maine,ylim=c(0,4.5),...)
+                    ylab="-log10(pval)",main=main,...)
 
   }
-  if (!is.null(chr)) {
-    # chr functionality still not working correctly
-    # some problems with chr breaks so it plots incorrect region
-    # only plot a specific chromosme
-    l1 = min(mcols(mrk2[seqnames(mrk)==chr])$.start)
-    l2 = max(mcols(mrk2[seqnames(mrk)==chr])$.end)
-    #print(paste(l1,l2))
-    p = p + xlim(l1,l2)
-  }
-  p = p + theme(axis.text.x=element_text(angle=-45, hjust=0))
-  p
-  return(p)
+  p + theme(axis.text.x=element_text(angle=-45, hjust=0))
 }

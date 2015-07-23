@@ -8,26 +8,37 @@
 #' findQTLPeaks()
 #' @export
 #'
-findQTLPeaks = function( qtls, mrk, cutoff = 3 ) {
-  # find top two peaks
-  mrk2 = format4manhattan( qtls, mrk )
-  candidates = which( mrk2$p>cutoff)
-  ind = 1
-  final_candidates = cbind(candidates[ind],mrk2$p[candidates[ind]])
-  ind = ind + 1
-  while (ind<=length(candidates)) {
-    if (diff(candidates)[ind-1]<10) {
-      # single peak
-      # only replace val if higher
-      if ( mrk2$p[candidates[ind]] > final_candidates[ dim(final_candidates)[1],2] ) {
-        final_candidates[ dim(final_candidates)[1],] = cbind(candidates[ind],mrk2$p[candidates[ind]])
-      }
-    } else {
-      final_candidates = rbind(final_candidates,cbind(candidates[ind],mrk2$p[candidates[ind]]))
+findQTLPeaks = function(qtls, mrk, pcutoff = .05, peak_sigma = 25, peak_threshold=1,...) {
+  # find peaks
+  library(Peaks)
+  library.dynam('Peaks', 'Peaks', lib.loc=NULL)
+  p = as.numeric(qtls[,"pval"])
+  locs = c(which(p>pcutoff),which(is.na(p)))
+  p = -log10(p)
+  p[locs] = 0
+  names(p) = names(mrk)
+  mrk2 = mrk
+  mrk2$p = p
+  peaks = SpectrumSearch(mcols(mrk2)$p,sigma=peak_sigma,threshold=peak_threshold)
+  # peaks does not actually find QTL peak
+  # to find this look for the QTL in a region
+  # of peak with highest -log10 pval
+  # this is actual "QTL" location
+  actual_peaks = unlist(lapply(peaks$pos,function(i){
+    i1 = i-peak_sigma*2
+    if (i1<1) {
+      i1 = 1
     }
-    ind = ind + 1
-  }
-  to_r = mrk2[paste("mrk",final_candidates[,1],sep="_"),]
+    i2 = i+peak_sigma*2
+    if (i2>length(p)) {
+      i2 = length(p)
+    }
+    qtls_range = p[i1:i2]
+    o = names(which(qtls_range==max(qtls_range)))
+    o = o[median(seq(1,length(o)))]
+    return(o)
+  }))
+  to_r = mrk2[actual_peaks]
   return(to_r)
 }
 
