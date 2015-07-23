@@ -130,7 +130,7 @@ names(peak_counts_01) = names(clust_qtls)
 
 ## Summary stats
 
-In the 3' isoform data from Chenchen (SxY) there are `r sum(do.call(c,lapply(peak_counts_05,function(i){i$npeaks})))` QTLs among `r sum(qtl_genes < 0.05)` at an FDR of 5% among `r length(peak_counts)` total genes. At FDR of 1% there are `r sum(do.call(c,lapply(peak_counts_01,function(i){i$npeaks})))`
+In the 3' isoform data from Chenchen (SxY) there are `r sum(do.call(c,lapply(peak_counts_05,function(i){i$npeaks})))` QTLs among `r sum(qtl_genes < 0.05)` at an FDR of 5% among `r length(peak_counts_05)` total genes. At FDR of 1% there are `r sum(do.call(c,lapply(peak_counts_01,function(i){i$npeaks})))`
 
 Many of these are *cis*-QTLs. At FDR 5%, `r sum(do.call(c,lapply(peak_counts_05,function(i){i$cis})))` out of `r sum(do.call(c,lapply(peak_counts_05,function(i){i$npeaks})))` are *cis* (i.e. a signifcant QTL within 10kb of the 3'-UTR annotation itself) while at FDR 1% `r sum(do.call(c,lapply(peak_counts_01,function(i){i$cis})))` out of `r sum(do.call(c,lapply(peak_counts_01,function(i){i$npeaks})))`are *cis*
 
