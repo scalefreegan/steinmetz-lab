@@ -72,19 +72,18 @@ plotManhattan = function( qtls, mrk, main = "", trx_annot = NULL,
 #'
 #' @param qtls A two column matrix with each row containing a pvalue for
 #'  every marker in \code{mrk}
-#' @param mrk A Granges object containing the location of every genetic marker
-#'  tested by clustQTL
-#' @param main String used for plot title
-#' @param trx_annot GRanges. \code{main} show
-#' @param cutoff -log10(pval) signficance cutoff value for QTLs. Used to draw
-#'  horizontal line across plot
-#' @param gene_annot_range
-#' @param cutoff
 #' @return plot
 #' @examples
 #' plotManhattan()
 #' @export
 #'
-plotPeakProfile = function() {
-
+plotPeakProfile = function(data,genotypes,mrk) {
+  library(reshape2)
+  data_long = melt(data)
+  data_long$genotype = genotypes[mrk,][levels(data_long$Var1)[data_long$Var1]]
+  # remove 0 values
+  #data_long = data_long[data_long$value!=0,]
+  #data_long[data_long$value==0,]$value = NA
+  p <- ggplot(data_long %>% group_by(genotype), aes(y=value,x=Var2)) +
+    facet_wrap(~genotype,nrow = 2)+geom_bin2d(binwidth = c(1, 1))
 }
