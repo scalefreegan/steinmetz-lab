@@ -16,10 +16,10 @@ shinyServer(function(input, output) {
   output$qtlPlot <- renderPlot({
     
     # generate bins based on input$bins from ui.R
-    data <- clust_qtl[[input$gene]]$data
+    data <- clust_qtls[[input$gene]]$data
 
     # find peaks
-    peaks = findQTLPeaks(clust_qtl[[input$gene]]$qtl, markers_yeast, 
+    peaks = findQTLPeaks(clust_qtsl[[input$gene]]$qtl, markers_yeast, 
                          pcutoff = .01, peak_sigma = 25, peak_threshold=1)
     
     # draw the qtl peak profile
