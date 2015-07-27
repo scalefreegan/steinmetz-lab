@@ -66,6 +66,53 @@ plotManhattan = function( qtls, mrk, main = "", trx_annot = NULL,
   p + theme(axis.text.x=element_text(angle=-45, hjust=0))
 }
 
+# Multiple plot function
+#
+# ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+# - cols:   Number of columns in layout
+# - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+#
+# If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+# then plot 1 will go in the upper left, 2 will go in the upper right, and
+# 3 will go all the way across the bottom.
+#
+# from: http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+
+  numPlots = length(plots)
+
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                     ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+
+  if (numPlots==1) {
+    print(plots[[1]])
+
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+
 #' Plot peak profiles
 #'
 #' The function \code{\link{cluster}}
@@ -77,13 +124,64 @@ plotManhattan = function( qtls, mrk, main = "", trx_annot = NULL,
 #' plotManhattan()
 #' @export
 #'
-plotPeakProfile = function(data,genotypes,mrk) {
+plotPeakProfile = function(data, genotypes, marker, peak_sigma = 2, peak_threshold = 1) {
   library(reshape2)
-  data_long = melt(data)
-  data_long$genotype = genotypes[mrk,][levels(data_long$Var1)[data_long$Var1]]
+  library(Peaks)
+  library.dynam('Peaks', 'Peaks', lib.loc=NULL)
+  library(gtable)
+  library(gridExtra)
+  library(grid)
+  data_mod = t(apply(data,1,function(i){SpectrumSearch(i,sigma=peak_sigma,threshold=peak_threshold)$y}))
+  #data_mod = t(apply(data_mod,1,function(i){i/sum(i)}))
+  colnames(data_mod) = colnames(data)
+  data_long = melt(data, varnames=c("y","x"))
+  data_long$genotype = genotypes[marker,][levels(data_long$y)[data_long$y]]
+  data_long$panel = "B"
+  colnames(data_long) = c("value","x","y","genotype","panel")
+  g1 = data_long %>% filter(genotype==1)
+  g2 = data_long %>% filter(genotype==2)
+  s2n = c(seq(1,length(unique(levels(g1$value)[g1$value]))),seq(1,length(unique(levels(g1$value)[g2$value]))))
+  names(s2n) = c(unique(levels(g1$value)[g1$value]),unique(levels(g2$value)[g2$value]))
+  data_long$value = s2n[levels(data_long$value)[data_long$value]]
+  data_long_mod = melt(data_mod, varnames=c("y","x"))
+  data_long_mod$genotype = genotypes[marker,][levels(data_long_mod$y)[data_long_mod$y]]
+  data_long_mod$panel = "A"
+  data_long_mod$y = s2n[levels(data_long_mod$y)[data_long_mod$y]]
+  d = rbind(data_long,data_long_mod)
   # remove 0 values
-  #data_long = data_long[data_long$value!=0,]
-  #data_long[data_long$value==0,]$value = NA
-  p <- ggplot(data_long %>% group_by(genotype), aes(y=value,x=Var2)) +
-    facet_wrap(~genotype,nrow = 2)+geom_bin2d(binwidth = c(1, 1))
+  # data_long = data_long[data_long$value!=0,]
+  # data_long[data_long$value==0,]$value = NA
+
+  panelAylim = max(data_long_mod %>% filter(genotype==1) %>% group_by(genotype,x) %>% summarise(sum=sum(value)) %>% select(sum))
+  p1 <- ggplot() +
+    facet_grid(panel~.,scale="free_y",labeller=function(x,y){return("")}) +
+    stat_summary(data=data_long_mod %>% filter(genotype==1), mapping=aes(y=value,x=x),geom="area",fun.y=sum) +
+    #scale_y_continuous(limits=c(0, panelAylim)) +
+   # geom_line(data=data_long_mod %>% filter(genotype==1), mapping=aes(y=value,x=x),stat="mean") +
+    geom_tile(data = data_long %>% filter(genotype==1), mapping=aes(y = value,x = x,fill = y)) +
+    scale_fill_gradient(low="black", high="white", guide = F, limits=c(0, max(data_long$y))) +
+    labs(x = "Position", y = "Sum Counts")
+  gt1 <- ggplot_gtable(ggplot_build(p1))
+  gt1$heights[[3]] <- unit(.25, "null")
+  gt1$grobs[[3]]$children[2]$axis$grobs[[1]]$label = ""
+  gt1$grobs[[10]]$hjust = -2
+  gt1$grobs[[10]]$vjust = -.25
+
+
+  p2 <- ggplot() +
+    facet_grid(panel~.,scale="free",labeller=function(x,y){return("")}) +
+    stat_summary(data=data_long_mod %>% filter(genotype==2), mapping=aes(y=value,x=x),geom="area",fun.y=sum) +
+    #scale_y_continuous(limits=c(0, panelAylim)) +
+    #geom_line(data=data_long_mod %>% filter(genotype==2), mapping=aes(y=value,x=x)) +
+    geom_tile(data = data_long %>% filter(genotype==2), mapping=aes(y=value,x=x,fill = y)) +
+    scale_fill_gradient(low="black", high="white", limits=c(0, max(data_long$y)),name="Counts") +
+    labs(x = "Position", y = "Sum Counts")
+  gt2 <- ggplot_gtable(ggplot_build(p2))
+  gt2$heights[[3]] <- unit(.25, "null")
+  gt2$grobs[[3]]$children[2]$axis$grobs[[1]]$label = ""
+  gt2$grobs[[10]]$hjust = -2
+  gt2$grobs[[10]]$vjust = -.25
+
+  grid.arrange(gt1,gt2,ncol=2)
+
 }

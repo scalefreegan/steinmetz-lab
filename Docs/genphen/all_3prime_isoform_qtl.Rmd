@@ -246,11 +246,6 @@ In this example it is clear that there is a difference in the 3'-UTR profiles gi
 
 ```{r, echo=FALSE,message=FALSE,warning=FALSE,fig.height=4,fig.width=8}
 
-pheatmap(data[c(A,B),],cluster_cols=F,cluster_rows=F,clustering_distance_rows=as.dist(cosineDist(data[c(A,B),])),scale="none",annotation_row=data.frame(rbind(cbind(A,"S"),cbind(B,"Y")),row.names=1), show_rownames = F, show_colnames = F,main="Isoform observations across 3'-UTR")
+pheatmap(data[c(A,B),],cluster_cols=F,cluster_rows=F,clustering_distance_rows=as.dist(cosineDist(data[c(A,B),])),scale="none",annotation_row=data.frame(rbind(cbind(A,"S"),cbind(B,"Y")),row.names=1), show_rownames = F, show_colnames = F,main="Isoform observations across 3'-UTR",colorRampPalette(c("white", "red"))(n = 299))
 ```
 
-Here I include a scaled version to emphasize differences and demonstrate that the phenomenon is not a result of different expression levels (e.g., an eQTL).
-
-```{r, echo=FALSE,message=FALSE,warning=FALSE,fig.height=4,fig.width=8}
-pheatmap(data[c(A,B),],cluster_cols = F,cluster_rows = F,clustering_distance_rows = as.dist(cosineDist(data[c(A,B),])),scale = "row",annotation_row = data.frame(rbind(cbind(A,"S"), cbind(B,"Y")), row.names=1), show_rownames = F, show_colnames = F,main="Isoform observations across 3'-UTR, scaled")
-```
