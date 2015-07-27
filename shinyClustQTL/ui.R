@@ -6,7 +6,6 @@
 #
 
 library(shiny)
-qtl_genes = sort(unlist(sapply(clust_qtls,function(i){min(as.numeric(i$qtl[,2]))})))
 
 shinyUI(pageWithSidebar(
   

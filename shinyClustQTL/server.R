@@ -9,6 +9,7 @@ library(shiny)
 library(clustQTL)
 
 load("/g/steinmetz/brooks/3prime_Tfill/clust_qtl.rda")
+qtl_genes = sort(unlist(sapply(clust_qtls,function(i){min(as.numeric(i$qtl[,2]))})))
 
 shinyServer(function(input, output) {
    
