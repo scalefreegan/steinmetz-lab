@@ -245,7 +245,7 @@ Second, we visualize the 3'-UTR profiles as a heatmap. The side bar shows the al
 In this example it is clear that there is a difference in the 3'-UTR profiles given genotype. Profiles for genotypes with the Y allele are missing prominent peaks in the profiles of this gene with the Y allele. 
 
 ```{r, echo=FALSE,message=FALSE,warning=FALSE,fig.height=4,fig.width=8}
-
-pheatmap(data[c(A,B),],cluster_cols=F,cluster_rows=F,clustering_distance_rows=as.dist(cosineDist(data[c(A,B),])),scale="none",annotation_row=data.frame(rbind(cbind(A,"S"),cbind(B,"Y")),row.names=1), show_rownames = F, show_colnames = F,main="Isoform observations across 3'-UTR",colorRampPalette(c("white", "red"))(n = 299))
+plotPeakProfile(data, geno, names(peaks)[1], peak_sigma = 2, peak_threshold = 1)
+#pheatmap(data[c(A,B),],cluster_cols=F,cluster_rows=F,clustering_distance_rows=as.dist(cosineDist(data[c(A,B),])),scale="none",annotation_row=data.frame(rbind(cbind(A,"S"),cbind(B,"Y")),row.names=1), show_rownames = F, show_colnames = F,main="Isoform observations across 3'-UTR",colorRampPalette(c("white", "red"))(n = 299))
 ```
 
