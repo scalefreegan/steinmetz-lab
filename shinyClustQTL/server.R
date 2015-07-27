@@ -19,7 +19,7 @@ shinyServer(function(input, output) {
     data <- clust_qtls[[input$gene]]$data
 
     # find peaks
-    peaks = findQTLPeaks(clust_qtsl[[input$gene]]$qtl, markers_yeast, 
+    peaks = findQTLPeaks(clust_qtls[[input$gene]]$qtl, markers_yeast, 
                          pcutoff = .01, peak_sigma = 25, peak_threshold=1)
     
     # draw the qtl peak profile
