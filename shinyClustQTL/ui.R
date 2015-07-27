@@ -6,6 +6,7 @@
 #
 
 library(shiny)
+qtl_genes = sort(unlist(sapply(clust_qtls,function(i){min(as.numeric(i$qtl[,2]))})))
 
 shinyUI(pageWithSidebar(
   
@@ -14,15 +15,14 @@ shinyUI(pageWithSidebar(
   
   # Sidebar with a slider input for number of bins
   sidebarPanel(
-    sliderInput("bins",
-                "Number of bins:",
-                min = 1,
-                max = 50,
-                value = 30)
+    selectInput(
+      "gene", "Gene", choices = names(qtl_genes)
+      )
+    
   ),
   
   # Show a plot of the generated distribution
   mainPanel(
-    plotOutput("distPlot")
+    plotOutput("qtlPlot")
   )
 ))

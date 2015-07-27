@@ -6,17 +6,25 @@
 #
 
 library(shiny)
+library(clustQTL)
+
+load("/g/steinmetz/brooks/3prime_Tfill/clust_qtl.rda")
 
 shinyServer(function(input, output) {
    
-  output$distPlot <- renderPlot({
+  output$qtlPlot <- renderPlot({
     
     # generate bins based on input$bins from ui.R
-    x    <- faithful[, 2] 
-    bins <- seq(min(x), max(x), length.out = input$bins + 1)
+    data <- clust_qtls[[input$gene]]$data
+
+    # find peaks
+    peaks = findQTLPeaks(clust_qtls[[input$gene]]$qtl, markers_yeast, 
+                         pcutoff = .01, peak_sigma = 25, peak_threshold=1)
     
-    # draw the histogram with the specified number of bins
-    hist(x, breaks = bins, col = 'darkgray', border = 'white')
+    # draw the qtl peak profile
+    plotPeakProfile(data, genotypes_yeast, 
+                    names(peaks)[1], peak_sigma = 2, 
+                    peak_threshold = 1)
     
   })
   
