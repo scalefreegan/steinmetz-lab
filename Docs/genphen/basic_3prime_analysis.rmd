@@ -1,0 +1,251 @@
+---
+title: "3'-isoform with clustQTL"
+author: "Aaron Brooks"
+date: "July 8, 2015"
+output: html_document
+---
+*Global detection of 3'-isoform QTLs with clustQTL.*
+
+Analysis of all S288CxYJM (SxY) 3'-isoform data from Chenchen using clustQTL
+
+## Preliminaries
+
+Load files and required packages.
+
+```{r load_packages, include=FALSE,echo=FALSE}
+library(clustQTL)
+library(GenomicRanges)
+library(ggbio)
+library(pheatmap)
+library(parallel)
+options("mc.cores"=20)
+library(Peaks)
+library.dynam('Peaks', 'Peaks', lib.loc=NULL) 
+library(dplyr)
+```
+
+```{r data, cache=FALSE,include=FALSE,echo=FALSE}
+load("/g/steinmetz/project/GenPhen/data/3tagseq/all/mergedCounts.rda")
+load("/g/steinmetz/project/GenPhen/data/3tagseq/counts.rda")
+load( "/g/steinmetz/brooks/genphen/qtl_endometabolome_23042015/geno_mrk.RData" )
+load("/g/steinmetz/brooks/3prime_Tfill/clust_qtl.rda")
+g = makeGRangesFromDataFrame(tx_3utr,
+        seqnames.field=c("seqnames"),
+        start.field=c("start"),
+        end.field=c("end"))
+mcols(g) = tx_3utr[,6:21]
+tx_3utr = g
+names(tx_3utr) = mcols(tx_3utr)$Name
+```
+
+## Detect QTLs with clustQTL
+
+Here is the code to compute isoform QTLs. This takes a day or two to run. To save time, I will load directly from file. 
+
+```{r run_analysis, include=TRUE,eval=FALSE}
+pb <- txtProgressBar(min = 0, max = length(names(tx_3utr)), style = 3)
+clust_qtls = lapply(seq(1,length(names(tx_3utr))), function(j) {
+  setTxtProgressBar(pb, j)
+  gene = names(tx_3utr)[j]
+  o = try({
+    #print(gene)
+    x = subsetByOverlaps(cts,tx_3utr[gene])
+    data = t(granges2matrix(x))
+    # log transform
+    data[data==0] = NA
+    data = log2(data)
+    data[is.na(data)] = 0
+    # need to clean up data names
+    rnames = sapply( sub("X","",sapply( rownames(data), 
+                                        function(i) strsplit(i,"_")[[1]][1] ) ), function(i) {
+    		if (nchar(i)==2){ 
+    			i = paste("0",i,sep="")
+    		} 
+    		i
+    	} )
+    rownames(data) = rnames
+    # remove insig peaks
+    peak_cutoff = find_sigCounts( data )
+    data_o = data
+    data[ , colSums(data)<peak_cutoff ] = 0
+    data = data[rownames(data)%in%colnames(genotypes_yeast),]
+    to_r = list()
+    to_r$data = data
+    to_r$qtl = clustANDscore(data,genotypes_yeast,distance="cosine")
+    return(to_r)
+  },silent=T)
+  if (class(o) == "try-error") {
+    return(NULL)
+  } else if (is.na(min(o[,2]))) {
+    return(NULL)
+  } else{
+    return(o)
+  }
+})
+close(pb)
+names(clust_qtls) = names(tx_3utr)
+clust_qtls = clust_qtls[!sapply(clust_qtls,is.null)]
+save(clust_qtls,file="/g/steinmetz/project/GenPhen/data/3tagseq/clust_qtl.rda")
+```
+
+## Load QTLs from file
+
+Here I've just load the QTLs directly from file above to save time.
+
+```{r, qtlpeaks, include=TRUE, include=FALSE,echo=FALSE}
+qtl_genes = sort(unlist(sapply(clust_qtls,function(i){min(as.numeric(i$qtl[,2]))})))
+
+peak_counts_05 = mclapply(names(clust_qtls),function(i){
+  #print(i)
+  peaks = findQTLPeaks(clust_qtls[[i]]$qtl, mrk, pcutoff = .05, peak_sigma = 50, peak_threshold=1)
+  cis_regions = names(subsetByOverlaps(mrk,tx_3utr[i]+10000))
+  cis_vals = names(peaks)%in%cis_regions
+  to_r = list()
+  to_r$peaks = peaks
+  to_r$npeaks = length(peaks)
+  if (length(cis_vals)==0) {
+    cis_vals = F
+  }
+  to_r$cis = cis_vals
+  return(to_r)
+})
+names(peak_counts_05) = names(clust_qtls)
+
+peak_counts_01 = mclapply(names(clust_qtls),function(i){
+  #print(i)
+  peaks = findQTLPeaks(clust_qtls[[i]]$qtl, mrk, pcutoff = .01, peak_sigma = 25, peak_threshold=1)
+  cis_regions = names(subsetByOverlaps(mrk,tx_3utr[i]+10000))
+  cis_vals = names(peaks)%in%cis_regions
+  to_r = list()
+  to_r$peaks = peaks
+  to_r$npeaks = length(peaks)
+  if (length(cis_vals)==0) {
+    cis_vals = F
+  }
+  to_r$cis = cis_vals
+  return(to_r)
+})
+names(peak_counts_01) = names(clust_qtls)
+```
+
+## Summary stats
+
+In the 3' isoform data from Chenchen (SxY) there are `r sum(do.call(c,lapply(peak_counts_05,function(i){i$npeaks})))` QTLs among `r sum(qtl_genes < 0.05)` genes at an FDR of 5% among `r length(peak_counts_05)` total genes. At FDR of 1% there are marginally fewer, `r sum(do.call(c,lapply(peak_counts_01,function(i){i$npeaks})))`.
+
+Many of these are *cis*-QTLs. At FDR 5%, `r sum(do.call(c,lapply(peak_counts_05,function(i){i$cis})))` out of `r sum(do.call(c,lapply(peak_counts_05,function(i){i$npeaks})))` are *cis* (i.e. a signifcant QTL within 10kb of the 3'-UTR annotation itself) while at FDR 1%, `r sum(do.call(c,lapply(peak_counts_01,function(i){i$cis})))` out of `r sum(do.call(c,lapply(peak_counts_01,function(i){i$npeaks})))` are *cis*.
+
+## Plot genome-wide QTLs for an example gene
+
+As an example, we will look at the QTLs detected for gene `r names(qtl_genes)[1]`, the gene with the most significant 3'-clustQTL.
+
+Below is Manhattan plot of QTLs for `r names(qtl_genes)[1]` across the entire genome.
+
+```{r, manhattan, echo=FALSE,message=FALSE,warning=FALSE,fig.height=4,fig.width=8}
+gene = names(qtl_genes)[1]
+plotManhattan(clust_qtls[[gene]]$qtl,mrk, gene,trx_annot=tx_3utr,cutoff=c(-log10(0.05),-log10(0.01)),cutoff.size=c(1,.25))
+```
+
+## QTL Inspection
+
+To explore the QTL in a little more detail, we inspect the data itself to confirm that the QTL prediction is plausible in context of the raw data. We will focus on the most significant QTL peak.
+
+```{r, corr_one, cache=FALSE,include=FALSE,echo=FALSE} 
+peaks = findQTLPeaks(clust_qtls[[gene]]$qtl, mrk, pcutoff = .01, peak_sigma = 25, peak_threshold=1)
+
+peak_genotypes = do.call(rbind,lapply(names(peaks),function(i){getGenotypes(i,geno)}))
+rownames(peak_genotypes) = names(peaks)
+
+# test whether QTL looks "real"
+
+# peak to analyze
+x = 1
+
+A = names(which(peak_genotypes[x,] == 1))
+B = names(which(peak_genotypes[x,] == 2))
+```
+
+### In-group vs. Out-group correlation
+
+First, we expect that if we split the data by genotype at the QTL locus, there should be an increase in correlation between 3'-UTR profiles within the genotypes compared to across the genotypes.
+
+Below I report peason correlation. 
+
+```{r, corr_one_2, cache=FALSE,include=FALSE,echo=FALSE} 
+# correlation
+data = clust_qtls[[gene]]$data[which(apply(clust_qtls[[gene]]$data,1,sum)>0,useNames=T),]
+A = intersect( A, rownames(data) )
+B = intersect( B, rownames(data) )
+all_cor = cor(t(data[c(A,B),]),use="pair",method="pearson")
+in_a = all_cor[A,A][upper.tri(all_cor[A,A])]
+in_b = all_cor[B,B][upper.tri(all_cor[B,B])]
+out_ab = all_cor[A,B][upper.tri(all_cor[A,B])]
+out_ba = all_cor[B,A][upper.tri(all_cor[B,A])]
+```
+-Within Genotype 1: `r mean(in_a,na.rm=T)`
+-Within Genotype 2: `r mean(in_b,na.rm=T)`
+-Between 1-2:`r mean(out_ab,na.rm=T)`
+-Between 2-1:`r mean(out_ba,na.rm=T)`
+
+As expected, correlation is higher within the genotype groups than between them. 
+
+Genome-wide, for every QTL the correlations within a genotype have a similar pattern (higher within than between):
+
+```{r, all_corr, cache=FALSE,include=FALSE,echo=FALSE} 
+all_qtl_cor = do.call(rbind,mclapply(names(qtl_genes),function(i){
+  #print(i)
+  to_r = data.frame()
+  peaks = findQTLPeaks(clust_qtls[[i]]$qtl, mrk, pcutoff = .01, peak_sigma = 25, peak_threshold=1)
+  if (length(peaks)>0) {
+    peak_genotypes = do.call(rbind,lapply(names(peaks),function(i){getGenotypes(i,geno)}))
+    rownames(peak_genotypes) = names(peaks)
+    data = clust_qtls[[i]]$data[which(apply(clust_qtls[[i]]$data,1,sum)>0,useNames=T),]
+    for (j in dim(peak_genotypes)[1]) {
+      A = names(which(peak_genotypes[j,] == 1))
+      B = names(which(peak_genotypes[j,] == 2))
+      A = intersect( A, rownames(data) )
+      B = intersect( B, rownames(data) )
+      all_cor = cor(t(data[c(A,B),]),use="pair",method="pearson")
+      in_a = all_cor[A,A][upper.tri(all_cor[A,A])]
+      in_b = all_cor[B,B][upper.tri(all_cor[B,B])]
+      out_ab = all_cor[A,B][upper.tri(all_cor[A,B])]
+      out_ba = all_cor[B,A][upper.tri(all_cor[B,A])]
+      o = data.frame(value = c(in_a,in_b,out_ab,out_ba), 
+                     type = c(rep("within",length(c(in_a,in_b))),rep("between",length(c(out_ab,out_ba)))))
+      o$qtl_p = mcols(peaks)$p[j]
+      to_r = rbind(to_r, o)
+    }
+    to_r$name = i
+    return(to_r)
+  } else {
+    return(NULL)
+  }
+}))
+all_qtl_cor$type = factor(all_qtl_cor$type,levels=c("within","between"))
+inVout = t.test(all_qtl_cor[all_qtl_cor$type=="within","value"],all_qtl_cor[all_qtl_cor$type=="between","value"])
+t_p = inVout$p.value
+if (t_p==0) {
+  t_p = "< 2.2e-16"
+}
+```
+
+One-sided Welch two sample t-test soundly rejects null hypothesis at p-val = `r t_p`.
+
+This is clear in boxplot of all pairwise correlations in and between genotypes at a QTL
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE,fig.height=4,fig.width=8}
+cor_summary = all_qtl_cor %>% group_by(type) %>%
+  summarise(Q0=quantile(value, probs=0),Q1=quantile(value, probs=0.25), Q2=quantile(value, probs=0.50), Q3=quantile(value, probs=0.75),Q4=quantile(value, probs=1))
+ 
+p <- ggplot(cor_summary, aes(x = type, ymin = Q0, lower = Q1, middle = Q2, upper = Q3, ymax = Q4, fill = type))
+p + geom_boxplot(stat = "identity") + labs(x = "Class", y = "Pearson Correlation") + ggtitle("3'-UTR Isoform Profile Within And Between Genotypes at all QTLs")
+```
+
+Second, we visualize the 3'-UTR profiles as a heatmap. The side bar shows the allele state at the most significant genetic marker. 
+
+In this example it is clear that there is a difference in the 3'-UTR profiles given genotype. Profiles for genotypes with the Y allele are missing prominent peaks in the profiles of this gene with the Y allele. 
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE,fig.height=4,fig.width=8}
+plotPeakProfile(data, geno, names(peaks)[1], peak_sigma = 2, peak_threshold = 1)
+#pheatmap(data[c(A,B),],cluster_cols=F,cluster_rows=F,clustering_distance_rows=as.dist(cosineDist(data[c(A,B),])),scale="none",annotation_row=data.frame(rbind(cbind(A,"S"),cbind(B,"Y")),row.names=1), show_rownames = F, show_colnames = F,main="Isoform observations across 3'-UTR",colorRampPalette(c("white", "red"))(n = 299))
+```
+
