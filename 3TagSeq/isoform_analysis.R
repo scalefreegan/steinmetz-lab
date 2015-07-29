@@ -1,7 +1,7 @@
 library( GenomicRanges )
 library( parallel )
 options("mc.cores"=20)
-# files 
+# files
 load("/g/steinmetz/project/GenPhen/data/3tagseq/all/mergedCounts.rda")
 load("/g/steinmetz/project/GenPhen/data/3tagseq/counts.rda")
 
@@ -17,25 +17,6 @@ g = makeGRangesFromDataFrame(tx_3utr,
         start.field=c("start"),
         end.field=c("end"))
 
-### clustering approach
-# n = dim(mcols(g))[1]
-# cluster_btwnss_2mer = unlist(mclapply(1:n,function(i){
-# 	if (i%%1000==0){
-# 		cat(paste(round((i/n)*100),"%\n",sep=""))
-# 	}
-# 	tmp = subsetByOverlaps(cts,g[i])
-# 	km = try(kmeans(t(as.matrix(mcols(tmp))),2),silent=T)
-# 	if (class(km)!="try-error"){
-# 		return(abs(diff(km$size)))
-# 		#km$betweenss
-# 	} else {
-# 		return(NULL)
-# 	}
-# }))
-
-# pheatmap(t(as.matrix(mcols(subsetByOverlaps(cts,g[i])))),clust_cols=F)
-# matplot(rowSums(as.matrix(mcols(subsetByOverlaps(cts,g[6])))),type="l")
-
 sig_peaks = function(peakMatrix, nresamples = 1000, alpha = 0.01) {
 	# resample peak matrix
 	# matrix should be nxm matrix where
@@ -46,7 +27,7 @@ sig_peaks = function(peakMatrix, nresamples = 1000, alpha = 0.01) {
 		rowSums(do.call(cbind,lapply(1:dim(peakMatrix)[2],function(i){sample(peakMatrix[,i])})))
 	}))
 	# return cutoff peak height at threshold
-	quantile(peakSamples,1-alpha) 
+	quantile(peakSamples,1-alpha)
 }
 
 # rep
@@ -78,7 +59,7 @@ strain_isoform_corr = unlist(mclapply(1:n,function(i){
 pdf("/g/steinmetz/brooks/3prime_Tfill/peakfiltering.pdf")
 for (i in 1:100) {
 	print(i)
-	n = tx_3utr[i,"Name"] 
+	n = tx_3utr[i,"Name"]
 	g_cts = as.matrix( mcols( subsetByOverlaps(cts,g[i]) ) )
 	cts_t = sig_peaks( g_cts )
 	g_cts2 = g_cts
@@ -104,7 +85,7 @@ namematch = function(string, stringVector) {
 		return( stringVector[ match_ind ] )
 	} else {
 		return( match_ind )
-	}	
+	}
 }
 
 cluster = function(data, cluster_method = c("fuzzy")[1], distance_metric = c("euclidean")[1] ) {
@@ -179,14 +160,14 @@ clustANDscore = function(data, genotypes,...) {
 	}))
 }
 
-format4manhattan = function( qtls, mrk, nresample = 10000 ) {	
+format4manhattan = function( qtls, mrk, nresample = 10000 ) {
 	mrk$p = -log10( qtls[,"pval"]+ 1/nresample )
 	return(mrk)
 }
 
 plotManhattan = function( qtls, mrk, qtl_name = "", trx_annot = NULL, cutoff = 3, gene_annot_range = c(5000,5000) ) {
 	library(ggbio)
-	mrk2 = format4manhattan( qtls,mrk )	
+	mrk2 = format4manhattan( qtls,mrk )
 	if ( (qtl_name!="") & ( !is.null(trx_annot) ) ) {
 		# annotate gene
 		trx_info = trx_annot[ which(trx_annot$Name == qtl_name), ]
@@ -196,14 +177,14 @@ plotManhattan = function( qtls, mrk, qtl_name = "", trx_annot = NULL, cutoff = 3
 	} else {
 		plotGrandLinear(mrk2, aes(y = p),spaceline = TRUE,cutoff=cutoff,ylab="-log10(pval)",main=qtl_name,ylim=c(0,4.5))
 	}
-	
+
 	#return(mrk2)
 }
 
 findQTLPeaks = function( qtls, mrk, cutoff = 3 ) {
 	# find top two peaks
-	mrk2 = format4manhattan( qtls, mrk )	
-	candidates = which( mrk2$p>cutoff) 
+	mrk2 = format4manhattan( qtls, mrk )
+	candidates = which( mrk2$p>cutoff)
 	ind = 1
 	final_candidates = cbind(candidates[ind],mrk2$p[candidates[ind]])
 	ind = ind + 1
@@ -235,9 +216,9 @@ clust_qtls = lapply(seq(1,dim(tx_3utr)[1]), function(i){
 	data = t(as.matrix(mcols(subsetByOverlaps(cts,g[i]))))
 	# need to clean up data names
 	rnames = sapply( sub("X","",sapply( rownames(data), function(i) strsplit(i,"_")[[1]][1] ) ), function(i) {
-			if (nchar(i)==2){ 
+			if (nchar(i)==2){
 				i = paste("0",i,sep="")
-			} 
+			}
 			i
 		} )
 	rownames(data) = rnames

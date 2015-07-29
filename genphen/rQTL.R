@@ -1,7 +1,7 @@
 #! /usr/bin/env Rscript
 
 #-------------------------------------------------------------------#
-# Rqtl 
+# Rqtl
 #-------------------------------------------------------------------#
 
 .author = "Aaron Brooks"
@@ -11,11 +11,7 @@
 .version = "0.0.1"
 .maintainer = "Aaron Brooks"
 .email = "aaron.brooks@embl.de"
-.status = "Development"
-
-genotype = geno
-phenotype = metabolome_data_mixednorm
-marker_info = mrk
+.status = "Alpha"
 
 PCA <- function(mat) eigen(cov(apply(mat, 2, function(i) (i - mean(i))/sd(i))))
 
@@ -32,7 +28,7 @@ removePrincipalComponent <- function(
   if (!specific_select) n <- 1:n
 
   to_r = t(eigenList$vectors[,-n] %*% (t(eigenList$vectors[,-n]) %*% t(matAdjust))) + (matrix(meanList, nrow = nrow(matAdjust), ncol = ncol(matAdjust), byrow=T))
-  colnames(to_r) = colnames(matAdjust) 
+  colnames(to_r) = colnames(matAdjust)
   return(to_r)
 }
 
@@ -41,11 +37,11 @@ runQTL <- function(
     # Format standard matrix/genotype data for rQTL
     # Run rQTL scanone analysis with optional methods,
     # permute_sig and pca
-    genotype, # a n x m genotype matrix containing (eg 1,2) at 'n' genotype markers in 'm' strains 
+    genotype, # a n x m genotype matrix containing (eg 1,2) at 'n' genotype markers in 'm' strains
     phenotype, # a n x m phenotype matrix containing measurements of 'm' phenotypes in 'n' strains
     marker_info, # GRanges object with information about genetic markers (chromosome and location)
-    permute = T, # compute significance of each QTL LOD by permutation 
-    pca = F, # maximize QTL detection by removing confounders using PCA 
+    permute = T, # compute significance of each QTL LOD by permutation
+    pca = F, # maximize QTL detection by removing confounders using PCA
     permute_alpha = 0.05,
     save_file = ""){
   # subset genotype data on metabolite data. transpose it.
@@ -162,10 +158,14 @@ runQTL <- function(
   return(to_r)
 }
 
-myqtls = runQTL(genotype = geno, 
+#-------------------------------------------------------------------#
+# Example, i.e. your data goes here!
+#-------------------------------------------------------------------#
+
+myqtls = runQTL(genotype = geno,
     phenotype = metabolome_data_mixednorm,
     marker_info = mrk,
-    permute = T, 
-    pca = T, 
+    permute = T,
+    pca = T,
     permute_alpha = 0.1,
     save_file = "./qtl_endometabolome_23042015/rqtls.rda")
