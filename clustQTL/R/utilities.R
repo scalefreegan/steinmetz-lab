@@ -119,7 +119,7 @@ cosineDist = function(x, na.rm=TRUE) {
 #' @export
 combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_markers = NULL, 
                           na.rm = TRUE, rm_type = c("marker","strain")[1], collpase_markers = TRUE,
-                          marker_rename = TRUE) {
+                          marker_rename = TRUE, impute_markers = TRUE, clean_markers = TRUE) {
   assertthat::assert_that(class(markers) == "GRanges" | class(markers) == "data.frame")
   if (class(markers) == "data.frame") {
     markers = makeGRangesFromDataFrame(markers,
@@ -134,6 +134,56 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
   }
   genotypes = genotypes[order(as.numeric(gsub("mrk_", "", names(markers)))),]
   assertthat::assert_that(dim(genotypes)[1] == length(markers))
+  
+  if (clean_markers) {
+    # clean markers according to Bloom et al 2013
+    # marker must be called in 99% of segregants
+    tor = apply(genotypes,1,function(i){1-sum(is.na(i))/length(i)})
+    tor = which(tor < 0.99)
+    if (length(tor)>0) {
+      genotypes = genotypes[-tor,]
+    }
+    # allele frequence should not be greater than 55% or less than 45%
+    tor = apply(genotypes,1,function(i){1-sum(i==1, na.rm=T)/length(i[!is.na(i)])})
+    tor = c(which(tor < 0.45), which(tor > 0.55))
+    if (length(tor)>0) {
+      genotypes = genotypes[-tor,]
+    }
+    markers = markers[rownames(genotypes)]
+  }
+  
+  if (impute_markers) {
+    #Fake phenotype data to make cross object
+    phenotype = cbind(rep(0,dim(genotypes)[2]), rep(0,dim(genotypes)[2]))
+    dimnames(phenotype) = list(colnames(genotypes),c("1","2"))
+    genotype_subset = t( genotypes[ ,rownames( phenotype ) ] )
+    # add chr num to markers
+    genotype_subset = rbind( gsub('chr','', as.character( seqnames( markers[ colnames( genotype_subset ) ] ) ) ),
+                             genotype_subset )
+    genotype_subset = cbind( c( NULL, rownames( genotype_subset ) ), genotype_subset )
+    colnames( genotype_subset )[ 1 ] = 'id'
+    # add id column to phen data
+    phenotype = cbind( phenotype, rownames( phenotype )  )
+    colnames( phenotype )[ dim( phenotype )[2] ] = 'id' 
+    write.table( genotype_subset, file =  ".tmpgen", sep = ",", col.names = T, row.names = F, quote=F )
+    write.table( phenotype, file =  ".tmpphen", sep = ",", col.names = T, row.names = F, quote=F )
+    # read.cross to import data into rqtl
+    cross = try(qtl::read.cross(format = "csvs", ".", genfile = ".tmpgen" , 
+                                  phefile=  ".tmpphen", genotypes = c("1","2"),estimate.map=F))
+    # impute by verterbi
+    cross = qtl::fill.geno(cross,method="argmax")
+    new_genotype = qtl::pull.geno(cross)
+    rownames(new_genotype) = colnames(genotypes)
+    genotypes = t(new_genotype)
+    if ( class(cross)[1]!="try-error" ) {
+      # clean up
+      file.remove(c(".tmpgen",".tmpphen"))
+    } else {
+      cat("ERROR: Could not create rQTL cross object from genotype and phenotype data\n")
+      return(NULL)
+    }
+  }
+ 
   if (!is.null(limit_strains)) {
     assertthat::assert_that(sum(limit_strains%in%colnames(genotypes))>0)
     if (sum(!limit_strains%in%colnames(genotypes))>0) {
@@ -153,13 +203,13 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
     # remove any strain and marker with NA values
     if (rm_type == "marker") {
       tor = apply(genotypes,1,function(i)sum(is.na(i)))
-      if (sum(tor)>0) {
+      if (sum(tor>0)>0) {
         genotypes = genotypes[tor>0,]
         markers = markers[tor>0]
       }
     } else if (rm_type == "strain") {
       tor = apply(genotypes,2,function(i)sum(is.na(i)))
-      if (sum(tor)>0) {
+      if (sum(tor>0)>0) {
         genotypes = genotypes[tor>0,]
         markers = markers[tor>0]
       }

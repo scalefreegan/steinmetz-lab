@@ -49,9 +49,10 @@ runQTL <- function(
     cat("ERROR:Strain names in genotype matrix (columns) do not match strain names in phenotype matrix (rows\n")
     return(NULL)
   }
-  genotype_subset = t( genotype[ ,rownames( metabolome_data ) ] )
+  genotype_subset = t( genotype[ ,rownames( phenotype ) ] )
   # add chr num to markers
-  genotype_subset = rbind( gsub('chr','', as.character( seqnames( marker_info[ colnames( genotype_subset ) ] ) ) ), genotype_subset )
+  genotype_subset = rbind( gsub('chr','', as.character( seqnames( marker_info[ colnames( genotype_subset ) ] ) ) ),
+   genotype_subset )
   genotype_subset = cbind( c( NULL, rownames( genotype_subset ) ), genotype_subset )
   colnames( genotype_subset )[ 1 ] = 'id'
   # add id column to phen data
