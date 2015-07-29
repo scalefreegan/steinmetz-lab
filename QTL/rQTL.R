@@ -162,10 +162,10 @@ runQTL <- function(
 # Example, i.e. your data goes here!
 #-------------------------------------------------------------------#
 
-myqtls = runQTL(genotype = geno,
-    phenotype = metabolome_data_mixednorm,
-    marker_info = mrk,
-    permute = T,
-    pca = T,
-    permute_alpha = 0.1,
-    save_file = "./qtl_endometabolome_23042015/rqtls.rda")
+# myqtls = runQTL(genotype = geno,
+#     phenotype = metabolome_data_mixednorm,
+#     marker_info = mrk,
+#     permute = T,
+#     pca = T,
+#     permute_alpha = 0.1,
+#     save_file = "./qtl_endometabolome_23042015/rqtls.rda")

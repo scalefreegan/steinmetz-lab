@@ -105,3 +105,73 @@ cosineDist = function(x, na.rm=TRUE) {
   }
 }
 
+#' combineMarkers
+#'
+#' Combine markers if available genotypes at adjacent locations
+#' are identical
+#'
+#' @param x A matrix
+#' @param na.rm Remove rows that generate NaN values
+#' @return 1-cosine similarity matrix
+#' @examples
+#' x = do.call(rbind,lapply(1:5,function(i){rnorm(5,1)}))
+#' cosineDist(x)
+#' @export
+combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_markers = NULL, 
+                          na.rm = TRUE, rm_type = c("marker","strain")[1], collpase_markers = TRUE,
+                          marker_rename = TRUE) {
+  assertthat::assert_that(class(markers) == "GRanges" | class(markers) == "data.frame")
+  if (class(markers) == "data.frame") {
+    markers = makeGRangesFromDataFrame(markers,
+       keep.extra.columns=TRUE,
+       ignore.strand=TRUE)
+  }
+  if (is.null(names(markers))) {
+    names(markers) = paste("mrk", seq(1,length(markers)), sep="_")
+  }
+  if (is.null(rownames(genotypes))) {
+    rownames(genotypes) = names(markers)
+  }
+  genotypes = genotypes[order(as.numeric(gsub("mrk_", "", names(markers)))),]
+  assertthat::assert_that(dim(genotypes)[1] == length(markers))
+  if (!is.null(limit_strains)) {
+    assertthat::assert_that(sum(limit_strains%in%colnames(genotypes))>0)
+    if (sum(!limit_strains%in%colnames(genotypes))>0) {
+      cat("WARNING: Not all limit_strains are in colnames(genotypes)")
+    }
+    genotype = genotype[, intersect(limit_strains, colnames(genotypes))]
+  }
+  if (!is.null(limit_markers)) {
+    assertthat::assert_that(sum(limit_markers%in%names(markers))>0)
+    if (sum(!limit_markers%in%colnames(genotypes))>0) {
+      cat("WARNING: Not all limit_markers are in names(markers)")
+    }
+    markers = markers[intersect(limit_markers, colnames(markers))]
+  }
+  
+  if(na.rm == TRUE) {
+    # remove any strain and marker with NA values
+    if (rm_type == "marker") {
+      tor = apply(genotypes,1,function(i)sum(is.na(i)))
+      if (sum(tor)>0) {
+        genotypes = genotypes[tor>0,]
+        markers = markers[tor>0]
+      }
+    } else if (rm_type == "strain") {
+      tor = apply(genotypes,2,function(i)sum(is.na(i)))
+      if (sum(tor)>0) {
+        genotypes = genotypes[tor>0,]
+        markers = markers[tor>0]
+      }
+    }
+  }
+  if(collpase_markers) {
+    # collapse markers if genotypes are all the same
+    
+  }
+  if(marker_rename == TRUE) {
+    names(markers) = paste("mrk", seq(1,length(markers)), sep="_")
+    rownames(genotypes) = names(markers)
+  }
+  return(list(genotypes = genotypes,markers = markers))
+}
