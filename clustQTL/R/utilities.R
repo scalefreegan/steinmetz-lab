@@ -119,7 +119,7 @@ cosineDist = function(x, na.rm=TRUE) {
 #' @export
 combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_markers = NULL, 
                           na.rm = TRUE, rm_type = c("marker","strain")[1], collpase_markers = TRUE,
-                          marker_rename = TRUE, impute_markers = TRUE, clean_markers = TRUE) {
+                          marker_rename = FALSE, impute_markers = TRUE, clean_markers = TRUE) {
   assertthat::assert_that(class(markers) == "GRanges" | class(markers) == "data.frame")
   if (class(markers) == "data.frame") {
     markers = makeGRangesFromDataFrame(markers,
@@ -139,20 +139,38 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
     # clean markers according to Bloom et al 2013
     # marker must be called in 99% of segregants
     tor = apply(genotypes,1,function(i){1-sum(is.na(i))/length(i)})
-    tor = which(tor < 0.99)
+    tor = which(tor < 0.95)
     if (length(tor)>0) {
       genotypes = genotypes[-tor,]
     }
     # allele frequence should not be greater than 55% or less than 45%
-    tor = apply(genotypes,1,function(i){1-sum(i==1, na.rm=T)/length(i[!is.na(i)])})
-    tor = c(which(tor < 0.45), which(tor > 0.55))
+    #tor = apply(genotypes,1,function(i){1-sum(i==1, na.rm=T)/length(i[!is.na(i)])})
+    #tor = c(which(tor < 0.45), which(tor > 0.55))
+    # replcaed 30/07/2015 with binomial test
+    tor = apply(genotypes,1,function(i){
+      if (sum(!is.na(i)) == 0) {
+        return(0)
+      } else {
+        binom.test(sum(i==1,na.rm=T),sum(!is.na(i)))$p.value
+      }
+    })
+    tor = p.adjust(tor,method="BH")
+    tor = which(tor<=0.05)
     if (length(tor)>0) {
       genotypes = genotypes[-tor,]
     }
     markers = markers[rownames(genotypes)]
+    # for yeast genome genotypes_S288c_R64.rda
+    # this leaves some markers with as many as 10 NA values
   }
   
+  # record suspicious strains for user
+  tor = apply(genotypes,2,function(i){1-sum(is.na(i))/length(i)})
+  tor = which(tor<0.95)
+  bad_strains = names(tor)
+  
   if (impute_markers) {
+    cat("Imputing missing genotypes\n")
     #Fake phenotype data to make cross object
     phenotype = cbind(rep(0,dim(genotypes)[2]), rep(0,dim(genotypes)[2]))
     dimnames(phenotype) = list(colnames(genotypes),c("1","2"))
@@ -170,17 +188,16 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
     # read.cross to import data into rqtl
     cross = try(qtl::read.cross(format = "csvs", ".", genfile = ".tmpgen" , 
                                   phefile=  ".tmpphen", genotypes = c("1","2"),estimate.map=F))
-    # impute by verterbi
-    cross = qtl::fill.geno(cross,method="argmax")
-    new_genotype = qtl::pull.geno(cross)
-    rownames(new_genotype) = colnames(genotypes)
-    genotypes = t(new_genotype)
     if ( class(cross)[1]!="try-error" ) {
       # clean up
       file.remove(c(".tmpgen",".tmpphen"))
+      # impute by verterbi
+      cross = qtl::fill.geno(cross,method="argmax")
+      new_genotype = qtl::pull.geno(cross)
+      rownames(new_genotype) = colnames(genotypes)
+      genotypes = t(new_genotype)
     } else {
-      cat("ERROR: Could not create rQTL cross object from genotype and phenotype data\n")
-      return(NULL)
+      cat("WARNING: Could not impute genotype \n")
     }
   }
  
@@ -189,7 +206,7 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
     if (sum(!limit_strains%in%colnames(genotypes))>0) {
       cat("WARNING: Not all limit_strains are in colnames(genotypes)")
     }
-    genotype = genotype[, intersect(limit_strains, colnames(genotypes))]
+    genotypes = genotypes[, intersect(limit_strains, colnames(genotypes))]
   }
   if (!is.null(limit_markers)) {
     assertthat::assert_that(sum(limit_markers%in%names(markers))>0)
@@ -197,6 +214,7 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
       cat("WARNING: Not all limit_markers are in names(markers)")
     }
     markers = markers[intersect(limit_markers, colnames(markers))]
+    genotypes = genotypes[intersect(limit_markers, colnames(markers)),]
   }
   
   if(na.rm == TRUE) {
@@ -217,11 +235,41 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
   }
   if(collpase_markers) {
     # collapse markers if genotypes are all the same
-    
+    # collapsed markers will take name of first marker by default
+    cat("Collapsing markers with identical genotypes. This may take some time...\n")
+    new_markers = GRanges()
+    i = 1
+    pb <- txtProgressBar(min = 1, max =   dim(genotypes)[1], style = 3)
+    while(i <  dim(genotypes)[1]) {
+      setTxtProgressBar(pb, i)
+      i1 = i + 1
+      while(
+        # same genotype
+        as.logical(sum(diff(rbind(genotypes[i,],genotypes[i1,]))==0)==length(genotypes[i,]) &
+        # same chromosome
+        seqnames(markers[i])==seqnames(markers[i1]))
+        ) {
+        i1 = i1 + 1
+        #print(i1)
+      }
+      #print(paste(i,i1))
+      # adjust marker
+      new_marker = markers[i,]
+      end(ranges(new_marker)) = end(ranges(markers[i1-1,]))
+      new_markers = c(new_markers,new_marker)
+      i = i1
+    }
+    close(pb)
+    mcols(new_markers) = NULL
+    markers = new_markers
+    genotypes = genotypes[names(markers),]
   }
+  
   if(marker_rename == TRUE) {
     names(markers) = paste("mrk", seq(1,length(markers)), sep="_")
     rownames(genotypes) = names(markers)
   }
-  return(list(genotypes = genotypes,markers = markers))
+  return(list(genotypes = genotypes, markers = markers, suspect_strains = bad_strains))
 }
+
+tmp = combineMarkers(geno,mrk,limit_strains=colnames(genotypes)[1:10])
