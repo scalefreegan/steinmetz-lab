@@ -6,7 +6,7 @@
 #' @return Clustering object of input data
 #' @export
 #'
-cluster = function(data, cluster_method = c("fuzzy")[1],
+clustqtl_cluster = function(data, cluster_method = c("fuzzy")[1],
                    distance = c("cosine","euclidean")[1] ) {
   if (distance=="cosine") {
     dist_matrix = cosineDist(data)
@@ -29,7 +29,7 @@ cluster = function(data, cluster_method = c("fuzzy")[1],
 #'  and the one proposed by model using binomial distribution
 #' @export
 #'
-score = function(clusters, genotype_vector,verbose=FALSE) {
+clustqtl_score = function(clusters, genotype_vector,verbose=FALSE) {
   # order clusters and genotypes_vector
   clusters = clusters[intersect(names(genotype_vector),names(clusters))]
   genotype_vector = genotype_vector[names(clusters)]
@@ -73,7 +73,7 @@ clustANDscore = function(data, genotypes,...) {
   # only use data for clustering
   data = data[intersect(colnames(genotypes),rownames(data)),]
   #covariate_clust = cluster(covariates)
-  clustering = cluster(data,...)
+  clustering = clustqtl_cluster(data,...)
   #permuted = permute(genotypes,clustering$clustering)
   genotype_template = rownames(data)
   names(genotype_template) = genotype_template
@@ -86,7 +86,7 @@ clustANDscore = function(data, genotypes,...) {
       }
     })
     genotype_vector = genotype_vector[!is.na(genotype_vector)]
-    one_score = score(clustering$clustering,genotype_vector)
+    one_score = clustqtl_score(clustering$clustering,genotype_vector)
     o = cbind(one_score$statistic[[1]],one_score$p.value)
     colnames(o) = c("matches","pval")
     return(o)
