@@ -79,7 +79,7 @@ plotPeakProfile = function(data, genotypes, marker, peak_sigma = 2, peak_thresho
   library(gridExtra)
   library(grid)
   library(dplyr)
-  library(ggplot)
+  library(ggplot2)
   data_mod = t(apply(data,1,function(i){SpectrumSearch(i,sigma=peak_sigma,threshold=peak_threshold)$y}))
   #data_mod = t(apply(data_mod,1,function(i){i/sum(i)}))
   colnames(data_mod) = colnames(data)
