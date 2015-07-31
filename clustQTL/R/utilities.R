@@ -4,8 +4,6 @@
 #'
 #' @param qtls
 #' @return Data Frame of peaks
-#' @examples
-#' findQTLPeaks()
 #' @export
 #'
 findQTLPeaks = function(qtls, mrk, pcutoff = .05, peak_sigma = 25, peak_threshold=1,...) {
@@ -48,8 +46,6 @@ findQTLPeaks = function(qtls, mrk, pcutoff = .05, peak_sigma = 25, peak_threshol
 #'
 #' @param data
 #' @return genotypes
-#' @examples
-#' getGenotypes()
 #' @export
 #'
 getGenotypes = function(marker,geno) {
@@ -113,11 +109,8 @@ cosineDist = function(x, na.rm=TRUE) {
 #' @param x A matrix
 #' @param na.rm Remove rows that generate NaN values
 #' @return 1-cosine similarity matrix
-#' @examples
-#' x = do.call(rbind,lapply(1:5,function(i){rnorm(5,1)}))
-#' cosineDist(x)
 #' @export
-combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_markers = NULL, 
+combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_markers = NULL,
                           na.rm = TRUE, rm_type = c("marker","strain")[1], collpase_markers = TRUE,
                           marker_rename = FALSE, impute_markers = TRUE, clean_markers = TRUE) {
   assertthat::assert_that(class(markers) == "GRanges" | class(markers) == "data.frame")
@@ -134,7 +127,7 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
   }
   genotypes = genotypes[order(as.numeric(gsub("mrk_", "", names(markers)))),]
   assertthat::assert_that(dim(genotypes)[1] == length(markers))
-  
+
   if (clean_markers) {
     # clean markers according to Bloom et al 2013
     # marker must be called in 99% of segregants
@@ -165,12 +158,12 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
     # for yeast genome genotypes_S288c_R64.rda
     # this leaves some markers with as many as 10 NA values
   }
-  
+
   # record suspicious strains for user
   tor = apply(genotypes,2,function(i){1-sum(is.na(i))/length(i)})
   tor = which(tor<0.95)
   bad_strains = names(tor)
-  
+
   if (impute_markers) {
     cat("...Imputing missing genotypes\n")
     #Fake phenotype data to make cross object
@@ -184,11 +177,11 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
     colnames( genotype_subset )[ 1 ] = 'id'
     # add id column to phen data
     phenotype = cbind( phenotype, rownames( phenotype )  )
-    colnames( phenotype )[ dim( phenotype )[2] ] = 'id' 
+    colnames( phenotype )[ dim( phenotype )[2] ] = 'id'
     write.table( genotype_subset, file =  ".tmpgen", sep = ",", col.names = T, row.names = F, quote=F )
     write.table( phenotype, file =  ".tmpphen", sep = ",", col.names = T, row.names = F, quote=F )
     # read.cross to import data into rqtl
-    cross = try(qtl::read.cross(format = "csvs", ".", genfile = ".tmpgen" , 
+    cross = try(qtl::read.cross(format = "csvs", ".", genfile = ".tmpgen" ,
                                   phefile=  ".tmpphen", genotypes = c("1","2"),estimate.map=F))
     if ( class(cross)[1]!="try-error" ) {
       # clean up
@@ -202,7 +195,7 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
       cat("WARNING: Could not impute genotype \n")
     }
   }
- 
+
   if (!is.null(limit_strains)) {
     assertthat::assert_that(sum(limit_strains%in%colnames(genotypes))>0)
     cat("...Limiting genotypes by user-supplied strains\n")
@@ -220,7 +213,7 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
     markers = markers[intersect(limit_markers, colnames(markers))]
     genotypes = genotypes[intersect(limit_markers, colnames(markers)),]
   }
-  
+
   if(na.rm == TRUE) {
     # remove any strain and marker with NA values
     if (rm_type == "marker") {
@@ -237,7 +230,7 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
       }
     }
   }
-  
+
   if(collpase_markers) {
     # collapse markers if genotypes are all the same
     # collapsed markers will take name of first marker by default
@@ -246,33 +239,39 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
     new_markers = GenomicRanges::GRanges()
     i = dim(genotypes)[1]-1000
     pb <- txtProgressBar(min = 1, max =   dim(genotypes)[1], style = 3)
-    while(i <  dim(genotypes)[1]) {
+    while(i <=  dim(genotypes)[1]) {
       setTxtProgressBar(pb, i)
       i1 = i + 1
-      while(
+      if (i1 <= dim(genotypes)[1]) {
+        while(
           # same genotype
-          as.logical(sum(diff(rbind(genotypes[i,],genotypes[i1,]))==0)==length(genotypes[i,]) &
-                     # same chromosome
-                    GenomicRanges::seqnames(markers[i])==GenomicRanges::seqnames(markers[i1])) &
-                    i1 < dim(genotypes)[1]
+          sum(diff(rbind(genotypes[i,],genotypes[i1,]))==0)==length(genotypes[i,]) &
+          # same chromosome
+          as.logical(GenomicRanges::seqnames(markers[i])==GenomicRanges::seqnames(markers[i1])) &
+          # not out of bounds
+          i1 <= dim(genotypes)[1]
         ) {
           i1 = i1 + 1
           #print(i1)
         }
+        new_marker = markers[i,]
+        GenomicRanges::end(GenomicRanges::ranges(new_marker)) =
+          GenomicRanges::end(GenomicRanges::ranges(markers[i1-1,]))
+        new_markers = c(new_markers,new_marker)
+      } else {
+        new_marker = markers[i,]
+        new_markers = c(new_markers,new_marker)
       }
-      #print(paste(i,i1))
+      # print(paste(i,i1))
       # adjust marker
-      new_marker = markers[i,]
-      GenomicRanges::end(GenomicRanges::ranges(new_marker)) = 
-        GenomicRanges::end(GenomicRanges::ranges(markers[i1-1,]))
-      new_markers = c(new_markers,new_marker)
       i = i1
+    }
     close(pb)
-    mcols(new_markers) = NULL
+    GenomicRanges::mcols(new_markers) = NULL
     markers = new_markers
     genotypes = genotypes[names(markers),]
   }
-  
+
   if(marker_rename == TRUE) {
     names(markers) = paste("mrk", seq(1,length(markers)), sep="_")
     rownames(genotypes) = names(markers)

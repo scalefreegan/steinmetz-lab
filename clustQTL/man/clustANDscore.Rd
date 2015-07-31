@@ -15,7 +15,4 @@ to_r
 \description{
 The function \code{\link{cluster}}
 }
-\examples{
-clustANDscore()
-}
 

@@ -4,7 +4,8 @@
 \alias{findQTLPeaks}
 \title{Find QTL peaks}
 \usage{
-findQTLPeaks(qtls, mrk, cutoff = 3)
+findQTLPeaks(qtls, mrk, pcutoff = 0.05, peak_sigma = 25,
+  peak_threshold = 1, ...)
 }
 \arguments{
 \item{qtls}{}
@@ -14,8 +15,5 @@ Data Frame of peaks
 }
 \description{
 The function \code{\link{findQTLPeaks}}
-}
-\examples{
-findQTLPeaks()
 }
 

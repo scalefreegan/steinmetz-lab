@@ -2,6 +2,7 @@
 
 export(clustANDscore)
 export(cluster)
+export(combineMarkers)
 export(cosine)
 export(cosineDist)
 export(findQTLPeaks)
@@ -10,4 +11,5 @@ export(format4manhattan)
 export(getGenotypes)
 export(granges2matrix)
 export(plotManhattan)
+export(plotPeakProfile)
 export(score)

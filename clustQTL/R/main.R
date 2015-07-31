@@ -4,8 +4,6 @@
 #'
 #' @param data
 #' @return Clustering object of input data
-#' @examples
-#' cluster()
 #' @export
 #'
 cluster = function(data, cluster_method = c("fuzzy")[1],
@@ -17,8 +15,7 @@ cluster = function(data, cluster_method = c("fuzzy")[1],
   }
   # cluster
   if ( cluster_method == "fuzzy" ) {
-    library(cluster)
-    clustering = fanny( x = dist_matrix, k = 2 )
+    clustering = cluster::fanny( x = dist_matrix, k = 2 )
   }
   return(clustering)
 }
@@ -30,8 +27,6 @@ cluster = function(data, cluster_method = c("fuzzy")[1],
 #' @param data
 #' @return Score representing distance between the actual clustering
 #'  and the one proposed by model using binomial distribution
-#' @examples
-#' score()
 #' @export
 #'
 score = function(clusters, genotype_vector,verbose=FALSE) {
@@ -63,8 +58,6 @@ score = function(clusters, genotype_vector,verbose=FALSE) {
 #'
 #' @param data
 #' @return to_r
-#' @examples
-#' clustANDscore()
 #' @export
 #'
 #'

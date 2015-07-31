@@ -16,7 +16,4 @@ Clustering object of input data
 \description{
 The function \code{\link{cluster}}
 }
-\examples{
-cluster()
-}
 

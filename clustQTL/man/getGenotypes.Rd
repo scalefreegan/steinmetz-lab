@@ -15,7 +15,4 @@ genotypes
 \description{
 The function \code{\link{cluster}}
 }
-\examples{
-getGenotypes()
-}
 

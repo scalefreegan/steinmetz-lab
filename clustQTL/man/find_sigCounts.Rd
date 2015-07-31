@@ -27,8 +27,8 @@ The function \code{\link{find_sigCounts}} returns a count cutoff at a specified
 }
 \examples{
 # S. cerevisiae chr01 3' isoform counts
-x = subsetByOverlaps(tx3_counts_chr01,tx_3utr_annotations_yeast_chr01[1])
-x = t(as.matrix(mcols(x)))
+x = GenomicRanges::subsetByOverlaps(tx3_counts_chr01,tx_3utr_annotations_yeast_chr01[1])
+x = t(as.matrix(as.data.frame(GenomicRanges::mcols(x))))
 find_sigCounts(x)
 }
 

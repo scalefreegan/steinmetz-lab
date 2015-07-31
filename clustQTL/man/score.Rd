@@ -16,7 +16,4 @@ Score representing distance between the actual clustering
 \description{
 The function \code{\link{cluster}}
 }
-\examples{
-score()
-}
 

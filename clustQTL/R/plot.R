@@ -12,8 +12,6 @@
 #' @return GRanges object containing an extra metacolumn "p"
 #'  containing the -log10(pvalue) at each marker. This object is suitable
 #'  for plotting with \code{\link{plotManhattan}}
-#' @examples
-#' format4manhattan()
 #' @export
 #'
 format4manhattan = function(qtls, mrk) {
@@ -36,13 +34,10 @@ format4manhattan = function(qtls, mrk) {
 #' @param gene_annot_range
 #' @param cutoff
 #' @return plot
-#' @examples
-#' plotManhattan()
 #' @export
 #'
 plotManhattan = function( qtls, mrk, main = "", trx_annot = NULL,
                           cutoff = 3, gene_annot_range = c(1000,1000),... ) {
-  library(ggbio)
   if (is.null(rownames(qtls))) {
     # assume they are in correct order
     rownames(qtls) = names(mrk)
@@ -51,15 +46,16 @@ plotManhattan = function( qtls, mrk, main = "", trx_annot = NULL,
   if ( (main!="") & ( !is.null(trx_annot) ) ) {
     # annotate gene
     trx_info = trx_annot[ which(trx_annot$Name == main), ]
-    trx_granges = GRanges(seqnames=seqnames(trx_info),
-                          ranges=IRanges(start(ranges(trx_info))-gene_annot_range[1],
-                                         end(ranges(trx_info))+gene_annot_range[2]))
+    trx_granges = GenomicRanges::GRanges(seqnames=seqnames(trx_info),
+                          ranges=IRanges::IRanges(
+                            GenomicRanges::start(GenomicRanges::ranges(trx_info))-gene_annot_range[1],
+                            GenomicRanges::end(GenomicRanges::ranges(trx_info))+gene_annot_range[2]))
     names(trx_granges) = main
-    p = plotGrandLinear(mrk2, aes(y = p),spaceline = TRUE,cutoff=cutoff,
+    p = ggbio::plotGrandLinear(mrk2, aes(y = p),spaceline = TRUE,cutoff=cutoff,
                     ylab="-log10(pval)",main=main,
                     highlight.gr = trx_granges,...)
   } else {
-   p = plotGrandLinear(mrk2, aes(y = p),spaceline = TRUE,cutoff=cutoff,
+   p = ggbio::plotGrandLinear(mrk2, aes(y = p),spaceline = TRUE,cutoff=cutoff,
                     ylab="-log10(pval)",main=main,...)
 
   }
@@ -73,8 +69,6 @@ plotManhattan = function( qtls, mrk, main = "", trx_annot = NULL,
 #' @param qtls A two column matrix with each row containing a pvalue for
 #'  every marker in \code{mrk}
 #' @return plot
-#' @examples
-#' plotPeakProfile()
 #' @export
 #'
 plotPeakProfile = function(data, genotypes, marker, peak_sigma = 2, peak_threshold = 1) {

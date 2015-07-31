@@ -2,20 +2,26 @@
 % Please edit documentation in R/plot.R
 \name{format4manhattan}
 \alias{format4manhattan}
-\title{Permute}
+\title{Format clustQTL results for plotting}
 \usage{
-format4manhattan(qtls, mrk, nresample = 10000)
+format4manhattan(qtls, mrk)
 }
 \arguments{
-\item{data}{}
+\item{qtls}{A two column matrix with each row containing a pvalue for
+every marker in \code{mrk}}
+
+\item{mrk}{A Granges object containing the location of every genetic marker
+tested by clustQTL}
 }
 \value{
-Modified mrk
+GRanges object containing an extra metacolumn "p"
+ containing the -log10(pvalue) at each marker. This object is suitable
+ for plotting with \code{\link{plotManhattan}}
 }
 \description{
-The function \code{\link{cluster}}
-}
-\examples{
-format4manhattan()
+This function will format results from running clustQTL for plotting
+ as a Manhattan plot with \code{\link{plotManhattan}}. Plotting
+ is done with plotGradLinear from the ggbio package. This function is
+ not usually called directly. It is called by \code{\link{plotManhattan}}
 }
 
