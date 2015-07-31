@@ -122,7 +122,7 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
                           marker_rename = FALSE, impute_markers = TRUE, clean_markers = TRUE) {
   assertthat::assert_that(class(markers) == "GRanges" | class(markers) == "data.frame")
   if (class(markers) == "data.frame") {
-    markers = makeGRangesFromDataFrame(markers,
+    markers = GenomicRanges::makeGRangesFromDataFrame(markers,
        keep.extra.columns=TRUE,
        ignore.strand=TRUE)
   }
@@ -138,6 +138,7 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
   if (clean_markers) {
     # clean markers according to Bloom et al 2013
     # marker must be called in 99% of segregants
+    cat("...Removing markers genotyped in <95% of strains\n")
     tor = apply(genotypes,1,function(i){1-sum(is.na(i))/length(i)})
     tor = which(tor < 0.95)
     if (length(tor)>0) {
@@ -147,6 +148,7 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
     #tor = apply(genotypes,1,function(i){1-sum(i==1, na.rm=T)/length(i[!is.na(i)])})
     #tor = c(which(tor < 0.45), which(tor > 0.55))
     # replcaed 30/07/2015 with binomial test
+    cat("...Removing markers with imbalanced allele frequency\n")
     tor = apply(genotypes,1,function(i){
       if (sum(!is.na(i)) == 0) {
         return(0)
@@ -170,13 +172,13 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
   bad_strains = names(tor)
   
   if (impute_markers) {
-    cat("Imputing missing genotypes\n")
+    cat("...Imputing missing genotypes\n")
     #Fake phenotype data to make cross object
     phenotype = cbind(rep(0,dim(genotypes)[2]), rep(0,dim(genotypes)[2]))
     dimnames(phenotype) = list(colnames(genotypes),c("1","2"))
     genotype_subset = t( genotypes[ ,rownames( phenotype ) ] )
     # add chr num to markers
-    genotype_subset = rbind( gsub('chr','', as.character( seqnames( markers[ colnames( genotype_subset ) ] ) ) ),
+    genotype_subset = rbind( gsub('chr','', as.character( GenomicRanges::seqnames( markers[ colnames( genotype_subset ) ] ) ) ),
                              genotype_subset )
     genotype_subset = cbind( c( NULL, rownames( genotype_subset ) ), genotype_subset )
     colnames( genotype_subset )[ 1 ] = 'id'
@@ -203,6 +205,7 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
  
   if (!is.null(limit_strains)) {
     assertthat::assert_that(sum(limit_strains%in%colnames(genotypes))>0)
+    cat("...Limiting genotypes by user-supplied strains\n")
     if (sum(!limit_strains%in%colnames(genotypes))>0) {
       cat("WARNING: Not all limit_strains are in colnames(genotypes)")
     }
@@ -210,6 +213,7 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
   }
   if (!is.null(limit_markers)) {
     assertthat::assert_that(sum(limit_markers%in%names(markers))>0)
+    cat("...Limiting genotypes by user-supplied markers\n")
     if (sum(!limit_markers%in%colnames(genotypes))>0) {
       cat("WARNING: Not all limit_markers are in names(markers)")
     }
@@ -233,29 +237,34 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
       }
     }
   }
+  
   if(collpase_markers) {
     # collapse markers if genotypes are all the same
     # collapsed markers will take name of first marker by default
-    cat("Collapsing markers with identical genotypes. This may take some time...\n")
-    new_markers = GRanges()
-    i = 1
+    # dim(genotypes)[1]
+    cat("...Collapsing markers with identical genotypes. This may take some time...\n")
+    new_markers = GenomicRanges::GRanges()
+    i = dim(genotypes)[1]-1000
     pb <- txtProgressBar(min = 1, max =   dim(genotypes)[1], style = 3)
     while(i <  dim(genotypes)[1]) {
       setTxtProgressBar(pb, i)
       i1 = i + 1
-      while(
-        # same genotype
-        as.logical(sum(diff(rbind(genotypes[i,],genotypes[i1,]))==0)==length(genotypes[i,]) &
-        # same chromosome
-        seqnames(markers[i])==seqnames(markers[i1]))
+      while( i1 <= dim(genotypes)[1]) {
+        while(
+          # same genotype
+          as.logical(sum(diff(rbind(genotypes[i,],genotypes[i1,]))==0)==length(genotypes[i,]) &
+                     # same chromosome
+                     GenomicRanges::seqnames(markers[i])==GenomicRanges::seqnames(markers[i1]))
         ) {
-        i1 = i1 + 1
-        #print(i1)
+          i1 = i1 + 1
+          #print(i1)
+        }
       }
       #print(paste(i,i1))
       # adjust marker
       new_marker = markers[i,]
-      end(ranges(new_marker)) = end(ranges(markers[i1-1,]))
+      GenomicRanges::end(GenomicRanges::ranges(new_marker)) = 
+        GenomicRanges::end(GenomicRanges::ranges(markers[i1-1,]))
       new_markers = c(new_markers,new_marker)
       i = i1
     }
