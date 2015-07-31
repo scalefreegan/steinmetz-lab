@@ -249,12 +249,12 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
     while(i <  dim(genotypes)[1]) {
       setTxtProgressBar(pb, i)
       i1 = i + 1
-      while( i1 <= dim(genotypes)[1]) {
-        while(
+      while(
           # same genotype
           as.logical(sum(diff(rbind(genotypes[i,],genotypes[i1,]))==0)==length(genotypes[i,]) &
                      # same chromosome
-                     GenomicRanges::seqnames(markers[i])==GenomicRanges::seqnames(markers[i1]))
+                    GenomicRanges::seqnames(markers[i])==GenomicRanges::seqnames(markers[i1])) &
+                    i1 < dim(genotypes)[1]
         ) {
           i1 = i1 + 1
           #print(i1)
@@ -267,7 +267,6 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
         GenomicRanges::end(GenomicRanges::ranges(markers[i1-1,]))
       new_markers = c(new_markers,new_marker)
       i = i1
-    }
     close(pb)
     mcols(new_markers) = NULL
     markers = new_markers
@@ -281,4 +280,4 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
   return(list(genotypes = genotypes, markers = markers, suspect_strains = bad_strains))
 }
 
-tmp = combineMarkers(geno,mrk,limit_strains=colnames(genotypes)[1:10])
+#tmp = combineMarkers(geno,mrk,limit_strains=colnames(genotypes)[1:10])
