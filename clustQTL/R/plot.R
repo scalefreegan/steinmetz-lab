@@ -36,21 +36,22 @@ format4manhattan = function(qtls, mrk) {
 #' @return plot
 #' @export
 #'
-plotManhattan = function( qtls, mrk, main = "", trx_annot = NULL,
+plotManhattan = function( qtls, mrk, gene = "", main = "", trx_annot = NULL,
                           cutoff = 3, gene_annot_range = c(1000,1000),... ) {
+  library(ggplot2)
   if (is.null(rownames(qtls))) {
     # assume they are in correct order
     rownames(qtls) = names(mrk)
   }
   mrk2 = format4manhattan( qtls,mrk )
-  if ( (main!="") & ( !is.null(trx_annot) ) ) {
+  if ( (gene!="") & ( !is.null(trx_annot) ) ) {
     # annotate gene
-    trx_info = trx_annot[ which(trx_annot$Name == main), ]
+    trx_info = trx_annot[ which(trx_annot$Name == gene), ]
     trx_granges = GenomicRanges::GRanges(seqnames=seqnames(trx_info),
                           ranges=IRanges::IRanges(
                             GenomicRanges::start(GenomicRanges::ranges(trx_info))-gene_annot_range[1],
                             GenomicRanges::end(GenomicRanges::ranges(trx_info))+gene_annot_range[2]))
-    names(trx_granges) = main
+    names(trx_granges) = gene
     p = ggbio::plotGrandLinear(mrk2, aes(y = p),spaceline = TRUE,cutoff=cutoff,
                     ylab="-log10(pval)",main=main,
                     highlight.gr = trx_granges,...)
@@ -60,6 +61,7 @@ plotManhattan = function( qtls, mrk, main = "", trx_annot = NULL,
 
   }
   p + theme(axis.text.x=element_text(angle=-45, hjust=0))
+  return(p)
 }
 
 #' Plot peak profiles
@@ -113,7 +115,7 @@ plotPeakProfile = function(data, genotypes, marker, peak_sigma = 2, peak_thresho
   gt1 <- ggplot_gtable(ggplot_build(p1))
   gt1$heights[[3]] <- unit(.25, "null")
   gt1$grobs[[3]]$children[2]$axis$grobs[[1]]$label = ""
-  gt1$grobs[[10]]$hjust = -2
+  gt1$grobs[[10]]$hjust = -1.5
   gt1$grobs[[10]]$vjust = -.25
 
 
@@ -128,7 +130,7 @@ plotPeakProfile = function(data, genotypes, marker, peak_sigma = 2, peak_thresho
   gt2 <- ggplot_gtable(ggplot_build(p2))
   gt2$heights[[3]] <- unit(.25, "null")
   gt2$grobs[[3]]$children[2]$axis$grobs[[1]]$label = ""
-  gt2$grobs[[10]]$hjust = -2
+  gt2$grobs[[10]]$hjust = -1.5
   gt2$grobs[[10]]$vjust = -.25
 
   grid.arrange(gt1,gt2,ncol=2)

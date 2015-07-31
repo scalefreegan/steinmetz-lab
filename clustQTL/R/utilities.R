@@ -234,10 +234,9 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
   if(collpase_markers) {
     # collapse markers if genotypes are all the same
     # collapsed markers will take name of first marker by default
-    # dim(genotypes)[1]
     cat("...Collapsing markers with identical genotypes. This may take some time...\n")
     new_markers = GenomicRanges::GRanges()
-    i = dim(genotypes)[1]-1000
+    i = 1
     pb <- txtProgressBar(min = 1, max =   dim(genotypes)[1], style = 3)
     while(i <=  dim(genotypes)[1]) {
       setTxtProgressBar(pb, i)
@@ -278,5 +277,3 @@ combineMarkers = function(genotypes, markers, limit_strains = NULL, limit_marker
   }
   return(list(genotypes = genotypes, markers = markers, suspect_strains = bad_strains))
 }
-
-#tmp = combineMarkers(geno,mrk,limit_strains=colnames(genotypes)[1:10])

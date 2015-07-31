@@ -1,29 +1,28 @@
 
 # This is the user-interface definition of a Shiny web application.
 # You can find out more about building applications with Shiny here:
-# 
+#
 # http://www.rstudio.com/shiny/
 #
 
 library(shiny)
-load("/g/steinmetz/brooks/3prime_Tfill/clust_qtl.rda")
-qtl_genes = sort(unlist(sapply(clust_qtls,function(i){min(as.numeric(i$qtl[,2]))})))
 
-shinyUI(pageWithSidebar(
+fluidPage(
   
-  # Application title
-  headerPanel("3' UTR QTL Visualizer"),
-  
-  # Sidebar with a slider input for number of bins
-  sidebarPanel(
-    selectInput(
-      "gene", "Gene", choices = names(qtl_genes)
-      )
-    
+  title = "Poly(A) Isoforms",
+  h1("Poly(A) Isoform Viewer"),
+  hr(),
+  fluidRow(
+    column(6,DT::dataTableOutput('dt')),
+    column(6,plotOutput('manhattan',
+                        click = "plot_click",
+                        brush = "plot_brush"))
   ),
-  
-  # Show a plot of the generated distribution
-  mainPanel(
-    plotOutput("qtlPlot")
+  fluidRow(
+    verbatimTextOutput("info")
+    #column(12,plotOutput('pqtl'))
+  ),
+  fluidRow(
+    column(12,plotOutput('pqtl'))
   )
-))
+)
