@@ -5,7 +5,8 @@
 \title{Plot clustQTL results}
 \usage{
 plotManhattan(qtls, mrk, gene = "", main = "", trx_annot = NULL,
-  cutoff = 3, gene_annot_range = c(1000, 1000), ...)
+  cutoff = 3, gene_annot_range = c(1000, 1000), qqman = T, show = T,
+  ...)
 }
 \arguments{
 \item{qtls}{A two column matrix with each row containing a pvalue for

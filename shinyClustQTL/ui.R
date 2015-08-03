@@ -16,12 +16,13 @@ fluidPage(
     column(6,DT::dataTableOutput('dt')),
     column(6,plotOutput('manhattan',
                         click = "plot_click",
-                        brush = "plot_brush"))
+                        brush = "plot_brush",
+                        dblclick = "plot_dblclick"))
   ),
-  fluidRow(
-    verbatimTextOutput("info")
-    #column(12,plotOutput('pqtl'))
-  ),
+#   fluidRow(
+#     verbatimTextOutput("info")
+#     #column(12,plotOutput('pqtl'))
+#   ),
   fluidRow(
     column(12,plotOutput('pqtl'))
   )

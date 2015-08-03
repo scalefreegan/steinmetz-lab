@@ -23,8 +23,8 @@ names(clust_qtls) = gsub("%2","/",names(clust_qtls))
 load("~/Desktop/tmpdata/3TFill/geno_mrk.RData")
 load("~/Desktop/tmpdata/3TFill/tx_3utr.rda")
 # supplies mrk and geno
-alpha = 2
-qtl_df = as.data.frame(do.call(rbind,mclapply(names(clust_qtls),function(i){
+alpha = 1e-5
+qtl_df = as.data.frame(do.call(rbind,lapply(names(clust_qtls),function(i){
   #alpha = 10^-input$alpha
   i_peaks = findQTLPeaks(clust_qtls[[i]]$qtl, mrk, pcutoff = alpha)
   if (length(i_peaks) == 0 ) {
@@ -46,50 +46,77 @@ shinyServer(function(input, output, session) {
   output$dt = DT::renderDataTable(
     df, server = TRUE, selection = "single")
 
-  output$manhattan = renderPlot({
+  gene = reactive({
     s = input$dt_rows_selected
+    #input$plot_click = NULL
+    #input$plot_brush = NULL
     if (length(s)) {
-      gene =  df[s, "gene"]
-      gene2 =  gsub("/", "%2", df[s, "gene"])
-      p = plotManhattan(clust_qtls[[gene]]$qtl, mrk, gene = gene2, trx_annot = tx_3utr,
-                              cutoff = alpha)
-      p
+     levels(df[s, "gene"])[df[s, "gene"]]
+    } else {
+      NULL
     }
   })
-    
-  output$pqtl = renderPlot({
+  
+  gene2 = reactive({
     s = input$dt_rows_selected
     if (length(s)) {
-      gene = df[s,"gene"]
-      print(gene)
-      data <- clust_qtls[[gene]]$data
+      gsub("/", "%2", df[s, "gene"])
+    } else {
+      NULL
+    }
+  })
+  
+  manhattan_data = reactive({
+    if (!is.null(gene())) {
+      plotManhattan(clust_qtls[[gene()]]$qtl, mrk, gene = gene2(), trx_annot = tx_3utr,
+                                  cutoff = alpha, qqman = TRUE, show = FALSE)
+    }
+  })
+  
+  #gene = names(clust_qtls)[1]
+  #qtls = clust_qtls[[gene]]$qtl
+  #marker = names(mrk)[1:100]
+  
+  output$manhattan = renderPlot({
+    if (!is.null(gene())) {
+      qtls = clust_qtls[[gene()]]$qtl
+      plotManhattan(qtls, mrk, gene = gene2(), trx_annot = tx_3utr,
+                      cutoff = alpha, qqman = TRUE)
+    }
+  })
+  
+  output$pqtl = renderPlot({
+    if (!is.null(gene())) {
+      data <- clust_qtls[[gene()]]$data
       
       # find peaks
-      peaks = findQTLPeaks(clust_qtls[[gene]]$qtl, mrk,
+      peaks = findQTLPeaks(clust_qtls[[gene()]]$qtl, mrk,
                            pcutoff = alpha)
       
       # draw the qtl peak profile
-      plotPeakProfile(data, geno,
-                      names(peaks)[1], peak_sigma = 2,
-                      peak_threshold = 1)
+      if(is.null(input$plot_click) && is.null(input$plot_brush)) {
+        print("normal")
+        print(names(peaks)[1])
+        plotPeakProfile(data, geno,
+                        names(peaks)[1], peak_sigma = 2,
+                        peak_threshold = 1)
+      } else {
+        if(is.null(input$plot_brush)) {
+          print("click")
+          marker = nearPoints(manhattan_data(),input$plot_click, xvar = "pos", yvar = "logp")
+        } else {
+          print("brush")
+          marker = brushedPoints(manhattan_data(), input$plot_brush, xvar = "pos", yvar = "logp")
+          }
+        if (dim(marker)[1]>0) {
+          marker = marker[which.max(marker$logp),"SNP"]
+          marker = levels(marker)[marker]
+          print(marker)
+          plotPeakProfile(data, geno,
+                          marker, peak_sigma = 2,
+                          peak_threshold = 1)
+        }
+      }
     }
   })
-  
-  output$info <- renderText({
-    xy_str <- function(e) {
-      if(is.null(e)) return("NULL\n")
-      paste0("x=", round(e$x, 1), " y=", round(e$y, 1), "\n")
-    }
-    xy_range_str <- function(e) {
-      if(is.null(e)) return("NULL\n")
-      paste0("xmin=", round(e$xmin, 1), " xmax=", round(e$xmax, 1), 
-             " ymin=", round(e$ymin, 1), " ymax=", round(e$ymax, 1))
-    }
-    #mrk2 = as.data.frame(format4manhattan( clust_qtls[[gene]]$qtl,mrk ))
-    paste0(
-      "click: ", xy_str(input$plot_click),
-      "brush: ", xy_range_str(input$plot_brush)
-    )
-  })
-  
 })

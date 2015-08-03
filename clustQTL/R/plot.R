@@ -14,9 +14,32 @@
 #'  for plotting with \code{\link{plotManhattan}}
 #' @export
 #'
-format4manhattan = function(qtls, mrk) {
-  mrk$p = -log10(qtls[,"pval"])
-  return(mrk)
+format4manhattan = function(qtls, mrk, qqman = TRUE, midpoint = TRUE, restrict = NULL, ...) {
+  if (qqman) {
+    if (midpoint) {
+      # take midpoint instead of entire range
+      bp =  apply(cbind(GenomicRanges::start(GenomicRanges::ranges(mrk)),
+                       GenomicRanges::end(GenomicRanges::ranges(mrk))),1,function(i){round(mean(i))})
+      snp = names(mrk)
+      chr = as.numeric(gsub("chr","",GenomicRanges::seqnames(mrk)))
+      p = qtls[,"pval"]
+    } else {
+      # Not implemented
+      #bp =  cbind(GenomicRanges::start(GenomicRanges::ranges(mrk)),
+      #          GenomicRanges::end(GenomicRanges::ranges(mrk)))
+      #snp = rep(names(mrk),length(bp))
+      #chr = rep(GenomicRanges::seqnames(mrk),length(bp))
+      #p = rep(qtls[,"pval"],length(bp))
+    }
+    to_r = data.frame(SNP = snp,CHR = chr, BP = bp, P = p)
+    if (!is.null(restrict)) {
+      to_r = to_r %>% filter(.,SNP == restrict)
+    }
+    return(to_r)
+  } else {
+    mrk$p = -log10(qtls[,"pval"])
+    return(mrk)
+  }
 }
 
 #' Plot clustQTL results
@@ -37,31 +60,50 @@ format4manhattan = function(qtls, mrk) {
 #' @export
 #'
 plotManhattan = function( qtls, mrk, gene = "", main = "", trx_annot = NULL,
-                          cutoff = 3, gene_annot_range = c(1000,1000),... ) {
-  library(ggplot2)
-  if (is.null(rownames(qtls))) {
-    # assume they are in correct order
-    rownames(qtls) = names(mrk)
-  }
-  mrk2 = format4manhattan( qtls,mrk )
-  if ( (gene!="") & ( !is.null(trx_annot) ) ) {
-    # annotate gene
+                          cutoff = 3, gene_annot_range = c(1000,1000),qqman = T,show=T,... ) {
+  if (qqman) {
+    if (is.null(rownames(qtls))) {
+      # assume they are in correct order
+      rownames(qtls) = names(mrk)
+    }
+    mrk2 = format4manhattan( qtls,mrk, qqman = T)
     trx_info = trx_annot[ which(trx_annot$Name == gene), ]
     trx_granges = GenomicRanges::GRanges(seqnames=seqnames(trx_info),
-                          ranges=IRanges::IRanges(
-                            GenomicRanges::start(GenomicRanges::ranges(trx_info))-gene_annot_range[1],
-                            GenomicRanges::end(GenomicRanges::ranges(trx_info))+gene_annot_range[2]))
+                                         ranges=IRanges::IRanges(
+                                           GenomicRanges::start(GenomicRanges::ranges(trx_info))-gene_annot_range[1],
+                                           GenomicRanges::end(GenomicRanges::ranges(trx_info))+gene_annot_range[2]))
     names(trx_granges) = gene
-    p = ggbio::plotGrandLinear(mrk2, aes(y = p),spaceline = TRUE,cutoff=cutoff,
-                    ylab="-log10(pval)",main=main,
-                    highlight.gr = trx_granges,...)
+    gene_snps = mrk2 %>% filter(., CHR == as.numeric(gsub("chr","",GenomicRanges::seqnames(trx_granges))),
+                                BP >= GenomicRanges::start(GenomicRanges::ranges(trx_granges)),
+                                BP <= GenomicRanges::end(GenomicRanges::ranges(trx_granges)))
+    to_r = qqman::manhattan(mrk2, highlight = gene_snps$SNP, show = show)
+    return(to_r)
   } else {
-   p = ggbio::plotGrandLinear(mrk2, aes(y = p),spaceline = TRUE,cutoff=cutoff,
-                    ylab="-log10(pval)",main=main,...)
-
+    library(ggplot2)
+    if (is.null(rownames(qtls))) {
+      # assume they are in correct order
+      rownames(qtls) = names(mrk)
+    }
+    mrk2 = format4manhattan( qtls,mrk, qqman = F )
+    if ( (gene!="") & ( !is.null(trx_annot) ) ) {
+      # annotate gene
+      trx_info = trx_annot[ which(trx_annot$Name == gene), ]
+      trx_granges = GenomicRanges::GRanges(seqnames=seqnames(trx_info),
+                                           ranges=IRanges::IRanges(
+                                             GenomicRanges::start(GenomicRanges::ranges(trx_info))-gene_annot_range[1],
+                                             GenomicRanges::end(GenomicRanges::ranges(trx_info))+gene_annot_range[2]))
+      names(trx_granges) = gene
+      p = ggbio::plotGrandLinear(mrk2, aes(y = p),spaceline = TRUE,cutoff=cutoff,
+                                 ylab="-log10(pval)",main=main,
+                                 highlight.gr = trx_granges,...)
+    } else {
+      p = ggbio::plotGrandLinear(mrk2, aes(y = p),spaceline = TRUE,cutoff=cutoff,
+                                 ylab="-log10(pval)",main=main,...)
+      
+    }
+    p + theme(axis.text.x=element_text(angle=-45, hjust=0))
   }
-  p + theme(axis.text.x=element_text(angle=-45, hjust=0))
-  return(p)
+  
 }
 
 #' Plot peak profiles

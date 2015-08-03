@@ -4,7 +4,8 @@
 \alias{format4manhattan}
 \title{Format clustQTL results for plotting}
 \usage{
-format4manhattan(qtls, mrk)
+format4manhattan(qtls, mrk, qqman = TRUE, midpoint = TRUE,
+  restrict = NULL, ...)
 }
 \arguments{
 \item{qtls}{A two column matrix with each row containing a pvalue for
