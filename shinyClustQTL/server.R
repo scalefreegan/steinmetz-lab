@@ -11,17 +11,24 @@ library(dplyr)
 library(DT)
 library(parallel)
 options("mc.cores"=4)
+
+if (!is.null(local)) {
+  load("~/Desktop/tmpdata/3TFill/clust_qtl_small.rda")
+  load("~/Desktop/tmpdata/3TFill/geno_mrk.RData")
+  load("~/Desktop/tmpdata/3TFill/tx_3utr.rda")
+} else {
+  #load("/g/steinmetz/brooks/3prime_Tfill/clust_qtl.rda")
+  load("/g/steinmetz/brooks/3prime_Tfill/clust_qtl_1000.rda")
+  load( "/g/steinmetz/brooks/genphen/qtl_endometabolome_23042015/geno_mrk.RData" )
+  load("/g/steinmetz/brooks/3prime_Tfill/tx_3utr.rda")
+}
 # load qt_file
-load("/g/steinmetz/brooks/3prime_Tfill/clust_qtl.rda")
-#load("~/Desktop/tmpdata/3TFill/clust_qtl_small.rda")
+#
 #qtl_genes = sort(unlist(sapply(clust_qtls,function(i){min(as.numeric(i$qtl[,2]))})))
 names(clust_qtls) = gsub("%2","/",names(clust_qtls))
 
 # genotypes/markers from chenchen. only applies to clust_qtl data set
 # will be replaced in future
-load( "/g/steinmetz/brooks/genphen/qtl_endometabolome_23042015/geno_mrk.RData" )
-#load("~/Desktop/tmpdata/3TFill/geno_mrk.RData")
-load("/g/steinmetz/brooks/3prime_Tfill/tx_3utr.rda")
 
 # supplies mrk and geno
 alpha = 1e-5
@@ -51,6 +58,7 @@ shinyServer(function(input, output, session) {
     s = input$dt_rows_selected
     #input$plot_click = NULL
     #input$plot_brush = NULL
+    print(s)
     if (length(s)) {
      levels(df[s, "gene"])[df[s, "gene"]]
     } else {
