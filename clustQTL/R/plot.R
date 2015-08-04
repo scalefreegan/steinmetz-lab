@@ -76,7 +76,7 @@ plotManhattan = function( qtls, mrk, gene = "", main = "", trx_annot = NULL,
     gene_snps = mrk2 %>% filter(., CHR == as.numeric(gsub("chr","",GenomicRanges::seqnames(trx_granges))),
                                 BP >= GenomicRanges::start(GenomicRanges::ranges(trx_granges)),
                                 BP <= GenomicRanges::end(GenomicRanges::ranges(trx_granges)))
-    to_r = qqman::manhattan(mrk2, highlight = gene_snps$SNP, show = show)
+    to_r = qqman::manhattan(mrk2, highlight = gene_snps$SNP, show = show, ...)
     return(to_r)
   } else {
     library(ggplot2)
