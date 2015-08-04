@@ -48,26 +48,41 @@ shinyServer(function(input, output, session) {
 
   options(DT.options = list(pageLength = 5))
 
-  #input = list()
-  #input$alpha = 5
-
+  # DATA TABLE
   output$dt = DT::renderDataTable(
     df, server = TRUE, selection = "single")
 
-  selection = reactiveValues(
-    old = "start"
+  # REACTIVE VALUES
+  values = reactiveValues(
+    old_selection = NULL,
+    marker = NULL
   )
   
+  # MONITOR OLD SELECTION
   session$onFlush(once=FALSE, function(){
-    isolate({ selection$old<-input$dt_rows_selected })
+    isolate({ values$old_selection <- input$dt_rows_selected })
+  })
+  
+  # OBSERVE CLICK
+  observeEvent(input$plot_click, {
+    marker = nearPoints(manhattan_data(),input$plot_click, xvar = "pos", yvar = "logp")
+    if (dim(marker)[1] > 0) {
+      marker = marker[which.max(marker$logp),"SNP"]
+      values$marker = levels(marker)[marker]
+    }
+  })
+  
+  # OBSERVE BRUSH
+  observeEvent(input$plot_brush, {
+    marker = brushedPoints(manhattan_data(), input$plot_brush, xvar = "pos", yvar = "logp")
+    if (dim(marker)[1] > 0) {
+      marker = marker[which.max(marker$logp),"SNP"]
+      values$marker = levels(marker)[marker]
+    }
   })
   
   gene = reactive({
     s = input$dt_rows_selected
-    #input$plot_click = NULL
-    #input$plot_brush = NULL
-    print(s)
-    print(selection$old)
     if (length(s)) {
      levels(df[s, "gene"])[df[s, "gene"]]
     } else {
@@ -110,29 +125,16 @@ shinyServer(function(input, output, session) {
                            pcutoff = alpha)
       
       # draw the qtl peak profile
-      if( (is.null(input$plot_click) && is.null(input$plot_brush) ) || 
-          input$dt_rows_selected != selection$old ) {
+      if(input$dt_rows_selected != values$old_selection || is.null(values$marker)) {
         print("normal")
         print(names(peaks)[1])
         clustQTL::plotPeakProfile(data, geno,
                         names(peaks)[1], peak_sigma = 2,
                         peak_threshold = 1)
       } else {
-        if(is.null(input$plot_brush)) {
-          print("click")
-          marker = nearPoints(manhattan_data(),input$plot_click, xvar = "pos", yvar = "logp")
-        } else {
-          print("brush")
-          marker = brushedPoints(manhattan_data(), input$plot_brush, xvar = "pos", yvar = "logp")
-          }
-        if (dim(marker)[1] > 0) {
-          marker = marker[which.max(marker$logp),"SNP"]
-          marker = levels(marker)[marker]
-          print(marker)
           clustQTL::plotPeakProfile(data, geno,
-                          marker, peak_sigma = 2,
-                          peak_threshold = 1)
-        }
+                values$marker, peak_sigma = 2,
+                peak_threshold = 1)
       }
     }
   })
