@@ -153,7 +153,8 @@ plotPeakProfile = function(data, genotypes, marker, peak_sigma = 2, peak_thresho
    # geom_line(data=data_long_mod %>% filter(genotype==1), mapping=aes(y=value,x=x),stat="mean") +
     geom_tile(data = data_long %>% filter(genotype==1), mapping=aes(y = value,x = x,fill = y)) +
     scale_fill_gradient(low="black", high="white", guide = F, limits=c(0, max(data_long$y))) +
-    labs(x = "Position", y = "Sum Counts")
+    labs(x = "Position", y = "Sum Counts") + 
+    ggtitle("Genotype 1")
   gt1 <- ggplot_gtable(ggplot_build(p1))
   gt1$heights[[3]] <- unit(.25, "null")
   gt1$grobs[[3]]$children[2]$axis$grobs[[1]]$label = ""
@@ -168,7 +169,8 @@ plotPeakProfile = function(data, genotypes, marker, peak_sigma = 2, peak_thresho
     #geom_line(data=data_long_mod %>% filter(genotype==2), mapping=aes(y=value,x=x)) +
     geom_tile(data = data_long %>% filter(genotype==2), mapping=aes(y=value,x=x,fill = y)) +
     scale_fill_gradient(low="black", high="white", limits=c(0, max(data_long$y)),name="Counts") +
-    labs(x = "Position", y = "Sum Counts")
+    labs(x = "Position", y = "Sum Counts") +
+    ggtitle("Genotype 2")
   gt2 <- ggplot_gtable(ggplot_build(p2))
   gt2$heights[[3]] <- unit(.25, "null")
   gt2$grobs[[3]]$children[2]$axis$grobs[[1]]$label = ""
