@@ -18,8 +18,8 @@ if (!is.null(local)) {
   load("~/Desktop/tmpdata/3TFill/geno_mrk.RData")
   load("~/Desktop/tmpdata/3TFill/tx_3utr.rda")
 } else {
-  load("/g/steinmetz/brooks/3prime_Tfill/clust_qtl.rda")
-  #load("/g/steinmetz/brooks/3prime_Tfill/clust_qtl_1000.rda")
+  #load("/g/steinmetz/brooks/3prime_Tfill/clust_qtl.rda")
+  load("/g/steinmetz/brooks/3prime_Tfill/clust_qtl_1000.rda")
   load( "/g/steinmetz/brooks/genphen/qtl_endometabolome_23042015/geno_mrk.RData" )
   load("/g/steinmetz/brooks/3prime_Tfill/tx_3utr.rda")
 }
