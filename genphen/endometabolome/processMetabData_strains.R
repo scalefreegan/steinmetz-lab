@@ -217,6 +217,9 @@ dev.off()
 #
 #-------------------------------------------------------------------#
 
+# source rQTL utilities
+devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-lab/master/QTL/rQTL.R")
+
 genotype_f = "/g/steinmetz/project/GenPhen/data/endometabolome/genotypesANDmarkers_14072015.rda"
 if (file.exists(genotype_f)) {
   load(genotype_f)
@@ -232,6 +235,25 @@ if (file.exists(genotype_f)) {
 }
 
 # load genotype and markers files
-repdata = endometabolite %>%
-  group_by(metabolite,strain) %>%
-  filter(.,time_format=="relative") %>%
+ARGdata = endometabolite %>%
+  filter(metabolite=="ARG") %>%
+  filter(.,time_format=="relative")
+pnames = rep(NA,length(unique(paste(ARGdata$metabolite,ARGdata$replicate,ARGdata$time,sep="_"))))
+names(pnames) = unique(paste(ARGdata$metabolite,ARGdata$replicate,ARGdata$time,sep="_"))
+
+pheno = t(do.call(cbind,lapply(levels(ARGdata$strain),function(i){
+		strain_data = filter(ARGdata,strain==i)
+		vals = pnames
+		vals[paste(strain_data$metabolite,strain_data$replicate,strain_data$time,sep="_")] = strain_data[,"value.log2"]
+		return(vals)
+	})))
+rownames(pheno) = levels(ARGdata$strain)
+
+mQTLs =	runQTL(
+			genotype = geno,
+	    phenotype = pheno,
+	    marker_info = mrk,
+	    permute = T, # compute significance of each QTL LOD by permutation
+	    pca = F, # maximize QTL detection by removing confounders using PCA
+	    permute_alpha = 0.05,
+	    save_file = "")

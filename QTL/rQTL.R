@@ -51,7 +51,7 @@ runQTL <- function(
   }
   genotype_subset = t( genotype[ ,rownames( phenotype ) ] )
   # add chr num to markers
-  genotype_subset = rbind( gsub('chr','', as.character( seqnames( marker_info[ colnames( genotype_subset ) ] ) ) ),
+  genotype_subset = rbind( gsub('chr','', as.character( GenomicRanges::seqnames( marker_info[ colnames( genotype_subset ) ] ) ) ),
    genotype_subset )
   genotype_subset = cbind( c( NULL, rownames( genotype_subset ) ), genotype_subset )
   colnames( genotype_subset )[ 1 ] = 'id'
@@ -63,7 +63,7 @@ runQTL <- function(
   write.table( phenotype, file =  ".tmpphen", sep = ",", col.names = T, row.names = F, quote=F )
   # read.cross to import data into rqtl
   cat("Creating rQTL cross object for genotype/phenotype data\n")
-  genphen = try( read.cross( format = "csvs", ".", genfile = ".tmpgen" , phefile=  ".tmpphen", genotypes = c( "1","2" ) ) )
+  genphen = try( qtl::read.cross( format = "csvs", ".", genfile = ".tmpgen" , phefile=  ".tmpphen", genotypes = c( "1","2" ) ) )
   if ( class(genphen)[1]!="try-error" ) {
     # clean up
     file.remove(c(".tmpgen",".tmpphen"))
