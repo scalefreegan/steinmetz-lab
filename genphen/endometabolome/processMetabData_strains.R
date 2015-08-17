@@ -217,8 +217,21 @@ dev.off()
 #
 #-------------------------------------------------------------------#
 
+genotype_f = "/g/steinmetz/project/GenPhen/data/endometabolome/genotypesANDmarkers_14072015.rda"
+if (file.exists(genotype_f)) {
+  load(genotype_f)
+} else{
+	load("/g/steinmetz/brooks/yeast/genomes/S288CxYJM789/genotypes_S288c_R64.rda")
+	strains = levels(endometabolite$strain)
+	gm_list = clustQTL::combineMarkers(geno, mrk, limit_strains = strains, limit_markers = NULL,
+	                          na.rm = TRUE, rm_type = c("marker","strain")[1], collpase_markers = TRUE,
+	                          marker_rename = FALSE, impute_markers = TRUE, clean_markers = TRUE)
+	geno = gm_list$genotypes
+	mrk = gm_list$markers
+  save(geno,mrk, file = genotype_f)
+}
+
 # load genotype and markers files
-
-
-
-source("")
+repdata = endometabolite %>%
+  group_by(metabolite,strain) %>%
+  filter(.,time_format=="relative") %>%

@@ -6,7 +6,7 @@
 
 .author = "Aaron Brooks"
 .copyright = "Copyright 2015"
-.credits = ["Aaron Brooks"]
+.credits = "Aaron Brooks"
 .license = "GPL"
 .version = "0.0.1"
 .maintainer = "Aaron Brooks"
