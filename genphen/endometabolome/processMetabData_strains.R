@@ -249,6 +249,9 @@ pheno = t(do.call(cbind,lapply(levels(ARGdata$strain),function(i){
 	})))
 rownames(pheno) = levels(ARGdata$strain)
 
+# remove missing data
+# pheno = pheno[which(apply(pheno,1,function(i)sum(is.na(i)))==0),]
+
 mQTLs =	runQTL(
 			genotype = geno,
 	    phenotype = pheno,

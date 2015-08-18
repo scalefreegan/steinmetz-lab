@@ -120,20 +120,22 @@ runQTL <- function(
     to_r = list()
     genphen$pheno = phenotype
     to_r$qtls = c( mclapply( seq(1,dim(phenotype)[2]),function( i ) { scanone( genphen, pheno.col = i ) } ) )
-    names(to_r$qtls) = colnames(genphen$phen)
+    names(to_r$qtls) = colnames(phenotype)
     to_r$pc_removed = pc_removed
     to_r$phenotype = phenotype
   } else {
     to_r = list()
-    to_r$qtls = c( mclapply( seq(1,dim(genphen$pheno)[2]-1),function( i ) { scanone( genphen, pheno.col = i ) } ) )
-    names(to_r$qtls) = colnames(genphen$pheno)[seq(1,dim(genphen$pheno)[2]-1)]
+    phenotype = genphen$pheno[,colnames(genphen$pheno)!="id"]
+    genphen$pheno = phenotype
+    to_r$qtls = c( mclapply(seq(1,dim(phenotype)[2]),function( i ) { scanone( genphen, pheno.col = i ) } ) )
+    names(to_r$qtls) = colnames(phenotype)
   }
 
   to_r$cross = genphen
   if (permute) {
     # permuations to determine qtl sig cutoff
     to_r$qtls_permuted = lapply(seq(1,dim(phenotype)[2]), function(i){scanone( genphen, pheno.col = i, n.perm = 1000, n.cluster = 20 )})
-    names(to_r$qtls_permuted) = colnames(genphen$phen)
+    names(to_r$qtls_permuted) = colnames(genphen$pheno)
     to_r$sig_qtls = list()
     to_r$qtls_threshold = summary(to_r$qtls_permuted,permute_alpha)
     for ( i in names(to_r$qtls) ) {
