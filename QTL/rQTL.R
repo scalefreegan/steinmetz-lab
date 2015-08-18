@@ -125,8 +125,8 @@ runQTL <- function(
     to_r$phenotype = phenotype
   } else {
     to_r = list()
-    to_r$qtls = c( mclapply( seq(1,dim(phenotype)[2]),function( i ) { scanone( genphen, pheno.col = i ) } ) )
-    names(to_r$qtls) = colnames(genphen$phen)
+    to_r$qtls = c( mclapply( seq(1,dim(genphen$pheno)[2]-1),function( i ) { scanone( genphen, pheno.col = i ) } ) )
+    names(to_r$qtls) = colnames(genphen$pheno)[seq(1,dim(genphen$pheno)[2]-1)]
   }
 
   to_r$cross = genphen

@@ -3,9 +3,8 @@ Specific aims of research
 
 Briefly describe the main aims of your research project, including the hypothesis(es) you intend to test. The information should be concise and provide the reviewers with the key features of the project without having to refer to the proposal text.
 
-1. Establish a microfluidic platform to measure and identify genetic contributions
-Hypothesis: Multiple genetic factors influence aging
-2. Establish experimental and computational approaches to integrate multiple omic measurements at specific stages of aging, and
-Hypothesis: Multiple genetic factors influence aging,
-3. Detect molecular "fingerprints" that report on the aging process and determine how these fingerprints and their underlying genetic factors are modulated by the environment
-Hypothesis:
+1. Multiple, unidentified genetic factors influence aging
+Establish a microfluidic platform to measure and identify genetic factors (QTLs) related to aging
+2. Genetic factors have different effects at different biological scales
+Integrate multiple omic measurements at specific stages of aging, and
+3. The environment modulates and 
