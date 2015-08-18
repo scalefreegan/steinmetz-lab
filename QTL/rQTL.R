@@ -135,7 +135,7 @@ runQTL <- function(
     to_r$qtls_permuted = lapply(seq(1,dim(phenotype)[2]), function(i){scanone( genphen, pheno.col = i, n.perm = 1000, n.cluster = 20 )})
     names(to_r$qtls_permuted) = colnames(genphen$phen)
     to_r$sig_qtls = list()
-    to_r$qtls_threshold = summary(myqtls$qtls_permuted,permute_alpha)
+    to_r$qtls_threshold = summary(to_r$qtls_permuted,permute_alpha)
     for ( i in names(to_r$qtls) ) {
       #phe_qtls = summary( to_r$qtls[[ i ]] , to_r$qtls_threshold[,i] )
       phe_qtls = summary(to_r$qtls[[ i ]], format="allpeaks", perms=to_r$qtls_permuted[[ i ]],
