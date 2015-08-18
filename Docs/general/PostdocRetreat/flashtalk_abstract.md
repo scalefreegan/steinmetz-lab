@@ -1,7 +1,14 @@
-Unraveling molecular processes that lead from genotype to phenotype is crucial to treat genetic diseases as well as understand how molecular pathways evolve. Until recently few studies have considered the effect of genetic variation at more than one biological scale. Furthermore, to our knowledge none of these studies has been able to place a QTL within an integrated cellular context to determine how it functions.
+# Flash talk Abstract
+###### Aaron Brooks
+###### Advisor: Lars Steinmetz, EMBL Heidelberg
+#### Deciphering Causal Pathways That Mediate Genetic Effects on Multiomic Molecular Profiles
 
-*My project aims to identify genetic variations that affect molecular processes across multiple biological layers, from transcription to post-translational mechanisms. I will place the variants we identify within the context of integrated biochemical networks to reveal intervention points that can modulate their effect.*
+*with Chenchen Zhu (EMBL), Nicole Paczia (ICSB), Carole Linster (ICSB), and Oliver Stegle (EMBL-EBI)*
 
-So far we have profiled the transcriptome, proteome, and metabolome for 50 genetically diverse yeast strains. We measured variation in transcript levels, 3´ transcript isoform usage, protein levels, and the dynamics of more than 30 metabolites at four time points during exponential growth. Our dataset provides an unprecedented window into the consequences of genetic variation across several molecular layers. My task will be to integrate these data using machine learning techniques, leveraging prior knowledge to robustly detect multi-omic QTLs and interpret their function within the context of macromolecular networks.
+Unraveling molecular processes that lead from genotype to phenotype is critical to treat genetic diseases and maintain health, as well as understand how biological pathways evolve. Until recently, however, few studies have considered how genetic variation affects processes across biological scales.
 
-The findings from this study will have implications for the design and analysis of clinical omics studies aimed at discovering personalized targets for molecular intervention. We anticipate that combining measurements across multiple molecular profiles and integrating these measurements within the context of biological networks will increase our ability to detect QTLs and understand how they function.  
+*Our study aims to identify the impact of genetic variation within and between biological scales by integrating multiple omic measurements in a genetically tractable yeast population.*
+
+We have profiled the transcriptome, proteome, and metabolome for 50 genetically diverse yeast segregants. We measured variation in transcript levels, 3´ transcript isoform usage, protein levels, and the dynamics of more than 30 metabolites at four time points during exponential growth. Our dataset provides unprecedented detail about how genetic variation leads to differences in molecular profiles. We are integrating these data using machine learning techniques and prior knowledge to identify causal genetic loci and interpret how they function in the context of biochemical networks.
+
+The findings from our study will have implications for the design and analysis of clinical omics studies aimed at discovering personalized targets for molecular intervention. We anticipate that combining measurements across multiple molecular profiles will increase our ability to detect genetic loci and understand how they lead to disease.  
