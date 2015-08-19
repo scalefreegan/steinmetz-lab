@@ -252,6 +252,9 @@ rownames(pheno) = levels(ARGdata$strain)
 # remove missing data
 # pheno = pheno[which(apply(pheno,1,function(i)sum(is.na(i)))==0),]
 
+# combine all data
+pheno = do.call(rbind,lapply(seq(1,dim(pheno)[2]),function(i){pheno[,i,drop=F]}))
+
 mQTLs =	runQTL(
 			genotype = geno,
 	    phenotype = pheno,
