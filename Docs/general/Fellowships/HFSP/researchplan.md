@@ -11,11 +11,15 @@ of the proposed research.
 
 #### subject/significance
 
-Wellness is a new frontier in personalized medicine. Several start-ups have emerged promising to quantify wellness and provide data-driven approaches to its management. These projects combine DNA sequencing with longitudinal molecular profiling, as well as coaching to improve health and detect anomalies before they manifest disease.
+A new paradigm for personalized medicine is emerging in the biomedical sciences: quantified wellness. Rather than focus on treatment of disease by understanding disease mechanisms and etiologies, this approach to medicine aims to monitor and quantify the "wellness" of patients in real time, providing customized interventions to sustain health before a patient manifests disease. Many of the technologies that enable this approach, however, are newly developed and incompletely understood. This proposal aims to measure and develop computational methods that integrate diverse molecular data types with genetic information to predict "molecular fingerprints of health" using a genetically tractable yeast model system. Conducting this study within the context of a highly controlled genetic and experimental model system will allow me to test predicted relationships between genetics, longitudinal molecular fingerprints, and quantitative measures of health directly using targeted genetic, molecular, and environmental interventions. Importantly, the computational methods we generate will be "model-free", meaning that they can serve as proof-of-principle for in humans, where the measured data types will be different from. At the same time, we will also be addressing fundamental biological questions. In particular, I will use these data to dissect how the influence of genetic variation varies across different biological scales and how these influences are modulated by environmental factors.
 
-From a technical point of view, however, . To being, it is presently unclear how genetic information can be combined with molecular profiles to predict or monitor disease development. Does integration across multiple scales of molecular information allow more sensitive detection of changes in health? Can many weakly predictive genetic markers be combined with real-time molecular profiling to identify personalized molecular intervention points?
+For decades, biomedical research has focused on understanding and treating disease mechanisms and etiologies. With the advent of next generation sequencing, attention has more recently focused on identifying genetic determinants of disease. Many so-called Genome Wide, including X and Y. Despite many notable succcess of these approaches. A new pardigm. Real time monitoring of wellness has been facilitated by several scientifi and technological developments. On the one hand, scientific technologies. Several companies that promise to quantify wellness and provide data-driven approaches to its management now exist. These companies provide DNA sequencing, longitudinal molecular profiling of blood and the , as well as coaching to improve health and detect anomalies before they manifest disease.
 
-For these reasons, I to a model system, where can be developed within a tractabble. As a HFSP fellow I will address these questions by quantifying the relationship between genetic, molecular, and environmental factors in a genetically tractable yeast population for a phenotype related to wellness, aging. will have significance, but also application
+From a technical point of view, however, . To being, it is presently unclear how genetic information can be combined with molecular profiles to predict or monitor disease development. Does integration across multiple scales of molecular information allow more sensitive detection of changes in health? Can many weakly predictive genetic markers be combined with real-time molecular profiling to identify personalized molecular intervention points? Partnership with Arivale.
+
+Apart from the applied, there are a number of fundamental scientific questions. In particular, there is currentl
+
+For these reasons, I to a model system, where can be developed within a tractabble. The project will have  As a HFSP fellow I will address these questions by quantifying the relationship between genetic, molecular, and environmental factors in a genetically tractable yeast population for a phenotype related to wellness, aging. will have significance, but also application
 
 #### Experimental Design and Methodology
 
@@ -41,7 +45,7 @@ To comprehensively investigate proteomic data, we will perform data-dependent an
 
 ###### Metabolomics
 
-The generation of intra- and extracellular metabolic data from yeast (absolute or relative abundance of metabolites) is a multi-step process: we will reproducibly generate biomass, withdraw defined amounts of biological material, measure the absolute biovolume (total amount of cells surrounded by an intact membrane) (57) by volume displacement (coulter counter principle) (58)., precisely inactivate metabolism by cold methanol quenching (59), nonselectively extract (60) and measure the metabolites (quantitatively and qualitatively). Within the proposed project a general protocol developed for the analysis of microorganisms andadapted to yeast within GenPhen will be used. Untargeted analysis of metabolites in different sample types will be carried out via an established GC-MS method (34). Targeted analysis of absolute intra- and extracellular metabolite concentrations will be performed using the LCMS/MS platform established within GenPhen. The measurement methods available on the QExactive Orbitrap LS-MS/MS cover almost all metabolites of the central carbon metabolism of yeast and provide absolute concentration via the use of isotopic labelled mass spectrometry coupled to chromatography.
+The generation of intra- and extracellular metabolic data from yeast (absolute abundance of metabolites) is a multi-step process: we will reproducibly generate biomass, withdraw defined amounts of biological material, measure the absolute biovolume (total amount of cells surrounded by an intact membrane) (57) by volume displacement (coulter counter principle) (58)., precisely inactivate metabolism by cold methanol quenching (59), nonselectively extract (60) and measure the metabolites (quantitatively and qualitatively). Within the proposed project a general protocol developed for the analysis of microorganisms andadapted to yeast within GenPhen will be used. Untargeted analysis of metabolites in different sample types will be carried out via an established GC-MS method (34). Targeted analysis of absolute intra- and extracellular metabolite concentrations will be performed using the LCMS/MS platform established within GenPhen. The measurement methods available on the QExactive Orbitrap LS-MS/MS cover almost all metabolites of the central carbon metabolism of yeast and provide absolute concentration via the use of isotopic labelled mass spectrometry coupled to chromatography.
 
 ###### Data integration and computational modeling
 
@@ -51,4 +55,12 @@ In parallel, I will measure molecular "fingerprints" in each segregant at severa
 
 Having established quantitative relationships between genetics, multi-omic molecular profiles, and the environment, it would be enticing to return full circle to provide actionable insights to human wellness companies. As a final component of my project, therefore, I would like to partner with a company called Arivale (a company started by the head of my previous Institute, Lee Hood) to adapt my computational approaches to discover molecular fingerprints of human wellness.
 
+###### Environmental dependence
+
+###### Validation
+
 ###### Risk management and Project feasibility
+
+###### Applicability
+
+###### Significance

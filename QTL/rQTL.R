@@ -77,7 +77,7 @@ runQTL <- function(
     pc_removed = 0
     # as a first approximation, use lod score > 2.5 as a "true" QTL
     # since running permutation is expensive
-    phenotype = genphen$pheno[,colnames(genphen$pheno)!="id"]
+    phenotype = genphen$pheno[,colnames(genphen$pheno)!="id",drop=F]
     qtls = sum( unlist( mclapply( seq(1,dim(phenotype)[2]),function( i ) { sum(scanone( genphen, pheno.col = i )$lod >= 2.5) } ) ) )
     qtls_mod = 0
     pca <- PCA(phenotype)
@@ -125,7 +125,7 @@ runQTL <- function(
     to_r$phenotype = phenotype
   } else {
     to_r = list()
-    phenotype = genphen$pheno[,colnames(genphen$pheno)!="id"]
+    phenotype = genphen$pheno[,colnames(genphen$pheno)!="id",drop=F]
     genphen$pheno = phenotype
     to_r$qtls = c( mclapply(seq(1,dim(phenotype)[2]),function( i ) { scanone( genphen, pheno.col = i ) } ) )
     names(to_r$qtls) = colnames(phenotype)
