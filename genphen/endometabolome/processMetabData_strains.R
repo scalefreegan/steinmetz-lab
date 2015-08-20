@@ -17,10 +17,11 @@
 # Import packages ---------------------------------------------------
 library(xlsx)
 library(ggplot2)
-library(plotly)
+#library(plotly)
 library(dplyr)
 library(reshape2)
 library(LSD)
+library(qtl)
 
 # Import functions ---------------------------------------------------
 # not required currently
@@ -235,31 +236,62 @@ if (file.exists(genotype_f)) {
 }
 
 # load genotype and markers files
-ARGdata = endometabolite %>%
-  filter(metabolite=="ARG") %>%
+# clean up data
+endometabolite = endometabolite[-which(is.na(endometabolite$time)),]
+data = endometabolite %>%
+  #filter(metabolite=="ARG") %>%
   filter(.,time_format=="relative")
-pnames = rep(NA,length(unique(paste(ARGdata$metabolite,ARGdata$replicate,ARGdata$time,sep="_"))))
-names(pnames) = unique(paste(ARGdata$metabolite,ARGdata$replicate,ARGdata$time,sep="_"))
+pnames = rep(NA,length(unique(paste(data$metabolite,data$replicate,data$time,sep="_"))))
+names(pnames) = unique(paste(data$metabolite,data$replicate,data$time,sep="_"))
 
-pheno = t(do.call(cbind,lapply(levels(ARGdata$strain),function(i){
-		strain_data = filter(ARGdata,strain==i)
-		vals = pnames
-		vals[paste(strain_data$metabolite,strain_data$replicate,strain_data$time,sep="_")] = strain_data[,"value.log2"]
+repnames = unique(paste(data$metabolite,data$time,sep="_"))
+nreps = length(unique(data$replicate))
+pheno = do.call(cbind,lapply(levels(data$strain),function(i){
+		strain_data = filter(data,strain==i)
+		# combine replicates
+		vals = do.call(cbind,lapply(repnames,function(j){
+			#print(j)
+			to_r = data.frame(value.log2 = rep(NA,nreps))
+			repj = strsplit(j,split="_")[[1]]
+			m = repj[1]
+			tj = repj[2]
+			thisv = filter(strain_data,metabolite == m,time == tj)[,"value.log2"]
+			if (length(thisv) > 0) {
+					to_r$value.log2[seq(1,length(thisv))] = thisv
+			}
+			return(to_r)
+			}))
+		vals = t(vals)
+		rownames(vals) = repnames
+		colnames(vals) = rep(i,dim(vals)[2])
 		return(vals)
-	})))
-rownames(pheno) = levels(ARGdata$strain)
+	}))
 
 # remove missing data
 # pheno = pheno[which(apply(pheno,1,function(i)sum(is.na(i)))==0),]
 
-# combine all data
-pheno = do.call(rbind,lapply(seq(1,dim(pheno)[2]),function(i){pheno[,i,drop=F]}))
+# combine all data per metabolite
+mnames = levels(data$metabolite)
+pheno_comb = do.call(cbind,lapply(mnames,function(i){
+	i_ind = which(sapply(rownames(pheno), function(j){strsplit(j,"_")[[1]][1]})%in%i)
+	do.call(rbind,lapply(seq(1,dim(pheno[i_ind,])[1]),function(j) t(pheno[i_ind,][j,,drop=F])))
+}))
+colnames(pheno_comb) = sapply(colnames(pheno_comb),function(i){strsplit(i,"_")[[1]][1]})
 
-mQTLs =	runQTL(
+mQTLs_combrep =	runQTL(
 			genotype = geno,
-	    phenotype = pheno,
+	    phenotype = t(pheno),
 	    marker_info = mrk,
 	    permute = T, # compute significance of each QTL LOD by permutation
 	    pca = F, # maximize QTL detection by removing confounders using PCA
 	    permute_alpha = 0.05,
-	    save_file = "")
+	    save_file = "/g/steinmetz/brooks/genphen/dynamic_metabolome_20082015/mQTLs_combrep.rda")
+
+mQTLs_permetabolite =	runQTL(
+			genotype = geno,
+	    phenotype = pheno_comb,
+	    marker_info = mrk,
+	    permute = T, # compute significance of each QTL LOD by permutation
+	    pca = F, # maximize QTL detection by removing confounders using PCA
+	    permute_alpha = 0.05,
+	    save_file = "/g/steinmetz/brooks/genphen/dynamic_metabolome_20082015/mQTLs_comball.rda")
