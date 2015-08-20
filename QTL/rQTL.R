@@ -35,7 +35,7 @@ removePrincipalComponent <- function(
 runQTL <- function(
     # Streamline rQTL
     # Format standard matrix/genotype data for rQTL
-    # Run rQTL scanone analysis with optional methods,
+    # Run rQTL qtl::scanone analysis with optional methods,
     # permute_sig and pca
     genotype, # a n x m genotype matrix containing (eg 1,2) at 'n' genotype markers in 'm' strains
     phenotype, # a n x m phenotype matrix containing measurements of 'm' phenotypes in 'n' strains
@@ -78,7 +78,7 @@ runQTL <- function(
     # as a first approximation, use lod score > 2.5 as a "true" QTL
     # since running permutation is expensive
     phenotype = genphen$pheno[,colnames(genphen$pheno)!="id",drop=F]
-    qtls = sum( unlist( mclapply( seq(1,dim(phenotype)[2]),function( i ) { sum(scanone( genphen, pheno.col = i )$lod >= 2.5) } ) ) )
+    qtls = sum( unlist( multicore::mclapply( seq(1,dim(phenotype)[2]),function( i ) { sum(qtl::scanone( genphen, pheno.col = i )$lod >= 2.5) } ) ) )
     qtls_mod = 0
     pca <- PCA(phenotype)
     phenotype_mod <- removePrincipalComponent(
@@ -90,7 +90,7 @@ runQTL <- function(
     )
     genphen_mod = genphen
     genphen_mod$pheno = phenotype_mod
-    qtls_mod = sum( unlist( mclapply( seq(1,dim(phenotype)[2]),function( i ) { sum(scanone( genphen_mod, pheno.col = i )$lod >= 2.5) } ) ) )
+    qtls_mod = sum( unlist( multicore::mclapply( seq(1,dim(phenotype)[2]),function( i ) { sum(qtl::scanone( genphen_mod, pheno.col = i )$lod >= 2.5) } ) ) )
     while (qtls_mod>qtls) {
       pc_removed = pc_removed + 1
       phenotype = phenotype_mod
@@ -105,7 +105,7 @@ runQTL <- function(
       )
       genphen_mod = genphen
       genphen_mod$pheno = phenotype_mod
-      qtls_mod = sum( unlist( mclapply( seq(1,dim(phenotype)[2]),function( i ) { sum(scanone( genphen_mod, pheno.col = i )$lod >= 2.5) } ) ) )
+      qtls_mod = sum( unlist( multicore::mclapply( seq(1,dim(phenotype)[2]),function( i ) { sum(qtl::scanone( genphen_mod, pheno.col = i )$lod >= 2.5) } ) ) )
     }
     if (pc_removed>0) {
       pca <- PCA(phenotype)
@@ -119,7 +119,7 @@ runQTL <- function(
     }
     to_r = list()
     genphen$pheno = phenotype
-    to_r$qtls = c( mclapply( seq(1,dim(phenotype)[2]),function( i ) { scanone( genphen, pheno.col = i ) } ) )
+    to_r$qtls = c( multicore::mclapply( seq(1,dim(phenotype)[2]),function( i ) { qtl::scanone( genphen, pheno.col = i ) } ) )
     names(to_r$qtls) = colnames(phenotype)
     to_r$pc_removed = pc_removed
     to_r$phenotype = phenotype
@@ -127,14 +127,14 @@ runQTL <- function(
     to_r = list()
     phenotype = genphen$pheno[,colnames(genphen$pheno)!="id",drop=F]
     genphen$pheno = phenotype
-    to_r$qtls = c( mclapply(seq(1,dim(phenotype)[2]),function( i ) { scanone( genphen, pheno.col = i ) } ) )
+    to_r$qtls = c( multicore::mclapply(seq(1,dim(phenotype)[2]),function( i ) { qtl::scanone( genphen, pheno.col = i ) } ) )
     names(to_r$qtls) = colnames(phenotype)
   }
 
   to_r$cross = genphen
   if (permute) {
     # permuations to determine qtl sig cutoff
-    to_r$qtls_permuted = lapply(seq(1,dim(phenotype)[2]), function(i){scanone( genphen, pheno.col = i, n.perm = 1000, n.cluster = 20 )})
+    to_r$qtls_permuted = lapply(seq(1,dim(phenotype)[2]), function(i){qtl::scanone( genphen, pheno.col = i, n.perm = 1000, n.cluster = 20 )})
     names(to_r$qtls_permuted) = colnames(genphen$pheno)
     to_r$sig_qtls = list()
     to_r$qtls_threshold = sapply(to_r$qtls_permuted,summary,permute_alpha)
