@@ -119,7 +119,7 @@ runQTL <- function(
     }
     to_r = list()
     genphen$pheno = phenotype
-    to_r$qtls = c( parallel::mclapply( seq(1,dim(phenotype)[2]),function( i ) { qtl::scanone( genphen, pheno.col = i ) } ) )
+    to_r$qtls = c( lapply( seq(1,dim(phenotype)[2]),function( i ) { qtl::scanone( genphen, pheno.col = i ) } ) )
     names(to_r$qtls) = colnames(phenotype)
     to_r$pc_removed = pc_removed
     to_r$phenotype = phenotype
@@ -127,7 +127,7 @@ runQTL <- function(
     to_r = list()
     phenotype = genphen$pheno[,colnames(genphen$pheno)!="id",drop=F]
     genphen$pheno = phenotype
-    to_r$qtls = c( parallel::mclapply(seq(1,dim(phenotype)[2]),function( i ) { qtl::scanone( genphen, pheno.col = i ) } ) )
+    to_r$qtls = c( lapply(seq(1,dim(phenotype)[2]),function( i ) { qtl::scanone( genphen, pheno.col = i ) } ) )
     names(to_r$qtls) = colnames(phenotype)
   }
 
