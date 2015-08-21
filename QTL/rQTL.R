@@ -130,7 +130,6 @@ runQTL <- function(
     to_r$qtls = c( lapply(seq(1,dim(phenotype)[2]),function( i ) { qtl::scanone( genphen, pheno.col = i ) } ) )
     names(to_r$qtls) = colnames(phenotype)
   }
-
   to_r$cross = genphen
   if (permute) {
     # permuations to determine qtl sig cutoff
@@ -146,7 +145,7 @@ runQTL <- function(
         # format table entry
         add_info = c()
         for ( n in rownames( phe_qtls ) ) {
-          add_info = rbind( add_info, as.data.frame( ranges( marker_info[ n ] ) ) )
+          add_info = rbind( add_info, as.data.frame( IRanges::ranges( marker_info[ n ] ) ) )
         }
         phe_qtls = cbind( i, phe_qtls[ add_info$names, ], add_info )
         phe_qtls$pos = NULL
