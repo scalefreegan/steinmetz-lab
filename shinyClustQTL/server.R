@@ -38,8 +38,10 @@ shinyServer(function(input, output, session) {
       start = 1
     }
     end = end + abs(flanking[2])
-    val = paste("chr",chr,":",start,"..",end, sep = "")
-    sprintf('<a href="http://browse.yeastgenome.org/fgb2/gbrowse/scgenome/?name=%s" target="_blank" class="btn btn-primary">Go to gene</a>',
+    val = paste("chr",chr,"%3A",start,"..",end, sep = "")
+    #sprintf('<a href="http://browse.yeastgenome.org/fgb2/gbrowse/scgenome/?name=%s" target="_blank" class="btn btn-primary">Go to gene</a>',
+    #        val)
+    sprintf('<a href="http://steinmetzlab.embl.de/gebrowser/?loc=%s" target="_blank" class="btn btn-primary">Go to gene</a>',
             val)
   }
   
@@ -53,7 +55,7 @@ shinyServer(function(input, output, session) {
     qtl_df = as.data.frame(do.call(rbind,lapply(names(clust_qtls),function(i){
       i_2 = gsub("/","%2",i)
       strand = GenomicRanges::strand(tx_3utr[i_2])
-      chr = as.character(as.roman(as.numeric(gsub("chr","",GenomicRanges::seqnames(tx_3utr[i_2])))))
+      chr = as.character(as.numeric(gsub("chr","",GenomicRanges::seqnames(tx_3utr[i_2]))))
       start = IRanges::start(IRanges::ranges(tx_3utr[i_2]))
       end = IRanges::end(IRanges::ranges(tx_3utr[i_2]))
       type = GenomicRanges::elementMetadata(tx_3utr[i_2])$type
