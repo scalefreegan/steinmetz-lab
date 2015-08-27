@@ -1,5 +1,15 @@
-Dear committee,
+Dear Evaluating Committee,
 
-1 page 
+I am applying for a Joachim Herz Stiftung Add-on Fellowship to supplement an ambitious systems genetics project I have proposed. The project I've designed combines longitudinal multiomic molecular profiles with genetics to better understand how Baker's yeast ages. While I have developed several of the interdisciplinary prerequisites for this project, including expertise in both bioinformatics and several high-throughput experimental methods, I would like to receive additional training in several emerging technologies to complement this skill set. More specifically, I would use Joachim Herz Stiftung funding to travel to several collaborating labs across the world where I will receive hands-on training in microfluidics, metabolomics, proteomics, and statistical machine learning methods.
 
-[View on Github](https://github.com/scalefreegan/steinmetz-lab/blob/master/Docs/general/EMBL_Summary/EMBL_project_summary.md)
+I am currently a postdoctoral fellow with Lars Steinmetz at the European Molecular Biology laboratory (EMBL) in Heidelberg, Germany. The group is internationally recognized for its forward-looking approach to emerging technologies in systems genetics, pioneering a number of technologies widely used in the field. I joined the group to expand my interdisciplinary training, taking on a more complex model system (yeast) and learning how to measure cells at multiple molecular scales. Previously in my PhD, I studied the structure and function of gene regulatory networks (GRNs) in microorganisms. I developed machine learning algorithms to infer GRNs directly from high-throughput gene expression data for two phylogenetically diverse organisms. These genome-scale models were able to predict (accurately and quantitatively) mechanisms responsible for regulation of each gene in the genome (Brooks et al. 2014. Mol Syst Biol). With this project I gained valuable expertise in computational approaches (ensemble learning and graph theory) and several high-throughput experimental methods related to transcription. By the conclusion of my PhD, however, it was clear to me that comprehensive understanding of a biological system would require integrating across multiple scales of biological complexity.
+
+The project I describe in my application emerged from an interest in how emerging technologies are reshaping approaches to healthcare. I have been fascinated by a new approach to preventative medicine that attempts to quantify and maintain "wellness" by combining longitudinal profiling with genetics.  Here, I saw an opportunity to create a project that would have implications for data integration within the basic sciences as well as personalized medicine. I have therefore designed a project to study a phenotype related to wellness (aging) by combining genetics with longitudinal molecular profiling. My hope is that the project will contribute a data integration paradigm for holistic modeling approaches.
+
+This project will be enriched by the training I will receive through Joachim Herz Stiftung funding. I will use these Add-on funds to conduct extended research stays in laboratories at Stanford, EMBL-EBI, and the University of Luxembourg. Each of these labs has expertise in a technology that will supplement my project. My bigger ambition is to carry some of these collaborations forward to take on other challenging problems in the future.
+
+Thank you for the opportunity to apply for your prestigious award.
+
+Sincerely,
+
+Aaron N. Brooks
