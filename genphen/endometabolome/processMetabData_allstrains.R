@@ -1,4 +1,5 @@
 #! /usr/bin/env Rscript
+# designed to be saved as .Rprofile in working dir
 
 #-------------------------------------------------------------------#
 # Process Metabolome Data Nicole on 07.07.2015
@@ -13,6 +14,7 @@
 .maintainer = "Aaron Brooks"
 .email = "aaron.brooks@embl.de"
 .status = "Development"
+.plot = FALSE
 
 # Import packages ---------------------------------------------------
 library(xlsx)
@@ -23,6 +25,7 @@ library(reshape2)
 library(LSD)
 library(qtl)
 library(pheatmap)
+library(funQTL)
 
 # Import functions ---------------------------------------------------
 # not required currently
@@ -120,84 +123,85 @@ if (file.exists(endo_f)) {
 }
 
 # Replicate behavior ---------------------------------------------------
+if (.plot) {
+	repdata = endometabolite %>%
+	  group_by(metabolite,strain) %>%
+	  filter(.,time_format=="relative") %>%
+	  do({
+	    x = filter(.,replicate==1)
+	    y = filter(.,replicate==2)
+	    t = sort(intersect(x$time,y$time))
+	    x.log2 = x$value.log2[x$time%in%t]
+	    y.log2 = y$value.log2[y$time%in%t]
+			x.diffBYmean = x$derivative.log2[x$time%in%t]/mean(x.log2)
+	    y.diffBYmean = y$derivative.log2[y$time%in%t]/mean(y.log2)
+	    if (length(x.log2)==length(y.log2)) {
+	      data.frame(x.log2 = x.log2, y.log2 = y.log2,
+					x.diffBYmean = x.diffBYmean, y.diffBYmean = y.diffBYmean)
+	    } else {
+	      data.frame()
+	    }
+	  })
 
-repdata = endometabolite %>%
-  group_by(metabolite,strain) %>%
-  filter(.,time_format=="relative") %>%
-  do({
-    x = filter(.,replicate==1)
-    y = filter(.,replicate==2)
-    t = sort(intersect(x$time,y$time))
-    x.log2 = x$value.log2[x$time%in%t]
-    y.log2 = y$value.log2[y$time%in%t]
-		x.diffBYmean = x$derivative.log2[x$time%in%t]/mean(x.log2)
-    y.diffBYmean = y$derivative.log2[y$time%in%t]/mean(y.log2)
-    if (length(x.log2)==length(y.log2)) {
-      data.frame(x.log2 = x.log2, y.log2 = y.log2,
-				x.diffBYmean = x.diffBYmean, y.diffBYmean = y.diffBYmean)
-    } else {
-      data.frame()
-    }
-  })
-
-pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/replicates_allmetabolites.pdf")
-	heatscatter(repdata$x.log2,repdata$y.log2,main="Reproducibility,
-	All Metabolites, Paired Time",
-		ylab="[X]] Log2(uM), Rep 2",xlab="[X] Log2(uM), Rep 1")
-	# remove outliers
-	lim1 = max(quantile(repdata$x.diffBYmean,na.rm=T,0.99),
-		quantile(repdata$y.diffBYmean,na.rm=T,0.99))
-	lim2 = max(quantile(repdata$x.diffBYmean,na.rm=T,0.01),
-			quantile(repdata$y.diffBYmean,na.rm=T,0.01))
-	d = repdata %>% filter(., x.diffBYmean <= lim1 & x.diffBYmean >= lim2 &
-		y.diffBYmean <= lim1 & y.diffBYmean >= lim2)
-	heatscatter(d$x.diffBYmean,d$y.diffBYmean,
-		main="Reproducibility, All Metabolites, Paired Time, Derivative By Mean",
-		ylab = "(d[X]/dt)/mean([X]), Log2(uM), Rep 2",
-		xlab = "(d[X]/dt)/mean([X]), Log2(uM), Rep 1"
-	)
-dev.off()
-
-pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/replicates_permetabolite.pdf")
-	par(mfrow = c(2,2))
-	for (i in levels(repdata$metabolite)) {
-		d = repdata[which(repdata$metabolite==i),]
-		heatscatter(d$x.log2,d$y.log2,main=i,ylab="[X] Log2(uM), Rep 2",xlab="[X] Log2(uM) Rep 1",
-			ylim=c(min(c(repdata$x.log2,repdata$y.log),na.rm=T),
-				max(c(repdata$x.log2,repdata$y.log),na.rm=T)),
-			xlim=c(min(c(repdata$x.log2,repdata$y.log),na.rm=T),
-				max(c(repdata$x.log2,repdata$y.log),na.rm=T))
-		)
-		d = repdata[which(repdata$metabolite==i),]
-		lims = max(quantile(repdata$x.diffBYmean,na.rm=T,0.99),
+	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/replicates_allmetabolites.pdf")
+		heatscatter(repdata$x.log2,repdata$y.log2,main="Reproducibility,
+		All Metabolites, Paired Time",
+			ylab="[X]] Log2(uM), Rep 2",xlab="[X] Log2(uM), Rep 1")
+		# remove outliers
+		lim1 = max(quantile(repdata$x.diffBYmean,na.rm=T,0.99),
 			quantile(repdata$y.diffBYmean,na.rm=T,0.99))
+		lim2 = max(quantile(repdata$x.diffBYmean,na.rm=T,0.01),
+				quantile(repdata$y.diffBYmean,na.rm=T,0.01))
+		d = repdata %>% filter(., x.diffBYmean <= lim1 & x.diffBYmean >= lim2 &
+			y.diffBYmean <= lim1 & y.diffBYmean >= lim2)
 		heatscatter(d$x.diffBYmean,d$y.diffBYmean,
-			main = i,
+			main="Reproducibility, All Metabolites, Paired Time, Derivative By Mean",
 			ylab = "(d[X]/dt)/mean([X]), Log2(uM), Rep 2",
-			xlab = "(d[X]/dt)/mean([X]), Log2(uM), Rep 1",
-			xlim = c(-lims,lims),
-			ylim = c(-lims,lims)
+			xlab = "(d[X]/dt)/mean([X]), Log2(uM), Rep 1"
 		)
-	}
-dev.off()
+	dev.off()
 
-# Plot overall data trends ---------------------------------------------------
+	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/replicates_permetabolite.pdf")
+		par(mfrow = c(2,2))
+		for (i in levels(repdata$metabolite)) {
+			d = repdata[which(repdata$metabolite==i),]
+			heatscatter(d$x.log2,d$y.log2,main=i,ylab="[X] Log2(uM), Rep 2",xlab="[X] Log2(uM) Rep 1",
+				ylim=c(min(c(repdata$x.log2,repdata$y.log),na.rm=T),
+					max(c(repdata$x.log2,repdata$y.log),na.rm=T)),
+				xlim=c(min(c(repdata$x.log2,repdata$y.log),na.rm=T),
+					max(c(repdata$x.log2,repdata$y.log),na.rm=T))
+			)
+			d = repdata[which(repdata$metabolite==i),]
+			lims = max(quantile(repdata$x.diffBYmean,na.rm=T,0.99),
+				quantile(repdata$y.diffBYmean,na.rm=T,0.99))
+			heatscatter(d$x.diffBYmean,d$y.diffBYmean,
+				main = i,
+				ylab = "(d[X]/dt)/mean([X]), Log2(uM), Rep 2",
+				xlab = "(d[X]/dt)/mean([X]), Log2(uM), Rep 1",
+				xlim = c(-lims,lims),
+				ylim = c(-lims,lims)
+			)
+		}
+	dev.off()
 
-pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/metabolome.pdf", width=11.5,height=8)
-ggplot(
-	data = endometabolite %>%
-		filter(! is.na(value.log2)) %>%
-		filter(time_format=="relative") %>%
-		group_by(metabolite) %>%
-		do({filter(.,abs(.$value.log2-mean(.$value.log2))<5*sd(.$value.log2))}),
-	aes(x = time, y = value.log2)) +
-  	geom_point() +
-	geom_smooth() +
-	facet_wrap( ~ metabolite, scales="free_y") +
-	scale_x_discrete(name="Time (relative)") +
-    scale_y_continuous(name=expression(paste("Level log2(",mu,"M)"))) +
-    ggtitle("Endo- Metabolome Levels Across All Strains All Metabolites")
-dev.off()
+	# Plot overall data trends ---------------------------------------------------
+
+	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/metabolome.pdf", width=11.5,height=8)
+	ggplot(
+		data = endometabolite %>%
+			filter(! is.na(value.log2)) %>%
+			filter(time_format=="relative") %>%
+			group_by(metabolite) %>%
+			do({filter(.,abs(.$value.log2-mean(.$value.log2))<5*sd(.$value.log2))}),
+		aes(x = time, y = value.log2)) +
+	  	geom_point() +
+		geom_smooth() +
+		facet_wrap( ~ metabolite, scales="free_y") +
+		scale_x_discrete(name="Time (relative)") +
+	    scale_y_continuous(name=expression(paste("Level log2(",mu,"M)"))) +
+	    ggtitle("Endo- Metabolome Levels Across All Strains All Metabolites")
+	dev.off()
+}
 
 
 #-------------------------------------------------------------------#
@@ -288,56 +292,82 @@ pheno_comb = do.call(cbind,lapply(mnames,function(i){
 }))
 colnames(pheno_comb) = sapply(colnames(pheno_comb),function(i){strsplit(i,"_")[[1]][1]})
 
-mQTLs_combrep =	runQTL(
-			genotype = geno,
-	    phenotype = t(pheno),
-	    marker_info = mrk,
-	    permute = T, # compute significance of each QTL LOD by permutation
-	    pca = F, # maximize QTL detection by removing confounders using PCA
-	    permute_alpha = 0.05,
-	    save_file = "/g/steinmetz/brooks/genphen/dynamic_metabolome_20082015/mQTLs_combrep.rda")
+f = "/g/steinmetz/brooks/genphen/dynamic_metabolome_20082015/mQTLs_combrep.rda"
+if (!file.exists(f)) {
+	mQTLs_combrep =	runQTL(
+		genotype = geno,
+    phenotype = t(pheno),
+    marker_info = mrk,
+    permute = T, # compute significance of each QTL LOD by permutation
+    pca = F, # maximize QTL detection by removing confounders using PCA
+    permute_alpha = 0.05,
+    save_file = f)
+	write.table(do.call(rbind, mQTLs_combrep$sig_qtls),
+		file = gsub(".rda","_sigtable.txt",f)
+		sep = "\t",
+		row.names = F,
+		col.names = T
+		)
+	# correlation of LOD scores between timepoints
+	cor_m = do.call(rbind, lapply(seq(1:length(mQTLs_combrep$qtls)),function(i){
+			sapply(seq(1:length(mQTLs_combrep$qtls)),function(j){
+					cor(mQTLs_combrep$qtls[[i]][,"lod"], mQTLs_combrep$qtls[[j]][,"lod"])
+				})
+		}))
+	rownames(cor_m) = names(mQTLs_combrep$qtls)
+	colnames(cor_m) = names(mQTLs_combrep$qtls)
 
-mQTLs_permetabolite =	runQTL(
-			genotype = geno,
-	    phenotype = pheno_comb,
-	    marker_info = mrk,
-	    permute = T, # compute significance of each QTL LOD by permutation
-	    pca = F, # maximize QTL detection by removing confounders using PCA
-	    permute_alpha = 0.05,
-	    save_file = "/g/steinmetz/brooks/genphen/dynamic_metabolome_20082015/mQTLs_comball.rda")
+	pdf(gsub(".rda","lod_timepointcor.pdf",f), width=11.5,height=8)
+		pheatmap(cor_m,breaks=seq(-1, 1, length.out = 100), fontsize = 6, main = "Correlation LOD score, Metabolites/Timepoints" )
+	dev.off()
+}
+
+f = "/g/steinmetz/brooks/genphen/dynamic_metabolome_20082015/mQTLs_comball.rda"
+if (!file.exists(f)) {
+	mQTLs_permetabolite =	runQTL(
+		genotype = geno,
+    phenotype = pheno_comb,
+    marker_info = mrk,
+    permute = T, # compute significance of each QTL LOD by permutation
+    pca = F, # maximize QTL detection by removing confounders using PCA
+    permute_alpha = 0.05,
+    save_file = f)
+	write.table(do.call(rbind, mQTLs_permetabolite$sig_qtls),
+		file = gsub(".rda","_sigtable.txt",f),
+		sep = "\t",
+		row.names = F,
+		col.names = T
+		)
+} else {
+	load(f)
+}
+
+#-------------------------------------------------------------------#
+# With funQTL
+#
+#-------------------------------------------------------------------#
+f = "/g/steinmetz/brooks/genphen/dynamic_metabolome_20082015/mQTLs_comball.rda"
+if (!file.exists(f)) {
+	mQTLs_cross =	runQTL(
+				genotype = geno,
+		    phenotype = t(pheno),
+		    marker_info = mrk,
+		    return_cross = TRUE
+				)
+	save(mQTLs_cross, file = f)
+} else {
+	load(f)
+}
 
 #-------------------------------------------------------------------#
 # Table output of sig qtls
 #
 #-------------------------------------------------------------------#
-write.table(do.call(rbind, mQTLs_combrep$sig_qtls),
-	file = "/g/steinmetz/brooks/genphen/dynamic_metabolome_20082015/mQTLs_combrep_sigtable.txt",
-	sep = "\t",
-	row.names = F,
-	col.names = T
-	)
 
-write.table(do.call(rbind, mQTLs_permetabolite$sig_qtls),
-	file = "/g/steinmetz/brooks/genphen/dynamic_metabolome_20082015/mQTLs_comball_sigtable.txt",
-	sep = "\t",
-	row.names = F,
-	col.names = T
-	)
+
+
 
 #-------------------------------------------------------------------#
 # Plot summaries
 #
 #-------------------------------------------------------------------#
-
-# correlation of LOD scores between timepoints
-cor_m = do.call(rbind, lapply(seq(1:length(mQTLs_combrep$qtls)),function(i){
-		sapply(seq(1:length(mQTLs_combrep$qtls)),function(j){
-				cor(mQTLs_combrep$qtls[[i]][,"lod"], mQTLs_combrep$qtls[[j]][,"lod"])
-			})
-	}))
-rownames(cor_m) = names(mQTLs_combrep$qtls)
-colnames(cor_m) = names(mQTLs_combrep$qtls)
-
-pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/endometabolome_lod_timepointcor.pdf", width=11.5,height=8)
-	pheatmap(cor_m,breaks=seq(-1, 1, length.out = 100), fontsize = 6, main = "Correlation LOD score, Metabolites/Timepoints" )
-dev.off()
