@@ -303,7 +303,7 @@ if (!file.exists(f)) {
     permute_alpha = 0.05,
     save_file = f)
 	write.table(do.call(rbind, mQTLs_combrep$sig_qtls),
-		file = gsub(".rda","_sigtable.txt",f)
+		file = gsub(".rda","_sigtable.txt",f),
 		sep = "\t",
 		row.names = F,
 		col.names = T
