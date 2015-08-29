@@ -43,7 +43,9 @@ runQTL <- function(
     permute = T, # compute significance of each QTL LOD by permutation
     pca = F, # maximize QTL detection by removing confounders using PCA
     permute_alpha = 0.05,
-    save_file = ""){
+    save_file = "",
+    return_cross = FALSE # just return cross object
+    ){
   # subset genotype data on metabolite data. transpose it.
   if ( !sum(colnames(genotype)%in%rownames(phenotype))>0 ) {
     cat("ERROR:Strain names in genotype matrix (columns) do not match strain names in phenotype matrix (rows\n")
@@ -72,6 +74,11 @@ runQTL <- function(
     return(NULL)
   }
   genphen = qtl::calc.genoprob( genphen,step = 0 )
+  if (return_cross) {
+    # just return cross object, nothing else
+    # to use in funQTL etc
+    return(genphen)
+  }
   if (pca) {
     cat("Removing principal components to increase number of detected QTLs\n")
     pc_removed = 0
