@@ -27,6 +27,7 @@ library(qtl)
 library(pheatmap)
 library(funqtl)
 library(clustQTL)
+#devtools::install_github("scalefreegan/steinmetz-lab/clustQTL")
 
 # Import functions ---------------------------------------------------
 # not required currently
