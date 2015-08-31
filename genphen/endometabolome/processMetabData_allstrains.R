@@ -25,7 +25,7 @@ library(reshape2)
 library(LSD)
 library(qtl)
 library(pheatmap)
-library(funQTL)
+library(funqtl)
 
 # Import functions ---------------------------------------------------
 # not required currently
