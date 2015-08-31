@@ -1,6 +1,6 @@
 #! /usr/bin/env Rscript
 # designed to be saved as .Rprofile in working dir
-
+#
 #-------------------------------------------------------------------#
 # Process Metabolome Data Nicole on 07.07.2015
 # ! Transform into a computable format !
@@ -26,6 +26,7 @@ library(LSD)
 library(qtl)
 library(pheatmap)
 library(funqtl)
+library(clustQTL)
 
 # Import functions ---------------------------------------------------
 # not required currently
@@ -316,12 +317,19 @@ if (!file.exists(f)) {
 		}))
 	rownames(cor_m) = names(mQTLs_combrep$qtls)
 	colnames(cor_m) = names(mQTLs_combrep$qtls)
-
+	# plot correlations between genome wide lod scores for all metabolite profiles
 	pdf(gsub(".rda","lod_timepointcor.pdf",f), width=11.5,height=8)
 		pheatmap(cor_m,breaks=seq(-1, 1, length.out = 100), fontsize = 6, main = "Correlation LOD score, Metabolites/Timepoints" )
 	dev.off()
+	#
+} else {
+	load(f)
+	mQTLs_combrep = qtl_list
+	rm("qtl_list")
 }
 
+# NOTE: this is probably statistically invalid way to combine across markers
+# do not use it for any serious business
 f = "/g/steinmetz/brooks/genphen/dynamic_metabolome_20082015/mQTLs_comball.rda"
 if (!file.exists(f)) {
 	mQTLs_permetabolite =	runQTL(
@@ -339,7 +347,7 @@ if (!file.exists(f)) {
 		col.names = T
 		)
 } else {
-	load(f)
+	#load(f)
 }
 
 #-------------------------------------------------------------------#
