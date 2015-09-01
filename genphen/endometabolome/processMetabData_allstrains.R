@@ -1,6 +1,6 @@
 #! /usr/bin/env Rscript
 # designed to be saved as .Rprofile in working dir
-#
+# devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-lab/master/genphen/endometabolome/processMetabData_allstrains.R")
 #-------------------------------------------------------------------#
 # Process Metabolome Data Nicole on 07.07.2015
 # ! Transform into a computable format !
@@ -203,6 +203,10 @@ if (.plot) {
 	    scale_y_continuous(name=expression(paste("Level log2(",mu,"M)"))) +
 	    ggtitle("Endo- Metabolome Levels Across All Strains All Metabolites")
 	dev.off()
+
+	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/metabolome_genotypefreq.pdf", width=11.5,height=8)
+		hist(apply(geno,1,function(i)sum(i==1)/length(i)),main="Genotype composition, all markers",xlab="Genotype == 1, Freq",xlim=c(0,1))
+	dev.off()
 }
 
 
@@ -310,6 +314,22 @@ if (!file.exists(f)) {
 		row.names = F,
 		col.names = T
 		)
+
+	# plot lod profiles for each metabolite
+	pdf(gsub(".rda","_lod_profiles.pdf",f), width=11.5,height=8)
+		for (i in 1:length(mQTLs_combrep$qtls)) {
+			x = mQTLs_combrep$qtls[[i]]
+			mx = max(x[,3])
+			if (mx < 4) {
+				mx = 4
+			}
+			x[,3] = 10^-x[,3]
+			colnames(x)[3] = "pval"
+			plotManhattan(qtls = x, mrk  = mrk, main = names(mQTLs_combrep$qtls)[i], ylim = c(0,mx),suggestiveline = mQTLs_combrep$qtls_threshold[[i]])
+		}
+	dev.off()
+
+	# plot correlations between genome wide lod scores for all metabolite profiles
 	# correlation of LOD scores between timepoints
 	cor_m = do.call(rbind, lapply(seq(1:length(mQTLs_combrep$qtls)),function(i){
 			sapply(seq(1:length(mQTLs_combrep$qtls)),function(j){
@@ -318,11 +338,29 @@ if (!file.exists(f)) {
 		}))
 	rownames(cor_m) = names(mQTLs_combrep$qtls)
 	colnames(cor_m) = names(mQTLs_combrep$qtls)
-	# plot correlations between genome wide lod scores for all metabolite profiles
-	pdf(gsub(".rda","lod_timepointcor.pdf",f), width=11.5,height=8)
+	pdf(gsub(".rda","_lod_timepointcor.pdf",f), width=11.5,height=8)
 		pheatmap(cor_m,breaks=seq(-1, 1, length.out = 100), fontsize = 6, main = "Correlation LOD score, Metabolites/Timepoints" )
 	dev.off()
-	#
+
+	# plot pheno dist for each sig qtl
+	pdf(gsub(".rda","_sigqtl_phenos.pdf",f), width=11.5,height=8)
+		sigqtls = do.call(rbind, mQTLs_combrep$sig_qtls)
+		to_p = lapply(1:dim(sigqtls)[1], function(i) {
+			m = sigqtls[i,"i"]
+			n = sigqtls[i,"names"]
+			g = geno[n,]
+			x = pheno[m,]
+			df = data.frame(geno = g, x = x)
+			p <- ggplot(df, aes(factor(geno), x, fill = factor(geno))) +
+				geom_boxplot(na.rm=T) +
+				geom_jitter(position = position_jitter(width = .1), na.rm=T) +
+				scale_x_discrete(name="Genotype") +
+				scale_y_continuous(name=expression("[X] Log2(uM))")) +
+	    	ggtitle(paste(m,n))
+			p
+		})
+		to_p[1:length(to_p)]
+	dev.off()
 } else {
 	load(f)
 	mQTLs_combrep = qtl_list
