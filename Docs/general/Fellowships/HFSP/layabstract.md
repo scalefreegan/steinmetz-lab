@@ -1,6 +1,0 @@
-Lay abstract of research plan
-(maximum of 1,000 characters including spaces and punctuation)
-
-Describe your proposed research project in language that is understood by scientists who are not experts in the field. The abstract should introduce the subject, your motivation for the study as well as the major aims of the proposed project.
-
-New technologies are providing increasingly detailed measurement of biological systems. It remains a challenge, however, to integrate across these data to construct comprehensive representations of biological systems. These challenges are magnified when one considers leveraging additional information, such as genetics, to understand the origins of molecular differences observed between individuals. This project attempts to address these challenges by developing a multifaceted understanding of how individual Baker's yeast age. In this project I will identify genetic and non-genetic factors that contribute to lifespan variation in yeast by measuring multiple omic-scale molecular fingerprints within a genetically diverse population across two growth conditions. The study will establish a computational framework for integrating multiple molecular profiles with genetic information to diagnose complex biological processes within individuals.

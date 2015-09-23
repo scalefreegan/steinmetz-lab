@@ -11,17 +11,25 @@ library(dplyr)
 library(DT)
 library(parallel)
 library(GenomicRanges)
-options("mc.cores"=4)
+#options("mc.cores" = 4)
+library("org.Sc.sgd.db")
+orf2name = org.Sc.sgdGENENAME
+
+addResourcePath('data', "/Users/brooks/Sites/JBrowse-1.11.6/data")
+
+# try to write
 
 if (!is.null(local)) {
   load("~/Desktop/tmpdata/3TFill/clust_qtl_small.rda")
   load("~/Desktop/tmpdata/3TFill/geno_mrk.RData")
   load("~/Desktop/tmpdata/3TFill/tx_3utr.rda")
+  #load("~/Desktop/tmpdata/3TFill/mergedCounts.rda")
 } else {
   #load("/g/steinmetz/brooks/3prime_Tfill/clust_qtl.rda")
   load("/g/steinmetz/brooks/3prime_Tfill/clust_qtl_1000.rda")
   load( "/g/steinmetz/brooks/genphen/qtl_endometabolome_23042015/geno_mrk.RData" )
   load("/g/steinmetz/brooks/3prime_Tfill/tx_3utr.rda")
+  #load("/g/steinmetz/project/GenPhen/data/3tagseq/all/mergedCounts.rda")
 }
 # load qt_file
 #
@@ -38,22 +46,72 @@ shinyServer(function(input, output, session) {
       start = 1
     }
     end = end + abs(flanking[2])
-    val = paste("chr",chr,"%3A",start,"..",end, sep = "")
+    val = paste("chr",as.roman(chr),":",start,"..",end, sep = "")
     #sprintf('<a href="http://browse.yeastgenome.org/fgb2/gbrowse/scgenome/?name=%s" target="_blank" class="btn btn-primary">Go to gene</a>',
     #        val)
-    sprintf('<a href="http://steinmetzlab.embl.de/gebrowser/?loc=%s" target="_blank" class="btn btn-primary">Go to gene</a>',
+    sprintf('<a href="http://localhost/~brooks/JBrowse-1.11.6/?loc=%s" target="_blank" class="btn btn-primary">Go to gene</a>',
             val)
   }
   
-  gbrowse_add = function(chr,start,end) {
-    val = paste("chr",chr,":",start,"..",end, sep = "")
-    sprintf('<a href="http://browse.yeastgenome.org/fgb2/gbrowse/scgenome/?add=%s" target="_blank" class="btn btn-danger">Add data</a>',
-            val)
+  gbrowse_heattrack = function(data) {
+    
+    STORETEMPLATE = "{'%s':{'type':'JBrowse/Store/SeqFeature/BigWig','urlTemplate':'%s'}}"
+    
+    TRACKTEMPLATE = "{'label':'%s','key':'%s','urlTemplate':'%s','type':'JBrowse/View/Track/Wiggle/Density','bicolor_pivot':'mean','style':{'pos_color':'purple','neg_color':'green'}}"
+    
+    TRACKTEMPLATE = "{'label':'%s','key':'%s','urlTemplate':'%s','type':'JBrowse/View/Track/Wiggle/Density','storeClass':'JBrowse/Store/SeqFeature/BigWig','bicolor_pivot':'mean','style':{'pos_color':'purple','neg_color':'green'}}"
+    
+    
+    
+    this_store = paste("addStores=",
+                       URLencode(paste(sprintf(STORETEMPLATE,"url","t1.bw"),sep=""), reserved = T), sep = "")
+    this_tracks = paste("addTracks=",
+                      URLencode(paste("[",sprintf(TRACKTEMPLATE,"iso1","S288c_Isoforms","url"),"]",sep=""),reserved = T),
+                      sep = "")
+    this_tracks = paste("addTracks=",
+                        URLencode(paste("[",sprintf(TRACKTEMPLATE,"iso1","S288c_Isoforms","t1.bw"),"]",sep=""),reserved = T),
+                        sep = "")
+    o = paste(this_store,"&",this_tracks,sep="")     
+    #o = paste(this_tracks,sep="")     
   }
   
+  
+  
+  makeBigWig = function(data, this_mrk, geno) {
+    d1 = colSums(data[intersect(names(which(geno[this_mrk,]==1)),rownames(data)),])
+    d2 = colSums(data[intersect(names(which(geno[this_mrk,]==2)),rownames(data)),])
+    chr = df()[s,"`Chr"]
+    seqinfo = Seqinfo(genome="sacCer3")
+    g1 = GenomicRanges::GRanges(
+      #seqnames = Rle(seqnames(chr_info[chr]),seqlengths(chr_info[chr])), 
+      seqnames = Rle(seqnames(chr_info[chr]),1),
+      ranges = IRanges(as.numeric(names(d1)), end = as.numeric(names(d1))),
+      strand = "+",
+      score = d1,
+      seqinfo = seqinfo
+      )
+    #seqlengths(g1) = seqlengths(chr_info[chr])
+    #seqlengths(g1) = length(d1)
+    rtracklayer::export.bw(object = g1, con = "/Users/brooks/Sites/JBrowse-1.11.6/data/t1.bw", compress=T)
+    g2 = GenomicRanges::GRanges(
+      #seqnames = Rle(seqnames(chr_info[chr]),seqlengths(chr_info[chr])), 
+      seqnames = Rle(seqnames(chr_info[chr]),1),
+      ranges = IRanges(as.numeric(names(d2)), end = as.numeric(names(d2))),
+      strand = "+",
+      score = d2,
+      seqinfo = seqinfo
+    )
+    #seqlengths(g2) = seqlengths(chr_info[chr])
+    rtracklayer::export.bw(object = g2, con = "/Users/brooks/Sites/JBrowse-1.11.6/data/t2.bw", compress=T)
+  }
+     
   df = reactive({
     qtl_df = as.data.frame(do.call(rbind,lapply(names(clust_qtls),function(i){
       i_2 = gsub("/","%2",i)
+      i_out = orf2name[[i]]
+      if (is.null(i_out) || is.na(i_out)) {
+        i_out = i
+      }
       strand = GenomicRanges::strand(tx_3utr[i_2])
       chr = as.character(as.numeric(gsub("chr","",GenomicRanges::seqnames(tx_3utr[i_2]))))
       start = IRanges::start(IRanges::ranges(tx_3utr[i_2]))
@@ -61,13 +119,18 @@ shinyServer(function(input, output, session) {
       type = GenomicRanges::elementMetadata(tx_3utr[i_2])$type
       i_peaks = findQTLPeaks(clust_qtls[[i]]$qtl, mrk, pcutoff = 10^-input$alpha)
       if (length(i_peaks) == 0 ) {
-        data.frame(Gene = i, QTLs = length(i_peaks), Top_QTL = NA, 
-                   Strand = strand, Chr = chr, Start = start, End = end, Type = type, 
-                   GBrowse = paste(gbrowse_link(chr,start,end),gbrowse_add(chr,start,end)))
+#         data.frame(Name = i_out, ORF = i, QTLs = length(i_peaks), Top_QTL = NA, 
+#                    Strand = strand, Chr = chr, Start = start, End = end, Type = type, 
+#                    JBrowse = paste(gbrowse_link(chr,start,end)))
+          data.frame(Name = i_out, ORF = i, QTLs = length(i_peaks), Top_QTL = NA, 
+                 Strand = strand, Chr = chr, Start = start, End = end, Type = type)
       } else {
-        data.frame(Gene = i, QTLs = length(i_peaks), Top_QTL = max(i_peaks$p), 
-                   Strand = strand, Chr = chr, Start = start, End = end, Type = type, 
-                   GBrowse = paste(gbrowse_link(chr,start,end),gbrowse_add(chr,start,end)))
+#         data.frame(Name = i_out, ORF = i, QTLs = length(i_peaks), Top_QTL = max(i_peaks$p), 
+#                    Strand = strand, Chr = chr, Start = start, End = end, Type = type, 
+#                    JBrowse = paste(gbrowse_link(chr,start,end)))
+          data.frame(Name = i_out, ORF = i, QTLs = length(i_peaks),
+              Top_QTL = max(i_peaks$p), Strand = strand, Chr = chr, Start =
+              start, End = end, Type = type)
       }
     })))
     qtl_df[order(qtl_df$QTLs,qtl_df$Top_QTL,decreasing=T),]
@@ -82,7 +145,8 @@ shinyServer(function(input, output, session) {
   values = reactiveValues(
     old_selection = NULL,
     marker = NULL,
-    x = NULL
+    x = NULL,
+    link = NULL
   )
   
   # MONITOR OLD SELECTION
@@ -122,7 +186,7 @@ shinyServer(function(input, output, session) {
   gene = reactive({
     s = input$dt_rows_selected
     if (length(s)) {
-     levels(df()[s, "Gene"])[df()[s, "Gene"]]
+     levels(df()[s, "ORF"])[df()[s, "ORF"]]
     } else {
       NULL
     }
@@ -131,10 +195,27 @@ shinyServer(function(input, output, session) {
   gene2 = reactive({
     s = input$dt_rows_selected
     if (length(s)) {
-      gsub("/", "%2", df()[s, "Gene"])
+      gsub("/", "%2", df()[s, "ORF"])
     } else {
       NULL
     }
+  })
+  
+  #output$link = renderPrint("hi")
+  output$link = renderText({
+    s = input$dt_rows_selected
+    print(s)
+    if (length(s)) {
+      #print(df()[s,])
+      chr = levels(df()[s, "Chr"])[df()[s, "Chr"]]
+      start = df()[s, "Start"]-1000
+      end = df()[s, "End"]+1000
+      val = paste("chr",as.roman(chr),"%3A",start,"..",end, sep = "")
+      val = paste('http://localhost/~brooks/JBrowse-1.11.6/?loc=',val,sep="")
+    } else {
+      val = "http://localhost/~brooks/JBrowse-1.11.6/"
+    }
+    paste("<div style='width: 100%; height: 600px'><iframe style='border: 1px solid black' src='", val ,"'width='100%' height='100%'></iframe></div>",sep="")
   })
   
   manhattan_data = reactive({

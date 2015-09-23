@@ -4,9 +4,8 @@
 \alias{plotManhattan}
 \title{Plot clustQTL results}
 \usage{
-plotManhattan(qtls, mrk, gene = "", main = "", trx_annot = NULL,
-  cutoff = 3, gene_annot_range = c(1000, 1000), qqman = T, show = T,
-  ...)
+plotManhattan(qtls, mrk, gene = "", trx_annot = NULL, cutoff = 3,
+  gene_annot_range = c(1000, 1000), qqman = T, show = T, ...)
 }
 \arguments{
 \item{qtls}{A two column matrix with each row containing a pvalue for
@@ -15,14 +14,14 @@ every marker in \code{mrk}}
 \item{mrk}{A Granges object containing the location of every genetic marker
 tested by clustQTL}
 
-\item{main}{String used for plot title}
-
 \item{trx_annot}{GRanges. \code{main} show}
 
 \item{cutoff}{-log10(pval) signficance cutoff value for QTLs. Used to draw
 horizontal line across plot}
 
 \item{gene_annot_range}{}
+
+\item{main}{String used for plot title}
 
 \item{cutoff}{}
 }

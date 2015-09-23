@@ -149,7 +149,7 @@ plotPeakProfile = function(data, genotypes, marker, peak_sigma = 2, peak_thresho
   # data_long = data_long[data_long$value!=0,]
   # data_long[data_long$value==0,]$value = NA
 
-  panelAylim = max(data_long_mod %>% filter(genotype==1) %>% group_by(genotype,x) %>% summarise(sum=sum(value)) %>% select(sum))
+  #panelAylim = max(data_long_mod %>% filter(genotype==1) %>% group_by(genotype,x) %>% summarise(sum=sum(value)) %>% select(sum))
   p1 <- ggplot() +
     facet_grid(panel~.,scale="free_y",labeller=function(x,y){return("")}) +
     stat_summary(data=data_long_mod %>% filter(genotype==1), mapping=aes(y=value,x=x),geom="area",fun.y=sum) +
@@ -183,4 +183,51 @@ plotPeakProfile = function(data, genotypes, marker, peak_sigma = 2, peak_thresho
 
   grid.arrange(gt1,gt2,ncol=2)
 
+}
+
+#' Plot peak profiles
+#'
+#' The function \code{\link{cluster}}
+#'
+#' @param qtls A two column matrix with each row containing a pvalue for
+#'  every marker in \code{mrk}
+#' @return plot
+#' @export
+#'
+writePeakProfile = function(data, genotypes, marker, peak_sigma = 2, peak_threshold = 1, 
+                            f1 = "/Users/brooks/Sites/JBrowse-1.11.6/data/d1.bw", f2 = "/Users/brooks/Sites/JBrowse-1.11.6/data/d2.bw") {
+  library(reshape2)
+  library(Peaks)
+  library.dynam('Peaks', 'Peaks', lib.loc=NULL)
+  library(gtable)
+  library(gridExtra)
+  library(grid)
+  library(dplyr)
+  library(ggplot2)
+  library(rtracklayer)
+  mrk2geno = genotypes[marker,]
+  #data_mod = as.matrix(mcols(data))
+  #data_mod = t(apply(data,1,function(i){SpectrumSearch(i,sigma=peak_sigma,threshold=peak_threshold)$y}))
+  strain_names = sapply(colnames(mcols(data)),function(i){
+    i = strsplit(i,"_")[[1]][1]
+    i = gsub("X","",i)
+    if (nchar(i)==2) {
+      i = paste("0",i,sep="")
+    }
+    if (nchar(i)==3) {
+      return(i)
+    } else {
+      return(NULL)
+    }
+  })
+  gen1 = which(strain_names%in%names(which(mrk2geno==1)))
+  gen2 = which(strain_names%in%names(which(mrk2geno==2)))
+  d1 = rowSums(as.matrix(mcols(data)[,gen1]))
+  d2 = rowSums(as.matrix(mcols(data)[,gen1]))
+  gr1 = data
+  mcols(gr1) = NULL
+  gr1$score = d1
+  gr2 = data
+  mcols(gr2) = d2
+  export.bw(object = gr1, con = f1, compress=T)
 }

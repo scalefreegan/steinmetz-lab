@@ -43,9 +43,10 @@ shinyUI(navbarPage("clustQTL", selected = "Inspect",
           )
          ),
        tabPanel("Genome Browser", id = "genome", fluidPage(
-         tags$head(HTML("<script type='text/javascript' src='http://www.biodalliance.org/release-0.11/dalliance-compiled.js'></script>")),
-         tags$head(HTML("<script type='text/javascript' src='genome.js'></script>")),
-         HTML("<div id='svgHolder'></div>")
+         tags$head(HTML("<title>Yeast JBrowse </title>")),
+         htmlOutput("link", inline = TRUE)
+         #htmlOutput('link')
+         #HTML("<div style='width: 100%; height: 600px'><iframe style='border: 1px solid black' src='http://localhost/~brooks/JBrowse-1.11.6/' width='100%' height='100%'></iframe></div>")
          )
       )
     )
