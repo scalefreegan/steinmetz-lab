@@ -1,6 +1,6 @@
 #! /usr/bin/env Rscript
 # designed to be saved as .Rprofile in working dir
-# devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-lab/master/genphen/endometabolome/processMetabData_allstrains.R")
+# devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-lab/master/genphen/metabolome/processMetabData_allstrains.R")
 #-------------------------------------------------------------------#
 # Process Metabolome Data Nicole on 07.07.2015
 # ! Transform into a computable format !
@@ -298,7 +298,7 @@ pheno_comb = do.call(cbind,lapply(mnames,function(i){
 }))
 colnames(pheno_comb) = sapply(colnames(pheno_comb),function(i){strsplit(i,"_")[[1]][1]})
 
-f = "/g/steinmetz/brooks/genphen/dynamic_metabolome_20082015/mQTLs_combrep.rda"
+f = "/g/steinmetz/brooks/genphen/metabolome/mQTLs_combrep.rda"
 if (!file.exists(f)) {
 	mQTLs_combrep =	runQTL(
 		genotype = geno,
@@ -368,41 +368,89 @@ if (!file.exists(f)) {
 	rm("qtl_list")
 }
 
-# NOTE: this is probably statistically invalid way to combine across markers
-# do not use it for any serious business
-f = "/g/steinmetz/brooks/genphen/dynamic_metabolome_20082015/mQTLs_comball.rda"
-if (!file.exists(f)) {
-	mQTLs_permetabolite =	runQTL(
-		genotype = geno,
-    phenotype = pheno_comb,
-    marker_info = mrk,
-    permute = T, # compute significance of each QTL LOD by permutation
-    pca = F, # maximize QTL detection by removing confounders using PCA
-    permute_alpha = 0.05,
-    save_file = f)
-	write.table(do.call(rbind, mQTLs_permetabolite$sig_qtls),
-		file = gsub(".rda","_sigtable.txt",f),
-		sep = "\t",
-		row.names = F,
-		col.names = T
-		)
-} else {
-	#load(f)
-}
+#-------------------------------------------------------------------#
+# Archive!
+#
+#-------------------------------------------------------------------#
+# # NOTE: this is probably statistically invalid way to combine across markers
+# # do not use it for any serious business
+# f = "/g/steinmetz/brooks/genphen/dynamic_metabolome_20082015/mQTLs_comball.rda"
+# if (!file.exists(f)) {
+# 	mQTLs_permetabolite =	runQTL(
+# 		genotype = geno,
+#     phenotype = pheno_comb,
+#     marker_info = mrk,
+#     permute = T, # compute significance of each QTL LOD by permutation
+#     pca = F, # maximize QTL detection by removing confounders using PCA
+#     permute_alpha = 0.05,
+#     save_file = f)
+# 	write.table(do.call(rbind, mQTLs_permetabolite$sig_qtls),
+# 		file = gsub(".rda","_sigtable.txt",f),
+# 		sep = "\t",
+# 		row.names = F,
+# 		col.names = T
+# 		)
+# } else {
+# 	#load(f)
+# }
 
 #-------------------------------------------------------------------#
 # With funQTL
 #
 #-------------------------------------------------------------------#
-f = "/g/steinmetz/brooks/genphen/dynamic_metabolome_20082015/mQTLs_comball.rda"
+f = "/g/steinmetz/brooks/genphen/metabolome/mQTLs_comball.rda"
 if (!file.exists(f)) {
-	mQTLs_cross =	runQTL(
+	# group phenotype timepoints
+
+	rep2metabolites = sapply(rownames(pheno), function(i) {
+		o = strsplit(i,"_")[[1]][1]
+		return(o)
+	})
+
+	cross =	runQTL(
 				genotype = geno,
 		    phenotype = t(pheno),
 		    marker_info = mrk,
 		    return_cross = TRUE
 				)
-	save(mQTLs_cross, file = f)
+	save(cross, file = f)
+
+	# first detect qtls individually
+	# have to run funqtl for each metabolite
+	# as shortcut, just replace cross object phenotypes
+	# for each
+
+	mQTLs = lapply(unique(rep2metabolites), function(m) {
+		these_phe = c(names(which(rep2metabolites == m)),"id")
+		cross_tmp = cross
+		cross_tmp$pheno = cross_tmp$pheno[,these_phe]
+		colnames(cross_tmp$pheno) = c(sapply(colnames(cross_tmp$pheno), function(i){
+			o = strsplit(i, split = "_")[[1]][2]
+			if (is.na(o)) {
+				o = "id"
+			}
+			return(o)
+			}))
+			cross_tmp = calc.genoprob(cross_tmp, step=0)
+		 	qtls = scanone(cross_tmp, method="hk",pheno.col=1:4)
+			eff = geteffects(cross_tmp, pheno.col=1:4)
+			plotlod(qtls, eff, 1:4, gap=25,
+        ylab="Time")
+			qtls_alt = scanoneF(cross_tmp, pheno.cols = 1:4, method="hk")
+			# permutation threshold
+			permout = scanoneF(cross_tmp, pheno.cols = 1:4,
+			                    method = "hk", n.perm = 1000, n.cluster = 20)
+			#display 5, 10 % threshold of permutation result
+			summary(permout)
+			par(mfrow=c(2,1))
+			plot(qtls_alt, ylim=c(0,3.5), main="SLOD",
+     			bandcol="gray90")
+					abline(h=2.02, col="red", lty=3)
+			plot(qtls_alt, lodcolumn=2, ylim=c(0,5),
+     			main="MLOD", bandcol="gray90")
+					abline(h=3.46, col="red", lty=3)
+			})
+
 } else {
 	load(f)
 }

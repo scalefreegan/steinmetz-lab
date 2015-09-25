@@ -73,7 +73,7 @@ runQTL <- function(
     cat("ERROR: Could not create rQTL cross object from genotype and phenotype data\n")
     return(NULL)
   }
-  genphen = qtl::calc.genoprob( genphen,step = 0 )
+  genphen = qtl::calc.genoprob( genphen, step = 0 )
   if (return_cross) {
     # just return cross object, nothing else
     # to use in funQTL etc

@@ -10,8 +10,8 @@ data =  {
                 "input1":
                 {
                     "ColumnNames": ["sequence", "cutsite", "percentpeptide"],
-                    "Values": [ [ "ATGAAATCTAACAATGCGCTCATCGTCATCCTCGGCACCGTCACCCTGGATGCTGTAGGCATAGGCTTGGTTATGCCGGTACTGCCGGGCCTCTTGCGGGATAT",
-                    "10", "100" ], ]
+                    "Values": [ [ "GGGAGGCTGCTTTACCCGCTGTGGGGGCGC",
+                    253, 86.1 ] ]
                 },        },
             "GlobalParameters": {
 }
