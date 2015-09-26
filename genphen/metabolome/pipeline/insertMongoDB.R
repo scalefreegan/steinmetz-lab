@@ -15,3 +15,10 @@
 .status = "Development"
 
 library(mongodb)
+library(assertthat)
+
+# Connect to MongoDB ---------------------------------------------------
+
+mongo <- mongo.create()
+
+assert_that(mongo.is.connected(mongo))
