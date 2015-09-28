@@ -30,7 +30,7 @@ library(xlsx)
 
 # Custom functions ---------------------------------------------------
 
-processData = function( f1, f2, startRow = 2,... ) {
+processData = function( f1, f2, startRow = 2, mLoc = "endo", isParental = "false", ... ) {
 	# f1 is relative time - defined by "cultivation phase"
 	# eg. Endometabolome_1B_25A_sorted by cultivation phase.xlsx
 	# f2 contains measurements at absolute time
@@ -60,26 +60,36 @@ processData = function( f1, f2, startRow = 2,... ) {
 				metabolite = i
 				if (k=="relative") {
 					touse = thisf1
+					fpath = f1
 				} else {
 					touse = thisf2
+					fpath = f2
 				}
 				time = touse[,1]
 				time_format = k
 				value = abs(as.numeric(touse[,j]))
-				if (is.na(value[1])) {
-				  time = time[2:length(time)]
-				  value = value[2:length(value)]
-				}
-				value.log2 = value
-				value.log2[value>0 & !is.na(value)] = log2(value.log2)
-				relative.log2 = sapply(value.log2,function(i){i/value.log2[1]})
-				derivative.log2 = c(NA,diff(value.log2)/diff(time))
-				data.frame(strain,replicate,metabolite,time,time_format,value,
-				           value.log2,relative.log2,derivative.log2)
+				# if (is.na(value[1])) {
+				#   time = time[2:length(time)]
+				#   value = value[2:length(value)]
+				# }
+				#value.log2 = value
+				#value.log2[value>0 & !is.na(value)] = log2(value.log2)
+				#relative.log2 = sapply(value.log2,function(i){i/value.log2[1]})
+				#derivative.log2 = c(NA,diff(value.log2)/diff(time))
+				data.frame(
+					fpath,
+					metabolite,
+					mLoc,
+					strain,
+					replicate,
+					isParental,
+					time,
+					time_format,
+					value)
 			}))
 		}))
 		# remove NA
-		to_r = to_r[!is.na(to_r$value),]
+		# to_r = to_r[!is.na(to_r$value),]
 		return(to_r)
 	}))
 	close(pb)
