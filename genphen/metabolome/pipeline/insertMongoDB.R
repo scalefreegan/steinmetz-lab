@@ -16,6 +16,7 @@
 
 library(rmongodb)
 library(assertthat)
+library(jsonlite)
 
 # Connect to MongoDB ---------------------------------------------------
 
@@ -31,6 +32,4 @@ mongoConnect = function(host = NULL, db = NULL) {
     cat("ERROR: Could not connect to MongoDB\n")
     return(NULL)
   }
-
-
 }

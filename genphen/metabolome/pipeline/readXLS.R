@@ -35,6 +35,19 @@ processData = function( f1, f2, startRow = 2, mLoc = "endo", isParental = "false
 	# eg. Endometabolome_1B_25A_sorted by cultivation phase.xlsx
 	# f2 contains measurements at absolute time
 	# eg. Endometabolome_25A_sorted by cultivation time.xlsx
+	cleanExcel = function(x) {
+		# remove extraneous rows from an Excel worksheet
+		# containing all NAs
+		# because Excel sucks!
+		rNA = apply(x,1,function(i)sum(is.na(i))==dim(x)[2])
+		x = x[!rNA,]
+	}
+	removeStrains = function(x) {
+		# remove strains without any measurements for
+		# a particular metabolite
+		rNA = apply(x,2,function(i)sum(is.na(i))==dim(x)[1])
+		x = x[,!rNA]
+	}
 	wb1 = loadWorkbook(f1)
 	wb2 = loadWorkbook(f2)
 	sheets = intersect(names(getSheets(wb1)),names(getSheets(wb2)))
@@ -43,8 +56,9 @@ processData = function( f1, f2, startRow = 2, mLoc = "endo", isParental = "false
 		#print(i)
 		setTxtProgressBar(pb, i)
 		i = sheets[i]
-		thisf1 = read.xlsx(f1,sheetName=i,startRow=startRow,header=T)
-		thisf2 = read.xlsx(f2,sheetName=i,startRow=startRow,header=T)
+		# remove strains without any measurements and clean up excel data!
+		thisf1 = removeStrains(cleanExcel(read.xlsx(f1,sheetName = i,startRow = startRow,header = T)))
+		thisf2 = removeStrains(cleanExcel(read.xlsx(f2,sheetName = i,startRow = startRow,header = T)))
 		common = intersect(colnames(thisf1),colnames(thisf2))
 		# keep strains only
 		common = common[grep("^X",common)]
@@ -68,10 +82,10 @@ processData = function( f1, f2, startRow = 2, mLoc = "endo", isParental = "false
 				time = touse[,1]
 				time_format = k
 				value = abs(as.numeric(touse[,j]))
-				# if (is.na(value[1])) {
-				#   time = time[2:length(time)]
-				#   value = value[2:length(value)]
-				# }
+				if (is.na(value[1])) {
+				  time = time[2:length(time)]
+				  value = value[2:length(value)]
+				}
 				#value.log2 = value
 				#value.log2[value>0 & !is.na(value)] = log2(value.log2)
 				#relative.log2 = sapply(value.log2,function(i){i/value.log2[1]})
