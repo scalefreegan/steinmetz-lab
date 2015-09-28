@@ -37,3 +37,5 @@ f1 = paste(DATADIR, "endometabolome/data/Endometabolome_1B_46B_sorted by cultiva
 f2 = paste(DATADIR, "endometabolome/data/Endometabolome_46B_sorted by cultivation time.xlsx", sep="")
 
 thisdata = processData(f1, f2)
+
+mongo = mongoConnect(HOST, DBNAME)
