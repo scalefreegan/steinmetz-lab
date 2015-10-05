@@ -431,25 +431,37 @@ if (!file.exists(f)) {
 			}
 			return(o)
 			}))
-			cross_tmp = calc.genoprob(cross_tmp, step=0)
-		 	qtls = scanone(cross_tmp, method="hk",pheno.col=1:4)
-			eff = geteffects(cross_tmp, pheno.col=1:4)
-			plotlod(qtls, eff, 1:4, gap=25,
-        ylab="Time")
-			qtls_alt = scanoneF(cross_tmp, pheno.cols = 1:4, method="hk")
-			# permutation threshold
-			permout = scanoneF(cross_tmp, pheno.cols = 1:4,
-			                    method = "hk", n.perm = 1000, n.cluster = 20)
-			#display 5, 10 % threshold of permutation result
-			summary(permout)
-			par(mfrow=c(2,1))
-			plot(qtls_alt, ylim=c(0,3.5), main="SLOD",
-     			bandcol="gray90")
-					abline(h=2.02, col="red", lty=3)
-			plot(qtls_alt, lodcolumn=2, ylim=c(0,5),
-     			main="MLOD", bandcol="gray90")
-					abline(h=3.46, col="red", lty=3)
-			})
+		cross_tmp = calc.genoprob(cross_tmp, step=0)
+	 	qtls = scanone(cross_tmp, method="hk",pheno.col=1:4)
+		eff = geteffects(cross_tmp, pheno.col=1:4)
+		plotlod(qtls, eff, 1:4, gap=25,
+      ylab="Time")
+		qtls_alt = scanoneF(cross_tmp, pheno.cols = 1:4, method="hk")
+		# calc permutation threshold
+		permout = scanoneF(cross_tmp, pheno.cols = 1:4,
+		                    method = "hk", n.perm = 1000, n.cluster = 20)
+		par(mfrow=c(2,1))
+		plot(qtls_alt, ylim=c(0,3.5), main="SLOD",
+   			bandcol="gray90")
+		abline(h=summary(permout)["5%","slod"], col="red", lty=3)
+		plot(qtls_alt, lodcolumn=2, ylim=c(0,5),
+   			main="MLOD", bandcol="gray90")
+		abline(h=summary(permout)["5%","mlod"], col="red", lty=3)
+		dev.off()
+		# multiple qtl stuff - not currently working
+		# qtlslod <- stepwiseqtlF(cross_tmp, pheno.cols = 1:4,
+		# 	max.qtl = 6, usec = "slod",
+		# 	method = "hk",
+		# 	penalties = c(2.02, 2.62, 1.74) )
+		# lodmat1.c <- getprofile(cross_tmp, qtl =  qtlslod, pheno.cols = 1:4,
+    #    formula = y~Q1, method = "hk",
+    #    verbose = T, tpy="comb")
+		# 	 plotprofile(lodmat1.c, mval = 8, col=heat.colors(100)[100:1],
+	  #           main="The Profile LOD image of data")
+
+		# hklod, flod, sl and ml - PCA based approach
+		cvout <- cvfold(cross_tmp, pheno.cols = 1:4, basisset = 4:10, fold = 10, random = F)
+
 
 } else {
 	load(f)
