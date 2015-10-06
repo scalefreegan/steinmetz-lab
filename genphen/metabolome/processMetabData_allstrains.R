@@ -217,20 +217,26 @@ if (.plot) {
 
 # source rQTL utilities
 devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-lab/master/QTL/rQTL.R")
+#
+# Don't think this is necessary for rqtl package
+# in fact, I think it will cause imputaition of genotypes, which I would like to
+# avoid
+#
+# genotype_f = "/g/steinmetz/project/GenPhen/data/endometabolome/genotypesANDmarkers_allmetabolites_23082015.rda"
+# if (file.exists(genotype_f)) {
+#   load(genotype_f)
+# } else{
+# 	load("/g/steinmetz/brooks/yeast/genomes/S288CxYJM789/genotypes_S288c_R64.rda")
+# 	strains = levels(endometabolite$strain)
+# 	gm_list = clustQTL::combineMarkers(geno, mrk, limit_strains = strains, limit_markers = NULL,
+# 	                          na.rm = TRUE, rm_type = c("marker","strain")[1], collpase_markers = TRUE,
+# 	                          marker_rename = FALSE, impute_markers = TRUE, clean_markers = TRUE)
+# 	geno = gm_list$genotypes
+# 	mrk = gm_list$markers
+#   save(geno,mrk, file = genotype_f)
+# }
 
-genotype_f = "/g/steinmetz/project/GenPhen/data/endometabolome/genotypesANDmarkers_allmetabolites_23082015.rda"
-if (file.exists(genotype_f)) {
-  load(genotype_f)
-} else{
-	load("/g/steinmetz/brooks/yeast/genomes/S288CxYJM789/genotypes_S288c_R64.rda")
-	strains = levels(endometabolite$strain)
-	gm_list = clustQTL::combineMarkers(geno, mrk, limit_strains = strains, limit_markers = NULL,
-	                          na.rm = TRUE, rm_type = c("marker","strain")[1], collpase_markers = TRUE,
-	                          marker_rename = FALSE, impute_markers = TRUE, clean_markers = TRUE)
-	geno = gm_list$genotypes
-	mrk = gm_list$markers
-  save(geno,mrk, file = genotype_f)
-}
+genotype_f = "/g/steinmetz/brooks/yeast/genomes/S288CxYJM789/genotypes_S288c_R64.rda"
 
 # load genotype and markers files
 
@@ -461,8 +467,6 @@ if (!file.exists(f)) {
 
 		# hklod, flod, sl and ml - PCA based approach
 		cvout <- cvfold(cross_tmp, pheno.cols = 1:4, basisset = 4:10, fold = 10, random = F)
-
-
 } else {
 	load(f)
 }
