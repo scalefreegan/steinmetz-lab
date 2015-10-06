@@ -466,7 +466,8 @@ if (!file.exists(f)) {
 	  #           main="The Profile LOD image of data")
 
 		# hklod, flod, sl and ml - PCA based approach
-		cvout <- cvfold(cross_tmp, pheno.cols = 1:4, basisset = 4:10, fold = 10, random = F)
+		cvout = cvfold(cross_tmp, pheno.cols = 1:4, basisset = 4:10, fold = 10, random = F)
+	})
 } else {
 	load(f)
 }
