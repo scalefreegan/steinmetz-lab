@@ -44,24 +44,30 @@ runQTL <- function(
     pca = F, # maximize QTL detection by removing confounders using PCA
     permute_alpha = 0.05,
     save_file = "",
-    return_cross = FALSE # just return cross object
+    return_cross = FALSE, # just return cross object,
+    subset_genotype = F
     ){
   # subset genotype data on metabolite data. transpose it.
   if ( !sum(colnames(genotype)%in%rownames(phenotype))>0 ) {
     cat("ERROR:Strain names in genotype matrix (columns) do not match strain names in phenotype matrix (rows\n")
     return(NULL)
   }
-  genotype_subset = t( genotype[ ,rownames( phenotype ) ] )
-  # add chr num to markers
-  genotype_subset = rbind( gsub('chr','', as.character( GenomicRanges::seqnames( marker_info[ colnames( genotype_subset ) ] ) ) ),
-   genotype_subset )
-  genotype_subset = cbind( c( NULL, rownames( genotype_subset ) ), genotype_subset )
-  colnames( genotype_subset )[ 1 ] = 'id'
+  if (subset_genotype) {
+    genotype = t( genotype[ ,rownames( phenotype ) ] )
+    # add chr num to markers
+  } else {
+    genotype = t(genotype)
+  }
+  genotype = rbind( gsub('chr','', as.character( GenomicRanges::seqnames( marker_info[ colnames( genotype ) ] ) ) ),
+   genotype )
+  genotype = cbind( c( NULL, rownames( genotype ) ), genotype )
+  colnames( genotype )[ 1 ] = 'id'
+
   # add id column to phen data
   phenotype = cbind( phenotype, rownames( phenotype )  )
   colnames( phenotype )[ dim( phenotype )[2] ] = 'id'
   # write rqtl files
-  write.table( genotype_subset, file =  ".tmpgen", sep = ",", col.names = T, row.names = F, quote=F )
+  write.table( genotype, file =  ".tmpgen", sep = ",", col.names = T, row.names = F, quote=F )
   write.table( phenotype, file =  ".tmpphen", sep = ",", col.names = T, row.names = F, quote=F )
   # read.cross to import data into rqtl
   cat("Creating rQTL cross object for genotype/phenotype data\n")
@@ -70,7 +76,7 @@ runQTL <- function(
     # clean up
     file.remove(c(".tmpgen",".tmpphen"))
   } else {
-    cat("ERROR: Could not create rQTL cross object from genotype and phenotype data\n")
+    cat("ERROR: Could not create rQTL cross object from genotype and phenotype data\nDo you have write permission in the current directory?\n")
     return(NULL)
   }
   genphen = qtl::calc.genoprob( genphen, step = 0 )

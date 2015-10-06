@@ -236,9 +236,9 @@ devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-l
 #   save(geno,mrk, file = genotype_f)
 # }
 
-genotype_f = "/g/steinmetz/brooks/yeast/genomes/S288CxYJM789/genotypes_S288c_R64.rda"
-
 # load genotype and markers files
+genotype_f = "/g/steinmetz/brooks/yeast/genomes/S288CxYJM789/genotypes_S288c_R64.rda"
+load(genotype_f)
 
 data = endometabolite %>%
   #filter(metabolite=="ARG") %>%
@@ -401,10 +401,11 @@ if (!file.exists(f)) {
 # }
 
 #-------------------------------------------------------------------#
-# With funQTL
+# With funQTL - MLOD/SLOD
+# No smoothing / PCA
 #
 #-------------------------------------------------------------------#
-f = "/g/steinmetz/brooks/genphen/metabolome/mQTLs_comball.rda"
+f = "/g/steinmetz/brooks/genphen/metabolome/qtls/mQTLs_comball_funqtl_2014.rda"
 if (!file.exists(f)) {
 	# group phenotype timepoints
 
@@ -413,20 +414,24 @@ if (!file.exists(f)) {
 		return(o)
 	})
 
-	cross =	runQTL(
-				genotype = geno,
-		    phenotype = t(pheno),
-		    marker_info = mrk,
-		    return_cross = TRUE
-				)
-	save(cross, file = f)
+	cross_f = "/g/steinmetz/brooks/genphen/metabolome/cross_template.rda"
+	if (!file.exists(f)) {
+		cross =	runQTL(
+					genotype = geno,
+					phenotype = t(pheno),
+					marker_info = mrk,
+					return_cross = TRUE
+					)
+		save(cross, file = cross_f)
+	} else {
+		load(cross_f)
+	}
 
 	# first detect qtls individually
 	# have to run funqtl for each metabolite
 	# as shortcut, just replace cross object phenotypes
-	# for each
-
-	mQTLs = lapply(unique(rep2metabolites), function(m) {
+	# for each metabolite
+	mQTLs_funqtl_2014 = lapply(unique(rep2metabolites), function(m) {
 		these_phe = c(names(which(rep2metabolites == m)),"id")
 		cross_tmp = cross
 		cross_tmp$pheno = cross_tmp$pheno[,these_phe]
@@ -437,23 +442,15 @@ if (!file.exists(f)) {
 			}
 			return(o)
 			}))
-		cross_tmp = calc.genoprob(cross_tmp, step=0)
-	 	qtls = scanone(cross_tmp, method="hk",pheno.col=1:4)
-		eff = geteffects(cross_tmp, pheno.col=1:4)
-		plotlod(qtls, eff, 1:4, gap=25,
-      ylab="Time")
-		qtls_alt = scanoneF(cross_tmp, pheno.cols = 1:4, method="hk")
+		cross_tmp = calc.genoprob(cross_tmp, step = 0)
+		# last phenotype column is the "id" tag
+		pcols = seq(1, length(these_phe) - 1)
+	 	qtls = scanone(cross_tmp, method = "hk",pheno.col = pcols)
+		eff = geteffects(cross_tmp, pheno.col = 1:4)
+		qtls_alt = scanoneF(cross_tmp, pheno.cols = 1:4, method = "hk")
 		# calc permutation threshold
 		permout = scanoneF(cross_tmp, pheno.cols = 1:4,
 		                    method = "hk", n.perm = 1000, n.cluster = 20)
-		par(mfrow=c(2,1))
-		plot(qtls_alt, ylim=c(0,3.5), main="SLOD",
-   			bandcol="gray90")
-		abline(h=summary(permout)["5%","slod"], col="red", lty=3)
-		plot(qtls_alt, lodcolumn=2, ylim=c(0,5),
-   			main="MLOD", bandcol="gray90")
-		abline(h=summary(permout)["5%","mlod"], col="red", lty=3)
-		dev.off()
 		# multiple qtl stuff - not currently working
 		# qtlslod <- stepwiseqtlF(cross_tmp, pheno.cols = 1:4,
 		# 	max.qtl = 6, usec = "slod",
@@ -464,10 +461,30 @@ if (!file.exists(f)) {
     #    verbose = T, tpy="comb")
 		# 	 plotprofile(lodmat1.c, mval = 8, col=heat.colors(100)[100:1],
 	  #           main="The Profile LOD image of data")
-
-		# hklod, flod, sl and ml - PCA based approach
-		cvout = cvfold(cross_tmp, pheno.cols = 1:4, basisset = 4:10, fold = 10, random = F)
+		return(list(qtls, eff, qtls_alt, permout, pcols))
 	})
+	names(mQTLs_funqtl_2014)  = unique(rep2metabolites)
+
+	# plot stuff
+
+	# effect plots
+	pdf("/g/steinmetz/brooks/genphen/metabolome/plots/effects_funqtl_2014.rda")
+		for (i in 1:length(mQTLs_funqtl_2014)) {
+			plotlod(mQTLs_funqtl_2014$qtls, mQTLs_funqtl_2014$eff, mQTLs_funqtl_2014$pcols, gap=25, ylab="Time")
+		}
+	dev.off()
+
+	pdf("/g/steinmetz/brooks/genphen/metabolome/plots/lods_funqtl_2014.rda")
+		for (i in 1:length(mQTLs_funqtl_2014)) {
+			par(mfrow=c(2,1))
+			plot(mQTLs_funqtl_2014$qtls_alt, ylim=c(0,3.5), main="SLOD",
+					bandcol="gray90")
+			abline(h=summary(mQTLs_funqtl_2014$permout)["5%","slod"], col="red", lty=3)
+			plot(mQTLs_funqtl_2014$qtls_alt, lodcolumn=2, ylim=c(0,5),
+					main="MLOD", bandcol="gray90")
+			abline(h=summary(mQTLs_funqtl_2014$permout)["5%","mlod"], col="red", lty=3)
+		}
+	dev.off()
 } else {
 	load(f)
 }
