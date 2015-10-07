@@ -26,6 +26,8 @@ library(LSD)
 library(qtl)
 library(pheatmap)
 library(funqtl)
+library(parallel)
+library(snow)
 #library(clustQTL)
 #devtools::install_github("scalefreegan/steinmetz-lab/clustQTL")
 
@@ -420,7 +422,8 @@ if (!file.exists(f)) {
 					genotype = geno,
 					phenotype = t(pheno),
 					marker_info = mrk,
-					return_cross = TRUE
+					return_cross = TRUE,
+					estimate.map=FALSE
 					)
 		save(cross, file = cross_f)
 	} else {
@@ -431,7 +434,10 @@ if (!file.exists(f)) {
 	# have to run funqtl for each metabolite
 	# as shortcut, just replace cross object phenotypes
 	# for each metabolite
-	mQTLs_funqtl_2014 = lapply(unique(rep2metabolites), function(m) {
+	pb = txtProgressBar(min = 0, max = length(unique(rep2metabolites)), style = 3)
+	mQTLs_funqtl_2014 = mclapply(1:length(unique(rep2metabolites)), function(i) {
+		m = unique(rep2metabolites)[i]
+		setTxtProgressBar(pb, i)
 		these_phe = c(names(which(rep2metabolites == m)),"id")
 		cross_tmp = cross
 		cross_tmp$pheno = cross_tmp$pheno[,these_phe]
@@ -446,43 +452,50 @@ if (!file.exists(f)) {
 		# last phenotype column is the "id" tag
 		pcols = seq(1, length(these_phe) - 1)
 	 	qtls = scanone(cross_tmp, method = "hk",pheno.col = pcols)
-		eff = geteffects(cross_tmp, pheno.col = 1:4)
-		qtls_alt = scanoneF(cross_tmp, pheno.cols = 1:4, method = "hk")
+		eff = geteffects(cross_tmp, pheno.col = pcols)
+		qtls_alt = scanoneF(cross_tmp, pheno.cols = pcols, method = "hk")
 		# calc permutation threshold
-		permout = scanoneF(cross_tmp, pheno.cols = 1:4,
+		permout = scanoneF(cross_tmp, pheno.cols = pcols,
 		                    method = "hk", n.perm = 1000, n.cluster = 20)
-		# multiple qtl stuff - not currently working
-		# qtlslod <- stepwiseqtlF(cross_tmp, pheno.cols = 1:4,
+		bayesint(qtls_alt, prob=0.95, lodcolumn=1, expandtomarkers=FALSE)
+		# for future!
+		# qtlslod_slod = stepwiseqtlF(cross_tmp, pheno.cols = pcols,
 		# 	max.qtl = 6, usec = "slod",
 		# 	method = "hk",
 		# 	penalties = c(2.02, 2.62, 1.74) )
-		# lodmat1.c <- getprofile(cross_tmp, qtl =  qtlslod, pheno.cols = 1:4,
-    #    formula = y~Q1, method = "hk",
-    #    verbose = T, tpy="comb")
-		# 	 plotprofile(lodmat1.c, mval = 8, col=heat.colors(100)[100:1],
-	  #           main="The Profile LOD image of data")
-		return(list(qtls, eff, qtls_alt, permout, pcols))
+		# qtls_refined_slod = refineqtlF(cross_tmp, usec = "slod"
+		# 		pheno.cols = pcols, method = "hk", qtl = qtlslod, keeplodprofile = T)
+		# qtlslod_mlod = stepwiseqtlF(cross_tmp, pheno.cols = pcols,
+		# 	max.qtl = 6, usec = "mlod",
+		# 	method = "hk",
+		# 	penalties = c(2.02, 2.62, 1.74) )
+		# qtls_refined_mlod = refineqtlF(cross_tmp, usec = "mlod"
+		# 		pheno.cols = pcols, method = "hk", qtl = qtlslod, keeplodprofile = T)
+		return(list(qtls = qtls, eff = eff,
+			qtls_alt = qtls_alt, qtls_refined_slod = qtls_refined_slod,
+			qtls_refined_mlod = qtls_refined_mlod, permout = permout, pcols = pcols))
 	})
 	names(mQTLs_funqtl_2014)  = unique(rep2metabolites)
-
+	close(pb)
 	# plot stuff
 
 	# effect plots
 	pdf("/g/steinmetz/brooks/genphen/metabolome/plots/effects_funqtl_2014.rda")
 		for (i in 1:length(mQTLs_funqtl_2014)) {
-			plotlod(mQTLs_funqtl_2014$qtls, mQTLs_funqtl_2014$eff, mQTLs_funqtl_2014$pcols, gap=25, ylab="Time")
+			plotlod(mQTLs_funqtl_2014[[i]]$qtls, mQTLs_funqtl_2014[[i]]$eff, mQTLs_funqtl_2014[[i]]$pcols, gap=25, ylab="Time")
+			mtext(names(mQTLs_funqtl_2014)[i], side = 3)
 		}
 	dev.off()
 
 	pdf("/g/steinmetz/brooks/genphen/metabolome/plots/lods_funqtl_2014.rda")
 		for (i in 1:length(mQTLs_funqtl_2014)) {
 			par(mfrow=c(2,1))
-			plot(mQTLs_funqtl_2014$qtls_alt, ylim=c(0,3.5), main="SLOD",
+			plot(mQTLs_funqtl_2014[[i]]$qtls_alt, ylim=c(0,3.5), main="SLOD",
 					bandcol="gray90")
-			abline(h=summary(mQTLs_funqtl_2014$permout)["5%","slod"], col="red", lty=3)
-			plot(mQTLs_funqtl_2014$qtls_alt, lodcolumn=2, ylim=c(0,5),
+			abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["5%","slod"], col="red", lty=3)
+			plot(mQTLs_funqtl_2014[[i]]$qtls_alt, lodcolumn=2, ylim=c(0,5),
 					main="MLOD", bandcol="gray90")
-			abline(h=summary(mQTLs_funqtl_2014$permout)["5%","mlod"], col="red", lty=3)
+			abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["5%","mlod"], col="red", lty=3)
 		}
 	dev.off()
 } else {

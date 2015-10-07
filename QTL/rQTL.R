@@ -45,7 +45,8 @@ runQTL <- function(
     permute_alpha = 0.05,
     save_file = "",
     return_cross = FALSE, # just return cross object,
-    subset_genotype = F
+    subset_genotype = F,
+    ...
     ){
   # subset genotype data on metabolite data. transpose it.
   if ( !sum(colnames(genotype)%in%rownames(phenotype))>0 ) {
@@ -71,7 +72,7 @@ runQTL <- function(
   write.table( phenotype, file =  ".tmpphen", sep = ",", col.names = T, row.names = F, quote=F )
   # read.cross to import data into rqtl
   cat("Creating rQTL cross object for genotype/phenotype data\n")
-  genphen = try( qtl::read.cross( format = "csvs", ".", genfile = ".tmpgen" , phefile=  ".tmpphen", genotypes = c( "1","2" ) ) )
+  genphen = try( qtl::read.cross( format = "csvs", ".", genfile = ".tmpgen" , phefile=  ".tmpphen", genotypes = c( "1","2" ), ... ) )
   if ( class(genphen)[1]!="try-error" ) {
     # clean up
     file.remove(c(".tmpgen",".tmpphen"))
