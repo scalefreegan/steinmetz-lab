@@ -17,7 +17,7 @@
 .plot = FALSE
 
 # Import packages ---------------------------------------------------
-#library(xlsx)
+library(xlsx)
 library(ggplot2)
 #library(plotly)
 library(dplyr)
@@ -52,9 +52,14 @@ processData = function( f1, f2, startRow = 2,... ) {
 	# eg. Endometabolome_1B_25A_sorted by cultivation phase.xlsx
 	# f2 contains measurements at absolute time
 	# eg. Endometabolome_25A_sorted by cultivation time.xlsx
+	# f3 contains additional measurements for the strains
+	# including Cell_conc, biovolume, single cell volume, and traits
+	# we will not use "traits" sheet - will calculate them myself if needed
 	wb1 = loadWorkbook(f1)
 	wb2 = loadWorkbook(f2)
+	wb3 = loadWorkbook(f3)
 	sheets = intersect(names(getSheets(wb1)),names(getSheets(wb2)))
+	sheets.g = names(getSheets(wb3))[names(getSheets(wb3))!="Traits"]
 	pb <- txtProgressBar(min = 0, max = length(sheets), style = 3)
 	o = do.call(rbind,lapply((1:length(sheets)),function(i){
 		#print(i)
@@ -62,6 +67,7 @@ processData = function( f1, f2, startRow = 2,... ) {
 		i = sheets[i]
 		thisf1 = read.xlsx(f1,sheetName=i,startRow=startRow,header=T)
 		thisf2 = read.xlsx(f2,sheetName=i,startRow=startRow,header=T)
+		thisf3 = read.xlsx(f2,sheetName=i,startRow=startRow,header=T)
 		common = intersect(colnames(thisf1),colnames(thisf2))
 		# keep strains only
 		common = common[grep("^X",common)]
@@ -77,8 +83,12 @@ processData = function( f1, f2, startRow = 2,... ) {
 				metabolite = i
 				if (k=="relative") {
 					touse = thisf1
+					# add additional phes - only annotated for abs measure
+					g = FALSE
 				} else {
 					touse = thisf2
+					# add additional phes - only annotated for abs measure
+					g = FALSE
 				}
 				time = touse[,1]
 				time_format = k
@@ -110,6 +120,7 @@ data_dir = "/g/steinmetz/project/GenPhen/data/endometabolome/data/"
 
 f1 = paste(data_dir, "Endometabolome_1B_46B_sorted by cultivation phase.xlsx", sep="")
 f2 = paste(data_dir, "Endometabolome_46B_sorted by cultivation time.xlsx", sep="")
+f3 = paste(data_dir, "Dynamic Metabolome_growth and morphology_113 strains.xlsx", sep="")
 
 endo_f = "/g/steinmetz/project/GenPhen/data/endometabolome/endometabolite_full_23082015.rda"
 #endo_f = "~/Desktop/tmpdata/full_endometabolome/endometabolite_full_23082015.rda"
@@ -209,6 +220,85 @@ if (.plot) {
 	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/metabolome_genotypefreq.pdf", width=11.5,height=8)
 		hist(apply(geno,1,function(i)sum(i==1)/length(i)),main="Genotype composition, all markers",xlab="Genotype == 1, Freq",xlim=c(0,1))
 	dev.off()
+
+	repdata_abs = endometabolite %>%
+	  group_by(metabolite,strain) %>%
+	  filter(.,time_format=="absolute") %>%
+	  do({
+	    x = filter(.,replicate==1)
+	    y = filter(.,replicate==2)
+	    t = sort(intersect(x$time,y$time))
+	    x.log2 = x$value.log2[x$time%in%t]
+	    y.log2 = y$value.log2[y$time%in%t]
+			x.diffBYmean = x$derivative.log2[x$time%in%t]/mean(x.log2)
+	    y.diffBYmean = y$derivative.log2[y$time%in%t]/mean(y.log2)
+	    if (length(x.log2)==length(y.log2)) {
+	      data.frame(x.log2 = x.log2, y.log2 = y.log2,
+					x.diffBYmean = x.diffBYmean, y.diffBYmean = y.diffBYmean)
+	    } else {
+	      data.frame()
+	    }
+	  })
+
+	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/replicates_allmetabolites_abstime.pdf")
+	  heatscatter(repdata_abs$x.log2,repdata_abs$y.log2,main="Reproducibility,
+	  All Metabolites, Paired Time",
+	    ylab="[X]] Log2(uM), Rep 2",xlab="[X] Log2(uM), Rep 1")
+	  # remove outliers
+	  lim1 = max(quantile(repdata_abs$x.diffBYmean,na.rm=T,0.99),
+	    quantile(repdata_abs$y.diffBYmean,na.rm=T,0.99))
+	  lim2 = max(quantile(repdata_abs$x.diffBYmean,na.rm=T,0.01),
+	      quantile(repdata_abs$y.diffBYmean,na.rm=T,0.01))
+	  d = repdata_abs %>% filter(., x.diffBYmean <= lim1 & x.diffBYmean >= lim2 &
+	    y.diffBYmean <= lim1 & y.diffBYmean >= lim2)
+	  heatscatter(d$x.diffBYmean,d$y.diffBYmean,
+	    main="Reproducibility, All Metabolites, Paired Time, Derivative By Mean",
+	    ylab = "(d[X]/dt)/mean([X]), Log2(uM), Rep 2",
+	    xlab = "(d[X]/dt)/mean([X]), Log2(uM), Rep 1"
+	  )
+	dev.off()
+
+	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/replicates_permetabolite_abstime.pdf")
+	  par(mfrow = c(2,2))
+	  for (i in levels(repdata_abs$metabolite)) {
+	    d = repdata_abs[which(repdata_abs$metabolite==i),]
+	    heatscatter(d$x.log2,d$y.log2,main=i,ylab="[X] Log2(uM), Rep 2",xlab="[X] Log2(uM) Rep 1",
+	      ylim=c(min(c(repdata_abs$x.log2,repdata_abs$y.log),na.rm=T),
+	        max(c(repdata_abs$x.log2,repdata_abs$y.log),na.rm=T)),
+	      xlim=c(min(c(repdata_abs$x.log2,repdata_abs$y.log),na.rm=T),
+	        max(c(repdata_abs$x.log2,repdata_abs$y.log),na.rm=T))
+	    )
+	    d = repdata_abs[which(repdata_abs$metabolite==i),]
+	    lims = max(quantile(repdata_abs$x.diffBYmean,na.rm=T,0.99),
+	      quantile(repdata_abs$y.diffBYmean,na.rm=T,0.99))
+	    heatscatter(d$x.diffBYmean,d$y.diffBYmean,
+	      main = i,
+	      ylab = "(d[X]/dt)/mean([X]), Log2(uM), Rep 2",
+	      xlab = "(d[X]/dt)/mean([X]), Log2(uM), Rep 1",
+	      xlim = c(-lims,lims),
+	      ylim = c(-lims,lims)
+	    )
+	  }
+	dev.off()
+
+	# Plot overall data trends ---------------------------------------------------
+
+	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/metabolome_abstime.pdf", width=11.5,height=8)
+	ggplot(
+	  data = endometabolite %>%
+	    filter(! is.na(value.log2)) %>%
+	    filter(time_format=="relative") %>%
+	    group_by(metabolite) %>%
+	    do({filter(.,abs(.$value.log2-mean(.$value.log2))<5*sd(.$value.log2))}),
+	  aes(x = time, y = value.log2)) +
+	    geom_point() +
+	  geom_smooth() +
+	  facet_wrap( ~ metabolite, scales="free_y") +
+	  scale_x_discrete(name="Time (relative)") +
+	    scale_y_continuous(name=expression(paste("Level log2(",mu,"M)"))) +
+	    ggtitle("Endo- Metabolome Levels Across All Strains All Metabolites")
+	dev.off()
+
 }
 
 
@@ -242,9 +332,10 @@ devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-l
 genotype_f = "/g/steinmetz/brooks/yeast/genomes/S288CxYJM789/genotypes_S288c_R64.rda"
 load(genotype_f)
 
+# 7/10/2015 changed from time_format=="relative" to time_format=="absolute"
 data = endometabolite %>%
   #filter(metabolite=="ARG") %>%
-  filter(.,time_format=="relative")
+  filter(.,time_format=="absolute")
 pnames = rep(NA,length(unique(paste(data$metabolite,data$replicate,data$time,sep="_"))))
 names(pnames) = unique(paste(data$metabolite,data$replicate,data$time,sep="_"))
 
@@ -294,6 +385,9 @@ colnames(pheno) = levels(data$strain)
 
 # change NaN to NA
 pheno[is.nan(pheno)] = NA
+
+# order rownames by time
+pheno = pheno[order(rownames(pheno)),]
 
 # remove missing data
 # pheno = pheno[which(apply(pheno,1,function(i)sum(is.na(i)))==0),]
@@ -408,7 +502,8 @@ if (!file.exists(f)) {
 #
 #-------------------------------------------------------------------#
 f = "/g/steinmetz/brooks/genphen/metabolome/qtls/mQTLs_comball_funqtl_2014.rda"
-if (!file.exists(f)) {
+if (F) {
+#if (!file.exists(f)) {
 	# group phenotype timepoints
 
 	rep2metabolites = sapply(rownames(pheno), function(i) {
@@ -417,7 +512,7 @@ if (!file.exists(f)) {
 	})
 
 	cross_f = "/g/steinmetz/brooks/genphen/metabolome/cross_template.rda"
-	if (!file.exists(f)) {
+	if (!file.exists(cross_f)) {
 		cross =	runQTL(
 					genotype = geno,
 					phenotype = t(pheno),
@@ -457,7 +552,16 @@ if (!file.exists(f)) {
 		# calc permutation threshold
 		permout = scanoneF(cross_tmp, pheno.cols = pcols,
 		                    method = "hk", n.perm = 1000, n.cluster = 20)
-		bayesint(qtls_alt, prob=0.95, lodcolumn=1, expandtomarkers=FALSE)
+		# identify chrs with slod/lod above permute val
+		chrs = unique(c(
+			qtls_alt[qtls_alt[,"slod"]>=summary(permout)["5%","slod"],"chr"],
+			qtls_alt[qtls_alt[,"mlod"]>=summary(permout)["5%","mlod"],"chr"]
+			)
+		)
+		qtl_intervals = list()
+		for (i in chrs) {
+			qtl_intervals[[as.character(i)]] = mrk[rownames(bayesint(qtls_alt, chr = i, prob=0.95, lodcolumn=1))]
+		}
 		# for future!
 		# qtlslod_slod = stepwiseqtlF(cross_tmp, pheno.cols = pcols,
 		# 	max.qtl = 6, usec = "slod",
@@ -472,8 +576,8 @@ if (!file.exists(f)) {
 		# qtls_refined_mlod = refineqtlF(cross_tmp, usec = "mlod"
 		# 		pheno.cols = pcols, method = "hk", qtl = qtlslod, keeplodprofile = T)
 		return(list(qtls = qtls, eff = eff,
-			qtls_alt = qtls_alt, qtls_refined_slod = qtls_refined_slod,
-			qtls_refined_mlod = qtls_refined_mlod, permout = permout, pcols = pcols))
+			qtls_alt = qtls_alt, qtl_intervals = qtl_intervals,
+			permout = permout, pcols = pcols))
 	})
 	names(mQTLs_funqtl_2014)  = unique(rep2metabolites)
 	close(pb)
