@@ -27,9 +27,13 @@ library(qtl)
 library(pheatmap)
 library(funqtl)
 library(parallel)
+options(mc.cores = 12)
 library(snow)
 #library(clustQTL)
 #devtools::install_github("scalefreegan/steinmetz-lab/clustQTL")
+
+# source rQTL utilities
+devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-lab/master/QTL/rQTL.R")
 
 # Import functions ---------------------------------------------------
 # not required currently
@@ -46,6 +50,17 @@ library(snow)
 # This is slight different than the original format. Each of the metabolites is contained in a separate worksheet
 
 # Custom functions ---------------------------------------------------
+cleanData = function(df, row.names = NULL) {
+	# remove columns or rows with all NA values
+	tokr = apply(df,1,function(i)sum(is.na(i))!=length(i))
+	tokc = apply(df,2,function(i)sum(is.na(i))!=length(i))
+	df = df[tokr,tokc]
+	if (is.numeric(row.names)) {
+		rownames(df) = df[,row.names]
+		df = df[,seq(1,dim(df)[2])[-row.names]]
+	}
+	return(df)
+}
 
 processData = function( f1, f2, startRow = 2,... ) {
 	# f1 is relative time - defined by "cultivation phase"
@@ -60,14 +75,19 @@ processData = function( f1, f2, startRow = 2,... ) {
 	wb3 = loadWorkbook(f3)
 	sheets = intersect(names(getSheets(wb1)),names(getSheets(wb2)))
 	sheets.g = names(getSheets(wb3))[names(getSheets(wb3))!="Traits"]
+	thisf3_cellconc = cleanData(read.xlsx(f3,sheetName="Cell concentration",
+		startRow=startRow,header=T),row.names=1)
+	thisf3_biovol = cleanData(read.xlsx(f3,sheetName="Bio volume",
+		startRow=startRow,header=T),row.names=1)
+	thisf3_singlecell = cleanData(read.xlsx(f3,sheetName="Single cell volume",
+		startRow=startRow,header=T),row.names=1)
 	pb <- txtProgressBar(min = 0, max = length(sheets), style = 3)
 	o = do.call(rbind,lapply((1:length(sheets)),function(i){
 		#print(i)
 		setTxtProgressBar(pb, i)
 		i = sheets[i]
-		thisf1 = read.xlsx(f1,sheetName=i,startRow=startRow,header=T)
-		thisf2 = read.xlsx(f2,sheetName=i,startRow=startRow,header=T)
-		thisf3 = read.xlsx(f2,sheetName=i,startRow=startRow,header=T)
+		thisf1 = cleanData(read.xlsx(f1,sheetName=i,startRow=startRow,header=T))
+		thisf2 = cleanData(read.xlsx(f2,sheetName=i,startRow=startRow,header=T))
 		common = intersect(colnames(thisf1),colnames(thisf2))
 		# keep strains only
 		common = common[grep("^X",common)]
@@ -120,7 +140,7 @@ data_dir = "/g/steinmetz/project/GenPhen/data/endometabolome/data/"
 
 f1 = paste(data_dir, "Endometabolome_1B_46B_sorted by cultivation phase.xlsx", sep="")
 f2 = paste(data_dir, "Endometabolome_46B_sorted by cultivation time.xlsx", sep="")
-f3 = paste(data_dir, "Dynamic Metabolome_growth and morphology_113 strains.xlsx", sep="")
+f3 = paste(data_dir, "Dynamic_Metabolome_growth_and_morphology_113_strains.xlsx", sep="")
 
 endo_f = "/g/steinmetz/project/GenPhen/data/endometabolome/endometabolite_full_23082015.rda"
 #endo_f = "~/Desktop/tmpdata/full_endometabolome/endometabolite_full_23082015.rda"
@@ -307,8 +327,7 @@ if (.plot) {
 #
 #-------------------------------------------------------------------#
 
-# source rQTL utilities
-devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-lab/master/QTL/rQTL.R")
+
 #
 # Don't think this is necessary for rqtl package
 # in fact, I think it will cause imputaition of genotypes, which I would like to
@@ -335,7 +354,7 @@ load(genotype_f)
 # 7/10/2015 changed from time_format=="relative" to time_format=="absolute"
 data = endometabolite %>%
   #filter(metabolite=="ARG") %>%
-  filter(.,time_format=="absolute")
+  filter(.,time_format=="relative")
 pnames = rep(NA,length(unique(paste(data$metabolite,data$replicate,data$time,sep="_"))))
 names(pnames) = unique(paste(data$metabolite,data$replicate,data$time,sep="_"))
 
@@ -502,7 +521,7 @@ if (!file.exists(f)) {
 #
 #-------------------------------------------------------------------#
 f = "/g/steinmetz/brooks/genphen/metabolome/qtls/mQTLs_comball_funqtl_2014.rda"
-if (F) {
+if (FALSE) {
 #if (!file.exists(f)) {
 	# group phenotype timepoints
 
@@ -511,7 +530,8 @@ if (F) {
 		return(o)
 	})
 
-	cross_f = "/g/steinmetz/brooks/genphen/metabolome/cross_template.rda"
+	#cross_f = "/g/steinmetz/brooks/genphen/metabolome/cross_template.rda"
+	cross_f_abs = "/g/steinmetz/brooks/genphen/metabolome/cross_template_abs.rda"
 	if (!file.exists(cross_f)) {
 		cross =	runQTL(
 					genotype = geno,
@@ -531,75 +551,87 @@ if (F) {
 	# for each metabolite
 	pb = txtProgressBar(min = 0, max = length(unique(rep2metabolites)), style = 3)
 	mQTLs_funqtl_2014 = mclapply(1:length(unique(rep2metabolites)), function(i) {
-		m = unique(rep2metabolites)[i]
-		setTxtProgressBar(pb, i)
-		these_phe = c(names(which(rep2metabolites == m)),"id")
-		cross_tmp = cross
-		cross_tmp$pheno = cross_tmp$pheno[,these_phe]
-		colnames(cross_tmp$pheno) = c(sapply(colnames(cross_tmp$pheno), function(i){
-			o = strsplit(i, split = "_")[[1]][2]
-			if (is.na(o)) {
-				o = "id"
-			}
-			return(o)
-			}))
-		cross_tmp = calc.genoprob(cross_tmp, step = 0)
-		# last phenotype column is the "id" tag
-		pcols = seq(1, length(these_phe) - 1)
-	 	qtls = scanone(cross_tmp, method = "hk",pheno.col = pcols)
-		eff = geteffects(cross_tmp, pheno.col = pcols)
-		qtls_alt = scanoneF(cross_tmp, pheno.cols = pcols, method = "hk")
-		# calc permutation threshold
-		permout = scanoneF(cross_tmp, pheno.cols = pcols,
-		                    method = "hk", n.perm = 1000, n.cluster = 20)
-		# identify chrs with slod/lod above permute val
-		chrs = unique(c(
-			qtls_alt[qtls_alt[,"slod"]>=summary(permout)["5%","slod"],"chr"],
-			qtls_alt[qtls_alt[,"mlod"]>=summary(permout)["5%","mlod"],"chr"]
+		try({
+			m = unique(rep2metabolites)[i]
+			setTxtProgressBar(pb, i)
+			these_phe = c(names(which(rep2metabolites == m)),"id")
+			cross_tmp = cross
+			cross_tmp$pheno = cross_tmp$pheno[,these_phe]
+			colnames(cross_tmp$pheno) = c(sapply(colnames(cross_tmp$pheno), function(i){
+				o = strsplit(i, split = "_")[[1]][2]
+				if (is.na(o)) {
+					o = "id"
+				}
+				return(o)
+				}))
+			cross_tmp = calc.genoprob(cross_tmp, step = 0)
+			# last phenotype column is the "id" tag
+			pcols = seq(1, length(these_phe) - 1)
+		 	qtls = scanone(cross_tmp, method = "hk",pheno.col = pcols)
+			eff = geteffects(cross_tmp, pheno.col = pcols)
+			qtls_alt = scanoneF(cross_tmp, pheno.cols = pcols, method = "hk")
+			# calc permutation threshold
+			permout = scanoneF(cross_tmp, pheno.cols = pcols,
+			                    method = "hk", n.perm = 1000, n.cluster = 20, verbose = F)
+			# identify chrs with slod/lod above permute val
+			chrs = unique(c(
+				qtls_alt[qtls_alt[,"slod"]>=summary(permout)["5%","slod"],"chr"],
+				qtls_alt[qtls_alt[,"mlod"]>=summary(permout)["5%","mlod"],"chr"]
+				)
 			)
-		)
-		qtl_intervals = list()
-		for (i in chrs) {
-			qtl_intervals[[as.character(i)]] = mrk[rownames(bayesint(qtls_alt, chr = i, prob=0.95, lodcolumn=1))]
-		}
-		# for future!
-		# qtlslod_slod = stepwiseqtlF(cross_tmp, pheno.cols = pcols,
-		# 	max.qtl = 6, usec = "slod",
-		# 	method = "hk",
-		# 	penalties = c(2.02, 2.62, 1.74) )
-		# qtls_refined_slod = refineqtlF(cross_tmp, usec = "slod"
-		# 		pheno.cols = pcols, method = "hk", qtl = qtlslod, keeplodprofile = T)
-		# qtlslod_mlod = stepwiseqtlF(cross_tmp, pheno.cols = pcols,
-		# 	max.qtl = 6, usec = "mlod",
-		# 	method = "hk",
-		# 	penalties = c(2.02, 2.62, 1.74) )
-		# qtls_refined_mlod = refineqtlF(cross_tmp, usec = "mlod"
-		# 		pheno.cols = pcols, method = "hk", qtl = qtlslod, keeplodprofile = T)
-		return(list(qtls = qtls, eff = eff,
-			qtls_alt = qtls_alt, qtl_intervals = qtl_intervals,
-			permout = permout, pcols = pcols))
+			qtl_intervals = list()
+			if (length(chrs)>0) {
+				for (i in chrs) {
+					qtl_intervals[[as.character(i)]] = mrk[rownames(bayesint(qtls_alt, chr = i, prob=0.95, lodcolumn=1))]
+				}
+			}
+			# for future!
+			# qtlslod_slod = stepwiseqtlF(cross_tmp, pheno.cols = pcols,
+			# 	max.qtl = 6, usec = "slod",
+			# 	method = "hk",
+			# 	penalties = c(2.02, 2.62, 1.74) )
+			# qtls_refined_slod = refineqtlF(cross_tmp, usec = "slod"
+			# 		pheno.cols = pcols, method = "hk", qtl = qtlslod, keeplodprofile = T)
+			# qtlslod_mlod = stepwiseqtlF(cross_tmp, pheno.cols = pcols,
+			# 	max.qtl = 6, usec = "mlod",
+			# 	method = "hk",
+			# 	penalties = c(2.02, 2.62, 1.74) )
+			# qtls_refined_mlod = refineqtlF(cross_tmp, usec = "mlod"
+			# 		pheno.cols = pcols, method = "hk", qtl = qtlslod, keeplodprofile = T)
+			return(list(qtls = qtls, eff = eff,
+				qtls_alt = qtls_alt, qtl_intervals = qtl_intervals,
+				permout = permout, pcols = pcols))
+		})
 	})
 	names(mQTLs_funqtl_2014)  = unique(rep2metabolites)
 	close(pb)
 	# plot stuff
 
 	# effect plots
-	pdf("/g/steinmetz/brooks/genphen/metabolome/plots/effects_funqtl_2014.rda")
+	pdf("/g/steinmetz/brooks/genphen/metabolome/plots/funqtl_2014/effects.pdf")
 		for (i in 1:length(mQTLs_funqtl_2014)) {
-			plotlod(mQTLs_funqtl_2014[[i]]$qtls, mQTLs_funqtl_2014[[i]]$eff, mQTLs_funqtl_2014[[i]]$pcols, gap=25, ylab="Time")
-			mtext(names(mQTLs_funqtl_2014)[i], side = 3)
+			try({
+				plotlod(mQTLs_funqtl_2014[[i]]$qtls, mQTLs_funqtl_2014[[i]]$eff, mQTLs_funqtl_2014[[i]]$pcols, gap=25, ylab="Time")
+				mtext(names(mQTLs_funqtl_2014)[i], side = 3)
+			})
 		}
 	dev.off()
 
-	pdf("/g/steinmetz/brooks/genphen/metabolome/plots/lods_funqtl_2014.rda")
+	m_slod = max(as.numeric(unlist(lapply(seq(1:length(mQTLs_funqtl_2014)),function(i){try(max(mQTLs_funqtl_2014[[i]]$qtls_alt[,'slod']))}))), na.rm = T)
+	m_mlod = max(as.numeric(unlist(lapply(seq(1:length(mQTLs_funqtl_2014)),function(i){try(max(mQTLs_funqtl_2014[[i]]$qtls_alt[,'mlod']))}))), na.rm = T)
+	pdf("/g/steinmetz/brooks/genphen/metabolome/plots/funqtl_2014/lods.pdf")
 		for (i in 1:length(mQTLs_funqtl_2014)) {
-			par(mfrow=c(2,1))
-			plot(mQTLs_funqtl_2014[[i]]$qtls_alt, ylim=c(0,3.5), main="SLOD",
-					bandcol="gray90")
-			abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["5%","slod"], col="red", lty=3)
-			plot(mQTLs_funqtl_2014[[i]]$qtls_alt, lodcolumn=2, ylim=c(0,5),
-					main="MLOD", bandcol="gray90")
-			abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["5%","mlod"], col="red", lty=3)
+			try({
+				par(mfrow=c(2,1))
+				plot(mQTLs_funqtl_2014[[i]]$qtls_alt, ylim=c(0,m_slod), main=paste(names(mQTLs_funqtl_2014)[i],"SLOD"),bandcol="gray90")
+				abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["5%","slod"], col="red", lty=2)
+				abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["10%","slod"], col="blue", lty=3)
+				legend("topright", y.leg[i], c("5% FDR","10% FDR"), lty = c(2, 3), col = c("red","blue"))
+				plot(mQTLs_funqtl_2014[[i]]$qtls_alt, lodcolumn=2, ylim=c(0,m_mlod),
+						main=paste(names(mQTLs_funqtl_2014)[i],"MLOD"), bandcol="gray90")
+				abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["5%","mlod"], col="red", lty=2)
+				abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["10%","mlod"], col="blue", lty=3)
+			})
 		}
 	dev.off()
 } else {
