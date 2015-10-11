@@ -7,7 +7,7 @@
 
 .author = "Aaron Brooks"
 .copyright = "Copyright 2015"
-.credits = ["Aaron Brooks"]
+.credits = "Aaron Brooks"
 .license = "GPL"
 .version = "0.0.1"
 .maintainer = "Aaron Brooks"
@@ -146,9 +146,10 @@ if (!file.exists(cross_f)) {
 				estimate.map=FALSE,
 				)
 	to_r = list()
-  phenotype = cross$pheno[,colnames(cross$pheno)!="id",drop=F]
-  cross$pheno = phenotype
-  eQTL$qtls = c( lapply(seq(1,dim(phenotype)[2]),function( i ) { qtl::scanone( cross, pheno.col = i ) } ) )
+  # phenotype = cross$pheno[,colnames(cross$pheno)!="id",drop=F]
+  # cross$pheno = phenotype
+  # eQTL$qtls = c( lapply(seq(1,dim(phenotype)[2]),function( i ) { qtl::scanone( cross, pheno.col = i ) } ) )
+	eQTL$qtls = c( lapply(seq(1,dim(phenotype)[2]),function( i ) { qtl::scanone( cross, pheno.col = i ) } ) )
   names(eQTL$qtls) = colnames(phenotype)
 	eQTL$qtls_permuted = lapply(seq(1,dim(phenotype)[2]), function(i){try({qtl::scanone( cross, pheno.col = i, n.perm = 1000, n.cluster = 20 )})})
 	names(eQTL$qtls_permuted) = colnames(phenotype)
