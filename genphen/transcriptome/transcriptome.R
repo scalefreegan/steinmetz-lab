@@ -141,10 +141,18 @@ if (!file.exists(cross_f)) {
 		    pca = F, # maximize QTL detection by removing confounders using PCA
 		    permute_alpha = 0.05,
 		    save_file = qtl_f,
-		    return_cross = FALSE, # just return cross object,
+		    return_cross = TRUE, # just return cross object,
 		    subset_genotype = F,
 				estimate.map=FALSE,
 				)
+	to_r = list()
+  phenotype = cross$pheno[,colnames(cross$pheno)!="id",drop=F]
+  cross$pheno = phenotype
+  eQTL$qtls = c( lapply(seq(1,dim(phenotype)[2]),function( i ) { qtl::scanone( cross, pheno.col = i ) } ) )
+  names(eQTL$qtls) = colnames(phenotype)
+	eQTL$qtls_permuted = lapply(seq(1,dim(phenotype)[2]), function(i){try({qtl::scanone( cross, pheno.col = i, n.perm = 1000, n.cluster = 20 )})})
+	names(eQTL$qtls_permuted) = colnames(phenotype)
+	save(eQTL, file = qtl_f)
 } else {
 	load(qtl_f)
 }
