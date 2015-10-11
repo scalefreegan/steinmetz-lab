@@ -121,15 +121,15 @@ if (!file.exists(f)) {
 	load(f)
 }
 
+# load genotype and markers files
+genotype_f = "/g/steinmetz/brooks/yeast/genomes/S288CxYJM789/genotypes_S288c_R64.rda"
+load(genotype_f)
+
 # reduce data set - take mean of bioreps
 pheno = acast(trx_df, formula =strain~name, fun.aggregate = mean, value.var = "value")
 # only take strains in genotype matrix
 # take the shifted logarithm
 pheno = log2(pheno[intersect(rownames(pheno),colnames(geno)),]+1)
-
-# load genotype and markers files
-genotype_f = "/g/steinmetz/brooks/yeast/genomes/S288CxYJM789/genotypes_S288c_R64.rda"
-load(genotype_f)
 
 qtl_f = file.path(BASEDIR,"data","eQTL.rda")
 if (!file.exists(cross_f)) {
@@ -145,10 +145,11 @@ if (!file.exists(cross_f)) {
 		    subset_genotype = F,
 				estimate.map=FALSE,
 				)
-	to_r = list()
+	# eQTL = list()
   # phenotype = cross$pheno[,colnames(cross$pheno)!="id",drop=F]
   # cross$pheno = phenotype
   # eQTL$qtls = c( lapply(seq(1,dim(phenotype)[2]),function( i ) { qtl::scanone( cross, pheno.col = i ) } ) )
+	phenos
 	eQTL$qtls = c( lapply(seq(1,dim(phenotype)[2]),function( i ) { qtl::scanone( cross, pheno.col = i ) } ) )
   names(eQTL$qtls) = colnames(phenotype)
 	eQTL$qtls_permuted = lapply(seq(1,dim(phenotype)[2]), function(i){try({qtl::scanone( cross, pheno.col = i, n.perm = 1000, n.cluster = 20 )})})
