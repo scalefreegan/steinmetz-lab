@@ -150,7 +150,7 @@ if (!file.exists(cross_f)) {
   # cross$pheno = phenotype
   # eQTL$qtls = c( lapply(seq(1,dim(phenotype)[2]),function( i ) { qtl::scanone( cross, pheno.col = i ) } ) )
 	phenos
-	eQTL$qtls = c( lapply(seq(1,dim(phenotype)[2]),function( i ) { qtl::scanone( cross, pheno.col = i ) } ) )
+	eQTL$qtls = {qtl::scanone(cross, pheno.col = i, method = "hk")}))
   names(eQTL$qtls) = colnames(phenotype)
 	eQTL$qtls_permuted = lapply(seq(1,dim(phenotype)[2]), function(i){try({qtl::scanone( cross, pheno.col = i, n.perm = 1000, n.cluster = 20 )})})
 	names(eQTL$qtls_permuted) = colnames(phenotype)
