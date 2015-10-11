@@ -132,28 +132,33 @@ pheno = acast(trx_df, formula =strain~name, fun.aggregate = mean, value.var = "v
 pheno = log2(pheno[intersect(rownames(pheno),colnames(geno)),]+1)
 
 qtl_f = file.path(BASEDIR,"data","eQTL.rda")
-if (!file.exists(cross_f)) {
-	cross =	runQTL(
-				genotype = geno,
-				phenotype = pheno,
-				marker_info = mrk,
-				permute = T, # compute significance of each QTL LOD by permutation
-		    pca = F, # maximize QTL detection by removing confounders using PCA
-		    permute_alpha = 0.05,
-		    save_file = qtl_f,
-		    return_cross = TRUE, # just return cross object,
-		    subset_genotype = F,
-				estimate.map=FALSE,
-				)
-	# eQTL = list()
+if (!file.exists(qtl_f)) {
+	cross_f = file.path(BASEDIR,"data","trx_cross.rda")
+	if (!file.exists(cross_f)) {
+		cross =	runQTL(
+					genotype = geno,
+					phenotype = pheno,
+					marker_info = mrk,
+					permute = T, # compute significance of each QTL LOD by permutation
+			    pca = F, # maximize QTL detection by removing confounders using PCA
+			    permute_alpha = 0.05,
+			    save_file = qtl_f,
+			    return_cross = TRUE, # just return cross object,
+			    subset_genotype = F,
+					estimate.map=FALSE,
+					)
+		save(cross, file = cross_f)
+	} else {
+		load(cross_f)
+	}
+	eQTL = list()
   # phenotype = cross$pheno[,colnames(cross$pheno)!="id",drop=F]
   # cross$pheno = phenotype
   # eQTL$qtls = c( lapply(seq(1,dim(phenotype)[2]),function( i ) { qtl::scanone( cross, pheno.col = i ) } ) )
-	phenos
-	eQTL$qtls = {qtl::scanone(cross, pheno.col = i, method = "hk")}))
-  names(eQTL$qtls) = colnames(phenotype)
-	eQTL$qtls_permuted = lapply(seq(1,dim(phenotype)[2]), function(i){try({qtl::scanone( cross, pheno.col = i, n.perm = 1000, n.cluster = 20 )})})
-	names(eQTL$qtls_permuted) = colnames(phenotype)
+	phes = which(colnames(cross$pheno)!="id")
+	eQTL$qtls = qtl::scanone(cross, pheno.col = phes, method = "hk")
+	eQTL$resamples = qtl::scanone( cross, pheno.col = phes, n.perm = 1000, n.cluster = 24)
+	# names(eQTL$qtls_permuted) = colnames(phenotype)
 	save(eQTL, file = qtl_f)
 } else {
 	load(qtl_f)
