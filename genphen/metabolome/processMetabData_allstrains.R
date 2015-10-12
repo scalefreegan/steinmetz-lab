@@ -27,7 +27,7 @@ library(qtl)
 library(pheatmap)
 library(funqtl)
 library(parallel)
-options(mc.cores = 12)
+options(mc.cores = 24)
 library(snow)
 #library(clustQTL)
 #devtools::install_github("scalefreegan/steinmetz-lab/clustQTL")
@@ -118,7 +118,8 @@ processData = function( f1, f2, startRow = 2,... ) {
 				  value = value[2:length(value)]
 				}
 				value.log2 = value
-				value.log2[value>0 & !is.na(value)] = log2(value.log2)
+				# update 12/10
+				value.log2 = log2(value.log2 + 1)
 				relative.log2 = sapply(value.log2,function(i){i/value.log2[1]})
 				derivative.log2 = c(NA,diff(value.log2)/diff(time))
 				data.frame(strain,replicate,metabolite,time,time_format,value,
@@ -142,7 +143,7 @@ f1 = paste(data_dir, "Endometabolome_1B_46B_sorted by cultivation phase.xlsx", s
 f2 = paste(data_dir, "Endometabolome_46B_sorted by cultivation time.xlsx", sep="")
 f3 = paste(data_dir, "Dynamic_Metabolome_growth_and_morphology_113_strains.xlsx", sep="")
 
-endo_f = "/g/steinmetz/project/GenPhen/data/endometabolome/endometabolite_full_23082015.rda"
+endo_f = "/g/steinmetz/project/GenPhen/data/endometabolome/data/endometabolite_full_12102015.rda"
 #endo_f = "~/Desktop/tmpdata/full_endometabolome/endometabolite_full_23082015.rda"
 
 if (file.exists(endo_f)) {
@@ -419,8 +420,9 @@ pheno_comb = do.call(cbind,lapply(mnames,function(i){
 }))
 colnames(pheno_comb) = sapply(colnames(pheno_comb),function(i){strsplit(i,"_")[[1]][1]})
 
-f = "/g/steinmetz/brooks/genphen/metabolome/mQTLs_combrep.rda"
-if (!file.exists(f)) {
+f = "/g/steinmetz/brooks/genphen/metabolome/qtls/mQTLs_combrep.rda"
+#if (!file.exists(f)) {
+if (FALSE) {
 	mQTLs_combrep =	runQTL(
 		genotype = geno,
     phenotype = t(pheno),
@@ -530,8 +532,8 @@ if (FALSE) {
 		return(o)
 	})
 
-	#cross_f = "/g/steinmetz/brooks/genphen/metabolome/cross_template.rda"
-	cross_f_abs = "/g/steinmetz/brooks/genphen/metabolome/cross_template_abs.rda"
+	cross_f = "/g/steinmetz/brooks/genphen/metabolome/cross_template.rda"
+	#cross_f_abs = "/g/steinmetz/brooks/genphen/metabolome/cross_template_abs.rda"
 	if (!file.exists(cross_f)) {
 		cross =	runQTL(
 					genotype = geno,

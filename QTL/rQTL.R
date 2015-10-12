@@ -46,6 +46,9 @@ runQTL <- function(
     save_file = "",
     return_cross = FALSE, # just return cross object,
     subset_genotype = F,
+    method = "hk",
+    n.cores = 24,
+    n.perm = 1000,
     ...
     ){
   # subset genotype data on metabolite data. transpose it.
@@ -92,7 +95,7 @@ runQTL <- function(
     # as a first approximation, use lod score > 2.5 as a "true" QTL
     # since running permutation is expensive
     phenotype = genphen$pheno[,colnames(genphen$pheno)!="id",drop=F]
-    qtls = sum( unlist( parallel::mclapply( seq(1,dim(phenotype)[2]),function( i ) { sum(qtl::scanone( genphen, pheno.col = i )$lod >= 2.5) } ) ) )
+    qtls = sum(unlist(parallel::mclapply( seq(1,dim(phenotype)[2]),function( i ) {sum(qtl::scanone(genphen, pheno.col = i, method = method)$lod >= 2.5)})))
     qtls_mod = 0
     pca <- PCA(phenotype)
     phenotype_mod <- removePrincipalComponent(
@@ -104,7 +107,7 @@ runQTL <- function(
     )
     genphen_mod = genphen
     genphen_mod$pheno = phenotype_mod
-    qtls_mod = sum( unlist( parallel::mclapply( seq(1,dim(phenotype)[2]),function( i ) { sum(qtl::scanone( genphen_mod, pheno.col = i )$lod >= 2.5) } ) ) )
+    qtls_mod = sum(unlist(parallel::mclapply(seq(1,dim(phenotype)[2]),function(i) {sum(qtl::scanone(genphen_mod, pheno.col = i, method = method)$lod >= 2.5)})))
     while (qtls_mod>qtls) {
       pc_removed = pc_removed + 1
       phenotype = phenotype_mod
@@ -119,7 +122,7 @@ runQTL <- function(
       )
       genphen_mod = genphen
       genphen_mod$pheno = phenotype_mod
-      qtls_mod = sum( unlist( parallel::mclapply( seq(1,dim(phenotype)[2]),function( i ) { sum(qtl::scanone( genphen_mod, pheno.col = i )$lod >= 2.5) } ) ) )
+      qtls_mod = sum( unlist( parallel::mclapply(seq(1,dim(phenotype)[2]),function(i) { sum(qtl::scanone(genphen_mod, pheno.col = i, method = method)$lod >= 2.5)})))
     }
     if (pc_removed>0) {
       pca <- PCA(phenotype)
@@ -133,40 +136,21 @@ runQTL <- function(
     }
     to_r = list()
     genphen$pheno = phenotype
-    to_r$qtls = c( lapply( seq(1,dim(phenotype)[2]),function( i ) { qtl::scanone( genphen, pheno.col = i ) } ) )
+    phes = which(colnames(genphen$pheno)!="id")
+    to_r$qtls = qtl::scanone(genphen, pheno.col = phes, method = method)
     names(to_r$qtls) = colnames(phenotype)
     to_r$pc_removed = pc_removed
     to_r$phenotype = phenotype
   } else {
     to_r = list()
-    phenotype = genphen$pheno[,colnames(genphen$pheno)!="id",drop=F]
-    genphen$pheno = phenotype
-    to_r$qtls = c( lapply(seq(1,dim(phenotype)[2]),function( i ) { qtl::scanone( genphen, pheno.col = i ) } ) )
-    names(to_r$qtls) = colnames(phenotype)
+    phes = which(colnames(genphen$pheno)!="id")
+  	to_r$qtls = qtl::scanone(genphen, pheno.col = phes, method = method)
   }
   to_r$cross = genphen
   if (permute) {
+    phes = which(colnames(genphen$pheno)!="id")
     # permuations to determine qtl sig cutoff
-    to_r$qtls_permuted = lapply(seq(1,dim(phenotype)[2]), function(i){qtl::scanone( genphen, pheno.col = i, n.perm = 1000, n.cluster = 20 )})
-    names(to_r$qtls_permuted) = colnames(genphen$pheno)
-    to_r$sig_qtls = list()
-    to_r$qtls_threshold = sapply(to_r$qtls_permuted,summary,permute_alpha)
-    for ( i in names(to_r$qtls) ) {
-      #phe_qtls = summary( to_r$qtls[[ i ]] , to_r$qtls_threshold[,i] )
-      phe_qtls = summary(to_r$qtls[[ i ]], format="allpeaks", perms=to_r$qtls_permuted[[ i ]],
-        alpha=permute_alpha, pvalues=TRUE)
-      if ( dim( phe_qtls )[ 1 ] > 0 ) {
-        # format table entry
-        add_info = c()
-        for ( n in rownames( phe_qtls ) ) {
-          add_info = rbind( add_info, as.data.frame( IRanges::ranges( marker_info[ n ] ) ) )
-        }
-        phe_qtls = cbind( i, phe_qtls[ add_info$names, ], add_info )
-        phe_qtls$pos = NULL
-        to_r$sig_qtls[[i]] =  phe_qtls
-      }
-    }
-    to_r$permute_alpha = permute_alpha
+    to_r$qtls_permuted = qtl::scanone( cross, pheno.col = phes, n.perm = n.perm, n.cluster = n.cores)
   }
   if (save_file!="") {
     qtl_list = to_r
