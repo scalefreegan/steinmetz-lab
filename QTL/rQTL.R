@@ -43,17 +43,24 @@ runQTL <- function(
     permute = T, # compute significance of each QTL LOD by permutation
     pca = F, # maximize QTL detection by removing confounders using PCA
     permute_alpha = 0.05,
+    permute.lod.cutoff = 2.5,
     save_file = "",
     return_cross = FALSE, # just return cross object,
     subset_genotype = F,
     method = "hk",
     n.cores = 24,
     n.perm = 1000,
+    genotypes = c( "1","2" ),
+    estimate.map = FALSE,
     ...
     ){
   # subset genotype data on metabolite data. transpose it.
   if ( !sum(colnames(genotype)%in%rownames(phenotype))>0 ) {
-    cat("ERROR:Strain names in genotype matrix (columns) do not match strain names in phenotype matrix (rows\n")
+    cat("ERROR: Strain names in genotype matrix (columns) do not match strain names in phenotype matrix (rows\n")
+    return(NULL)
+  }
+  if (sum(is.na(pheno))>0 && pca == TRUE) {
+    cat("ERROR: PCA cannot handle missing/NA values\n")
     return(NULL)
   }
   if (subset_genotype) {
@@ -75,7 +82,7 @@ runQTL <- function(
   write.table( phenotype, file =  ".tmpphen", sep = ",", col.names = T, row.names = F, quote=F )
   # read.cross to import data into rqtl
   cat("Creating rQTL cross object for genotype/phenotype data\n")
-  genphen = try( qtl::read.cross( format = "csvs", ".", genfile = ".tmpgen" , phefile=  ".tmpphen", genotypes = c( "1","2" ), ... ) )
+  genphen = try( qtl::read.cross( format = "csvs", ".", genfile = ".tmpgen" , phefile=  ".tmpphen", genotypes = genotypes, estimate.map = estimate.map, ... ) )
   if ( class(genphen)[1]!="try-error" ) {
     # clean up
     file.remove(c(".tmpgen",".tmpphen"))
@@ -94,8 +101,12 @@ runQTL <- function(
     pc_removed = 0
     # as a first approximation, use lod score > 2.5 as a "true" QTL
     # since running permutation is expensive
+    #phenotype = genphen$pheno[,colnames(genphen$pheno)!="id",drop=F]
+    #tls = sum(unlist(parallel::mclapply( seq(1,dim(phenotype)[2]),function( i ) {sum(qtl::scanone(genphen, pheno.col = i, method = method)$lod >= 2.5)})))
     phenotype = genphen$pheno[,colnames(genphen$pheno)!="id",drop=F]
-    qtls = sum(unlist(parallel::mclapply( seq(1,dim(phenotype)[2]),function( i ) {sum(qtl::scanone(genphen, pheno.col = i, method = method)$lod >= 2.5)})))
+    qtls = try({parallel::mclapply(seq(1,dim(phenotype)[2]),function(i) {qtl::scanone(genphen, pheno.col = i, method = method)})})
+    qtls = qtls[!sapply(qtls,class) == "try-error"]
+    qtls = sum(sapply(qtls, function(q) {sum(q$lod >= permute.lod.cutoff)}))
     qtls_mod = 0
     pca <- PCA(phenotype)
     phenotype_mod <- removePrincipalComponent(
@@ -107,7 +118,7 @@ runQTL <- function(
     )
     genphen_mod = genphen
     genphen_mod$pheno = phenotype_mod
-    qtls_mod = sum(unlist(parallel::mclapply(seq(1,dim(phenotype)[2]),function(i) {sum(qtl::scanone(genphen_mod, pheno.col = i, method = method)$lod >= 2.5)})))
+    qtls_mod = sum(unlist(parallel::mclapply(seq(1,dim(phenotype)[2]),function(i) {sum(qtl::scanone(genphen_mod, pheno.col = i, method = method)$lod >= permute.lod.cutoff)})))
     while (qtls_mod>qtls) {
       pc_removed = pc_removed + 1
       phenotype = phenotype_mod
@@ -122,7 +133,7 @@ runQTL <- function(
       )
       genphen_mod = genphen
       genphen_mod$pheno = phenotype_mod
-      qtls_mod = sum( unlist( parallel::mclapply(seq(1,dim(phenotype)[2]),function(i) { sum(qtl::scanone(genphen_mod, pheno.col = i, method = method)$lod >= 2.5)})))
+      qtls_mod = sum( unlist( parallel::mclapply(seq(1,dim(phenotype)[2]),function(i) { sum(qtl::scanone(genphen_mod, pheno.col = i, method = method)$lod >= permute.lod.cutoff)})))
     }
     if (pc_removed>0) {
       pca <- PCA(phenotype)

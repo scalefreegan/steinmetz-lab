@@ -112,6 +112,7 @@ processData = function( f1, f2, startRow = 2,... ) {
 				}
 				time = touse[,1]
 				time_format = k
+				# there are several negative values / i just take the absolute value
 				value = abs(as.numeric(touse[,j]))
 				if (is.na(value[1])) {
 				  time = time[2:length(time)]
@@ -606,6 +607,7 @@ if (FALSE) {
 		})
 	})
 	names(mQTLs_funqtl_2014)  = unique(rep2metabolites)
+	save(mQTLs_funqtl_2014, file = f)
 	close(pb)
 	# plot stuff
 
@@ -619,9 +621,21 @@ if (FALSE) {
 		}
 	dev.off()
 
+	# effect plots: jpeg
+	for (i in 1:length(mQTLs_funqtl_2014)) {
+		try({
+			jpeg(paste("/g/steinmetz/brooks/genphen/metabolome/plots/funqtl_2014/effects",names(mQTLs_funqtl_2014)[i],".jpeg",sep=""))
+				plotlod(mQTLs_funqtl_2014[[i]]$qtls, mQTLs_funqtl_2014[[i]]$eff, mQTLs_funqtl_2014[[i]]$pcols, gap=25, ylab="Time")
+				mtext(names(mQTLs_funqtl_2014)[i], side = 3)
+			dev.off()
+		})
+	}
+
 	m_slod = max(as.numeric(unlist(lapply(seq(1:length(mQTLs_funqtl_2014)),function(i){try(max(mQTLs_funqtl_2014[[i]]$qtls_alt[,'slod']))}))), na.rm = T)
 	m_mlod = max(as.numeric(unlist(lapply(seq(1:length(mQTLs_funqtl_2014)),function(i){try(max(mQTLs_funqtl_2014[[i]]$qtls_alt[,'mlod']))}))), na.rm = T)
-	pdf("/g/steinmetz/brooks/genphen/metabolome/plots/funqtl_2014/lods.pdf")
+
+	# lod plots
+	pdf("/g/steinmetz/brooks/genphen/metabolome/plots/funqtl_2014/lods.jpeg")
 		for (i in 1:length(mQTLs_funqtl_2014)) {
 			try({
 				par(mfrow=c(2,1))
@@ -636,6 +650,24 @@ if (FALSE) {
 			})
 		}
 	dev.off()
+
+	# lod plots: jpeg
+
+	for (i in 1:length(mQTLs_funqtl_2014)) {
+		jpeg(paste("/g/steinmetz/brooks/genphen/metabolome/plots/funqtl_2014/lods",names(mQTLs_funqtl_2014)[i],".jpeg",sep=""))
+			try({
+				par(mfrow=c(2,1))
+				plot(mQTLs_funqtl_2014[[i]]$qtls_alt, ylim=c(0,m_slod), main=paste(names(mQTLs_funqtl_2014)[i],"SLOD"),bandcol="gray90")
+				abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["5%","slod"], col="red", lty=2)
+				abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["10%","slod"], col="blue", lty=3)
+				legend("topright", y.leg[i], c("5% FDR","10% FDR"), lty = c(2, 3), col = c("red","blue"))
+				plot(mQTLs_funqtl_2014[[i]]$qtls_alt, lodcolumn=2, ylim=c(0,m_mlod),
+						main=paste(names(mQTLs_funqtl_2014)[i],"MLOD"), bandcol="gray90")
+				abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["5%","mlod"], col="red", lty=2)
+				abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["10%","mlod"], col="blue", lty=3)
+			})
+		dev.off()
+	}
 } else {
 	load(f)
 }
