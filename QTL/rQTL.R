@@ -103,10 +103,12 @@ runQTL <- function(
     # since running permutation is expensive
     #phenotype = genphen$pheno[,colnames(genphen$pheno)!="id",drop=F]
     #tls = sum(unlist(parallel::mclapply( seq(1,dim(phenotype)[2]),function( i ) {sum(qtl::scanone(genphen, pheno.col = i, method = method)$lod >= 2.5)})))
+    phes = which(colnames(genphen$pheno)!="id")
+    qtls = qtl::scanone(genphen, pheno.col = phes, method = method)
+    qtls = sum(qtls[,intersect(colnames(qtls),colnames(genphen$pheno))] >= permute.lod.cutoff)
     phenotype = genphen$pheno[,colnames(genphen$pheno)!="id",drop=F]
-    qtls = try({parallel::mclapply(seq(1,dim(phenotype)[2]),function(i) {qtl::scanone(genphen, pheno.col = i, method = method)})})
-    qtls = qtls[!sapply(qtls,class) == "try-error"]
-    qtls = sum(sapply(qtls, function(q) {sum(q$lod >= permute.lod.cutoff)}))
+    # remove NAs
+    phenotype = phenotype[!apply(phenotype,1,function(x){sum(is.na(x))>0}),]
     qtls_mod = 0
     pca <- PCA(phenotype)
     phenotype_mod <- removePrincipalComponent(
@@ -117,8 +119,9 @@ runQTL <- function(
       specific_select = TRUE
     )
     genphen_mod = genphen
-    genphen_mod$pheno = phenotype_mod
-    qtls_mod = sum(unlist(parallel::mclapply(seq(1,dim(phenotype)[2]),function(i) {sum(qtl::scanone(genphen_mod, pheno.col = i, method = method)$lod >= permute.lod.cutoff)})))
+    genphen_mod$pheno[rownames(phenotype_mod), colnames(genphen$pheno)!="id"] = phenotype_mod
+    qtls_mod = qtl::scanone(genphen_mod, pheno.col = phes, method = method)
+    qtls_mod = sum(qtls_mod[,intersect(colnames(qtls_mod),colnames(genphen_mod$pheno))] >= permute.lod.cutoff)
     while (qtls_mod>qtls) {
       pc_removed = pc_removed + 1
       phenotype = phenotype_mod
@@ -132,8 +135,9 @@ runQTL <- function(
         specific_select = TRUE
       )
       genphen_mod = genphen
-      genphen_mod$pheno = phenotype_mod
-      qtls_mod = sum( unlist( parallel::mclapply(seq(1,dim(phenotype)[2]),function(i) { sum(qtl::scanone(genphen_mod, pheno.col = i, method = method)$lod >= permute.lod.cutoff)})))
+      genphen_mod$pheno[rownames(phenotype_mod), colnames(genphen$pheno)!="id"] = phenotype_mod
+      qtls_mod = qtl::scanone(genphen_mod, pheno.col = phes, method = method)
+      qtls_mod = sum(qtls_mod[,intersect(colnames(qtls_mod),colnames(genphen_mod$pheno))] >= permute.lod.cutoff)
     }
     if (pc_removed>0) {
       pca <- PCA(phenotype)
@@ -146,10 +150,9 @@ runQTL <- function(
       )
     }
     to_r = list()
-    genphen$pheno = phenotype
+    genphen$pheno[rownames(phenotype), colnames(genphen$pheno)!="id"] = phenotype
     phes = which(colnames(genphen$pheno)!="id")
     to_r$qtls = qtl::scanone(genphen, pheno.col = phes, method = method)
-    names(to_r$qtls) = colnames(phenotype)
     to_r$pc_removed = pc_removed
     to_r$phenotype = phenotype
   } else {
