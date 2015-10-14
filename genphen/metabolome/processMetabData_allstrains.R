@@ -50,10 +50,10 @@ devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-l
 # This is slight different than the original format. Each of the metabolites is contained in a separate worksheet
 
 # Custom functions ---------------------------------------------------
-cleanData = function(df, row.names = NULL) {
+cleanData = function(df, row.names = NULL, nap = 0.9) {
 	# remove columns or rows with all NA values
-	tokr = apply(df,1,function(i)sum(is.na(i))!=length(i))
-	tokc = apply(df,2,function(i)sum(is.na(i))!=length(i))
+	tokr = apply(df,1,function(i)sum(is.na(i))<=nap*length(i))
+	tokc = apply(df,2,function(i)sum(is.na(i))<=nap*length(i))
 	df = df[tokr,tokc]
 	if (is.numeric(row.names)) {
 		rownames(df) = df[,row.names]
@@ -62,7 +62,23 @@ cleanData = function(df, row.names = NULL) {
 	return(df)
 }
 
-processData = function( f1, f2, startRow = 2,... ) {
+strainRename = function(strains) {
+	o = sapply(strains,function(strain){
+		if (nchar(strain)==3) {
+			strain = gsub("^X","0",strain)
+		} else {
+			strain = gsub("^X","",strain)
+		}
+		if (length(grep("\\.",strain))>0) {
+			rep = as.numeric(strsplit(strsplit(strain, split = "_")[[1]][2], split = "\\.")[[1]][1]) + 1
+			strain = paste(strsplit(strain, split = "_")[[1]][1], rep, sep = "_")
+		}
+		return(strain)
+	})
+	return(o)
+}
+
+processData = function( f1, f2, f3, startRow = 2,... ) {
 	# f1 is relative time - defined by "cultivation phase"
 	# eg. Endometabolome_1B_25A_sorted by cultivation phase.xlsx
 	# f2 contains measurements at absolute time
@@ -77,10 +93,13 @@ processData = function( f1, f2, startRow = 2,... ) {
 	sheets.g = names(getSheets(wb3))[names(getSheets(wb3))!="Traits"]
 	thisf3_cellconc = cleanData(read.xlsx(f3,sheetName="Cell concentration",
 		startRow=startRow,header=T),row.names=1)
+	colnames(thisf3_cellconc) = strainRename(colnames(thisf3_cellconc))
 	thisf3_biovol = cleanData(read.xlsx(f3,sheetName="Bio volume",
 		startRow=startRow,header=T),row.names=1)
+	colnames(thisf3_biovol) = strainRename(colnames(thisf3_biovol))
 	thisf3_singlecell = cleanData(read.xlsx(f3,sheetName="Single cell volume",
 		startRow=startRow,header=T),row.names=1)
+	colnames(thisf3_singlecell ) = strainRename(colnames(thisf3_singlecell ))
 	pb <- txtProgressBar(min = 0, max = length(sheets), style = 3)
 	o = do.call(rbind,lapply((1:length(sheets)),function(i){
 		#print(i)
@@ -92,39 +111,52 @@ processData = function( f1, f2, startRow = 2,... ) {
 		# keep strains only
 		common = common[grep("^X",common)]
 		to_r = do.call(rbind,lapply(common,function(j){
+			#print(j)
 			do.call(rbind,lapply(c("relative","absolute"),function(k){
+				#print(k)
+				j = strainRename(j)
 				strain = strsplit(j,"_")[[1]][1]
-				if (nchar(strain)==3) {
-					strain = gsub("^X","0",strain)
-				} else {
-					strain = gsub("^X","",strain)
-				}
 				replicate = as.numeric(strsplit(j,"_")[[1]][2])
 				metabolite = i
 				if (k=="relative") {
 					touse = thisf1
 					# add additional phes - only annotated for abs measure
 					g = FALSE
+					cellconc = rep(NA,length(touse[,1]))
+					biovol = rep(NA,length(touse[,1]))
+					singlecellvol = rep(NA,length(touse[,1]))
 				} else {
 					touse = thisf2
 					# add additional phes - only annotated for abs measure
 					g = FALSE
+					cellconc = thisf3_cellconc[,j]
+					biovol = thisf3_biovol[,j]
+					singlecellvol = thisf3_singlecell[,j]
 				}
 				time = touse[,1]
 				time_format = k
 				# there are several negative values / i just take the absolute value
-				value = abs(as.numeric(touse[,j]))
+				value = as.numeric(touse[,names(j)])
+				# negative values should be zero
+				value[value<0] = 0
 				if (is.na(value[1])) {
-				  time = time[2:length(time)]
-				  value = value[2:length(value)]
+				#   time = time[2:length(time)]
+				#   value = value[2:length(value)]
+				# 	cellconc = cellconc[2:length(cellconc)]
+				# 	biovol = biovol[2:length(biovol)]
+				# 	singlecellvol = singlecellvol[2:length(singlecellvol)]
+						normInd = 2
+				} else {
+					normInd = 1
 				}
 				value.log2 = value
 				# update 12/10
 				value.log2 = log2(value.log2 + 1)
-				relative.log2 = sapply(value.log2,function(i){i/value.log2[1]})
+				relative.log2 = sapply(value.log2,function(i){i/value.log2[normInd]})
 				derivative.log2 = c(NA,diff(value.log2)/diff(time))
 				data.frame(strain,replicate,metabolite,time,time_format,value,
-				           value.log2,relative.log2,derivative.log2)
+				           value.log2,relative.log2,derivative.log2,
+									 cellconc,biovol,singlecellvol)
 			}))
 		}))
 		# remove NA
@@ -150,7 +182,7 @@ endo_f = "/g/steinmetz/project/GenPhen/data/endometabolome/data/endometabolite_f
 if (file.exists(endo_f)) {
   load(endo_f)
 } else{
-  endometabolite = processData(f1, f2, startRow = 2)
+  endometabolite = processData(f1, f2, f3, startRow = 2)
 	# fix replicate problem: change 28B_1/28B_1 to 28B_1/28B_2
 	endometabolite[which(endometabolite$replicate==1.1),"replicate"] = 2
 	endometabolite$replicate = as.factor(endometabolite$replicate)
@@ -320,6 +352,9 @@ if (.plot) {
 	    scale_y_continuous(name=expression(paste("Level log2(",mu,"M)"))) +
 	    ggtitle("Endo- Metabolome Levels Across All Strains All Metabolites")
 	dev.off()
+
+	# Plot overall data trends ---------------------------------------------------
+
 
 }
 
