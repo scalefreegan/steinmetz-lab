@@ -353,8 +353,11 @@ if (.plot) {
 	    ggtitle("Endo- Metabolome Levels Across All Strains All Metabolites")
 	dev.off()
 
-	# Plot overall data trends ---------------------------------------------------
-
+	# Plot cell size characteristics ---------------------------------------------------
+	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/metabolome_abstime.pdf", width=11.5,height=8)
+	par(mfrow(3,1))
+	hist(endometabolite$cellconc,100,main="Cell Concentration: all time points, all strains", xlab = "[cells/ml] ")
+	dev.off()
 
 }
 

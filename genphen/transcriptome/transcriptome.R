@@ -139,7 +139,7 @@ if (!file.exists(qtl_f)) {
 					genotype = geno,
 					phenotype = pheno,
 					marker_info = mrk,
-					permute = T, # compute significance of each QTL LOD by permutation
+					permute = F, # compute significance of each QTL LOD by permutation
 			    pca = F, # maximize QTL detection by removing confounders using PCA
 			    permute_alpha = 0.05,
 			    save_file = qtl_f,
