@@ -8,7 +8,7 @@
 .author = "Aaron Brooks"
 .copyright = "Copyright 2015"
 .credits = "Aaron Brooks"
-.license = "GPL"
+.license = "WTFPL"
 .version = "0.0.1"
 .maintainer = "Aaron Brooks"
 .email = "aaron.brooks@embl.de"
@@ -33,7 +33,6 @@ library(reshape2)
 
 # source rQTL utilities
 devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-lab/master/QTL/rQTL.R")
-
 
 # load Chenchen's processed transcriptome data
 load("/g/steinmetz/project/GenPhen/data/3tagseq/counts.rda")
@@ -157,7 +156,7 @@ if (!file.exists(qtl_f)) {
   # eQTL$qtls = c( lapply(seq(1,dim(phenotype)[2]),function( i ) { qtl::scanone( cross, pheno.col = i ) } ) )
 	phes = which(colnames(cross$pheno)!="id")
 	eQTL$qtls = qtl::scanone(cross, pheno.col = phes, method = "hk")
-	eQTL$resamples = qtl::scanone( cross, pheno.col = phes, n.perm = 1000, n.cluster = 24)
+	# eQTL$resamples = qtl::scanone( cross, pheno.col = phes, n.perm = 1000, n.cluster = 24)
 	# names(eQTL$qtls_permuted) = colnames(phenotype)
 	save(eQTL, file = qtl_f)
 } else {

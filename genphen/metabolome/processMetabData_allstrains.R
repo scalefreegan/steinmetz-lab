@@ -335,6 +335,30 @@ if (.plot) {
 	  }
 	dev.off()
 
+	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/replicates_perstrain_abstime.pdf")
+	  par(mfrow = c(2,2))
+		d = filter(endometabolite, time_format == "absolute") %>%
+		select(replicate,time,strain,value.log2) %>%
+		group_by(strain) %>%
+		do({
+			x = filter(.,replicate==1)
+	    y = filter(.,replicate==2)
+	    t = sort(intersect(x$time,y$time))
+	    x.log2 = x$value.log2[x$time%in%t]
+	    y.log2 = y$value.log2[y$time%in%t]
+			if (length(x.log2)==length(y.log2)) {
+				data.frame(x.log2 = x.log2, y.log2 = y.log2)
+			} else {
+				data.frame()
+			}
+			})
+		ggplot(d, aes(x.log2, y.log2)) +
+			geom_point() +
+			facet_wrap(~ strain)
+
+
+	dev.off()
+
 	# Plot overall data trends ---------------------------------------------------
 
 	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/metabolome_abstime.pdf", width=11.5,height=8)
@@ -354,9 +378,43 @@ if (.plot) {
 	dev.off()
 
 	# Plot cell size characteristics ---------------------------------------------------
-	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/metabolome_abstime.pdf", width=11.5,height=8)
-	par(mfrow(3,1))
-	hist(endometabolite$cellconc,100,main="Cell Concentration: all time points, all strains", xlab = "[cells/ml] ")
+	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/size_char_bystrain.pdf", width=11.5,height=8)
+	d = filter(endometabolite, time_format == "absolute", metabolite == "AKG")
+	par(mfrow = c(3,1))
+	hist(d$cellconc,100,main="Cell Concentration: all time points, all strains", xlab = "[cells/ml] ")
+	hist(d$biovol,100,main="Biovolume: all time points, all strains", xlab = "[ul/ml] ")
+	hist(d$singlecellvol,100,main="Single cell volume: all time points, all strains", xlab = "[fl] ")
+	dev.off()
+
+	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/size_char_rep.pdf", width=11.5,height=8)
+	par(mfrow = c(3,1))
+	hist(d$cellconc,100,main="Cell Concentration: all time points, all strains", xlab = "[cells/ml] ")
+	hist(d$biovol,100,main="Biovolume: all time points, all strains", xlab = "[ul/ml] ")
+	hist(d$singlecellvol,100,main="Single cell volume: all time points, all strains", xlab = "[fl] ")
+	dev.off()
+
+	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/size_char_dynamics.pdf", width=11.5,height=8)
+	ggplot(
+		data = d,
+		aes(x = time, y = cellconc)) +
+	geom_point() +
+	geom_smooth() +
+	scale_x_continuous(name="Time (relative)") +
+	scale_y_continuous(name=expression(paste("[cells/ml]"))) +
+	ggtitle("Physical Characteristics: Cell Conc.")
+	dev.off()
+
+	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/size_char_dynamics_allstrains_cellconc.pdf", width=11.5,height=8)
+	ggplot(
+		data = d,
+		aes(x = time, y = cellconc)) +
+	geom_point() +
+	geom_smooth() +
+	scale_x_continuous(name="Time (relative)") +
+	scale_y_continuous(name=expression(paste("[cells/ml]"))) +
+	ylim(c(min(d$cellconc),max(d$cellconc))) +
+ 	facet_wrap( ~ strain, scales="free_y") +
+	ggtitle("Physical Characteristics: Cell Conc.")
 	dev.off()
 
 }
@@ -476,7 +534,6 @@ if (FALSE) {
 		row.names = F,
 		col.names = T
 		)
-
 	# plot lod profiles for each metabolite
 	pdf(gsub(".rda","_lod_profiles.pdf",f), width=11.5,height=8)
 	png(gsub(".rda","_lod_profiles.png",f), width=20,height=8)
@@ -525,9 +582,9 @@ if (FALSE) {
 		to_p[1:length(to_p)]
 	dev.off()
 } else {
-	load(f)
-	mQTLs_combrep = qtl_list
-	rm("qtl_list")
+	#load(f)
+	#mQTLs_combrep = qtl_list
+	#rm("qtl_list")
 }
 
 #-------------------------------------------------------------------#
@@ -707,7 +764,7 @@ if (FALSE) {
 		dev.off()
 	}
 } else {
-	load(f)
+	#load(f)
 }
 
 #-------------------------------------------------------------------#
