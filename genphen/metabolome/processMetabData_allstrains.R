@@ -136,7 +136,13 @@ processData = function( f1, f2, f3, startRow = 2,... ) {
 				time = touse[,1]
 				time_format = k
 				# there are several negative values / i just take the absolute value
-				value = as.numeric(touse[,names(j)])
+				# check for factor
+				value = touse[,names(j)]
+				if (class(value)=="factor") {
+					value = as.numeric(levels(value)[value])
+				} else {
+					value = as.numeric(value)
+				}
 				# negative values should be zero
 				value[value<0] = 0
 				if (is.na(value[1])) {
@@ -149,9 +155,9 @@ processData = function( f1, f2, f3, startRow = 2,... ) {
 				} else {
 					normInd = 1
 				}
-				value.log2 = value
+				# value.log2 = value
 				# update 12/10
-				value.log2 = log2(value.log2 + 1)
+				value.log2 = log2(value + 1)
 				relative.log2 = sapply(value.log2,function(i){i/value.log2[normInd]})
 				derivative.log2 = c(NA,diff(value.log2)/diff(time))
 				data.frame(strain,replicate,metabolite,time,time_format,value,
@@ -160,7 +166,7 @@ processData = function( f1, f2, f3, startRow = 2,... ) {
 			}))
 		}))
 		# remove NA
-		to_r = to_r[!is.na(to_r$value),]
+		# to_r = to_r[!is.na(to_r$value),]
 		return(to_r)
 	}))
 	close(pb)
