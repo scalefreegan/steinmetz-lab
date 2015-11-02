@@ -40,7 +40,7 @@ DDIR = "/Users/brooks/Documents/steinmetz_local/genphen/metabolome"
 f = file.path(DDIR,"mQTL.rda")
 if (!file.exists(f)) {
   # load and process data
-  devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-lab/master/genphen/metabolome/processMetabData_allstrains.R")
+  devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-lab/master/mQTL_explorer/processData.R")
 } else {
   load(f)
 }
@@ -171,7 +171,7 @@ shinyServer(function(input, output, session) {
     rownames = FALSE, extensions = 'Responsive', escape = FALSE)
 
   # STATIC VALUES
-  out$metabolites = 
+  out$metabolites = names(data)
   
   # REACTIVE VALUES
   values = reactiveValues(
