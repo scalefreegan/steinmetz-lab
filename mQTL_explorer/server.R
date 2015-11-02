@@ -28,8 +28,10 @@ library(DT)
 library(parallel)
 library(GenomicRanges)
 library(ggplot2)
+library(funqtl)
 library("org.Sc.sgd.db")
 orf2name = org.Sc.sgdGENENAME
+
 
 addResourcePath('data', "/Users/brooks/Sites/JBrowse-1.11.6/data")
 
@@ -50,7 +52,6 @@ if (!file.exists(f)) {
 
 if (!is.null(local)) {
   load("~/Desktop/tmpdata/3TFill/clust_qtl_small.rda")
-  load("~/Desktop/tmpdata/3TFill/geno_mrk.RData")
   load("~/Desktop/tmpdata/3TFill/tx_3utr.rda")
   #load("~/Desktop/tmpdata/3TFill/mergedCounts.rda")
 } else {
@@ -81,59 +82,7 @@ shinyServer(function(input, output, session) {
     sprintf('<a href="http://localhost/~brooks/JBrowse-1.11.6/?loc=%s" target="_blank" class="btn btn-primary">Go to gene</a>',
             val)
   }
-  
-  gbrowse_heattrack = function(data) {
-    
-    STORETEMPLATE = "{'%s':{'type':'JBrowse/Store/SeqFeature/BigWig','urlTemplate':'%s'}}"
-    
-    TRACKTEMPLATE = "{'label':'%s','key':'%s','urlTemplate':'%s','type':'JBrowse/View/Track/Wiggle/Density','bicolor_pivot':'mean','style':{'pos_color':'purple','neg_color':'green'}}"
-    
-    TRACKTEMPLATE = "{'label':'%s','key':'%s','urlTemplate':'%s','type':'JBrowse/View/Track/Wiggle/Density','storeClass':'JBrowse/Store/SeqFeature/BigWig','bicolor_pivot':'mean','style':{'pos_color':'purple','neg_color':'green'}}"
-    
-    
-    
-    this_store = paste("addStores=",
-                       URLencode(paste(sprintf(STORETEMPLATE,"url","t1.bw"),sep=""), reserved = T), sep = "")
-    this_tracks = paste("addTracks=",
-                      URLencode(paste("[",sprintf(TRACKTEMPLATE,"iso1","S288c_Isoforms","url"),"]",sep=""),reserved = T),
-                      sep = "")
-    this_tracks = paste("addTracks=",
-                        URLencode(paste("[",sprintf(TRACKTEMPLATE,"iso1","S288c_Isoforms","t1.bw"),"]",sep=""),reserved = T),
-                        sep = "")
-    o = paste(this_store,"&",this_tracks,sep="")     
-    #o = paste(this_tracks,sep="")     
-  }
-  
-  
-  
-  makeBigWig = function(data, this_mrk, geno) {
-    d1 = colSums(data[intersect(names(which(geno[this_mrk,]==1)),rownames(data)),])
-    d2 = colSums(data[intersect(names(which(geno[this_mrk,]==2)),rownames(data)),])
-    chr = df()[s,"`Chr"]
-    seqinfo = Seqinfo(genome="sacCer3")
-    g1 = GenomicRanges::GRanges(
-      #seqnames = Rle(seqnames(chr_info[chr]),seqlengths(chr_info[chr])), 
-      seqnames = Rle(seqnames(chr_info[chr]),1),
-      ranges = IRanges(as.numeric(names(d1)), end = as.numeric(names(d1))),
-      strand = "+",
-      score = d1,
-      seqinfo = seqinfo
-      )
-    #seqlengths(g1) = seqlengths(chr_info[chr])
-    #seqlengths(g1) = length(d1)
-    rtracklayer::export.bw(object = g1, con = "/Users/brooks/Sites/JBrowse-1.11.6/data/t1.bw", compress=T)
-    g2 = GenomicRanges::GRanges(
-      #seqnames = Rle(seqnames(chr_info[chr]),seqlengths(chr_info[chr])), 
-      seqnames = Rle(seqnames(chr_info[chr]),1),
-      ranges = IRanges(as.numeric(names(d2)), end = as.numeric(names(d2))),
-      strand = "+",
-      score = d2,
-      seqinfo = seqinfo
-    )
-    #seqlengths(g2) = seqlengths(chr_info[chr])
-    rtracklayer::export.bw(object = g2, con = "/Users/brooks/Sites/JBrowse-1.11.6/data/t2.bw", compress=T)
-  }
-     
+
   df = reactive({
     qtl_df = as.data.frame(do.call(rbind,lapply(names(clust_qtls),function(i){
       i_2 = gsub("/","%2",i)
@@ -170,8 +119,6 @@ shinyServer(function(input, output, session) {
     df(), server = TRUE, selection = "single",
     rownames = FALSE, extensions = 'Responsive', escape = FALSE)
 
-  # STATIC VALUES
-  out$metabolites = names(data)
   
   # REACTIVE VALUES
   values = reactiveValues(
@@ -184,35 +131,6 @@ shinyServer(function(input, output, session) {
   # MONITOR OLD SELECTION
   session$onFlush(once=FALSE, function(){
     isolate({ values$old_selection <- input$dt_rows_selected })
-  })
-  
-  # OBSERVE CLICK
-  observeEvent(input$plot_click, {
-    marker = nearPoints(manhattan_data(),input$plot_click, xvar = "pos", yvar = "logp")
-    if (dim(marker)[1] > 0) {
-      marker = marker[which.max(marker$logp),"SNP"]
-      values$marker = levels(marker)[marker]
-    }
-  })
-  
-  # OBSERVE BRUSH
-  observeEvent(input$plot_brush, {
-    marker = brushedPoints(manhattan_data(), input$plot_brush, xvar = "pos", yvar = "logp")
-    if (dim(marker)[1] > 0) {
-      marker = marker[which.max(marker$logp),"SNP"]
-      values$marker = levels(marker)[marker]
-    }
-  })
-  
-  # OBSERVE DOUBLECLICK
-  observeEvent(input$plot_dblclick, {
-    brush <- input$plot_brush
-    if (!is.null(brush)) {
-      x <- brushedPoints(manhattan_data(), input$plot_brush, xvar = "pos", yvar = "logp")[,"SNP"]
-      values$x <- levels(x)[x]
-    } else {
-      values$x <- NULL
-    }
   })
   
   gene = reactive({
@@ -250,60 +168,16 @@ shinyServer(function(input, output, session) {
     paste("<div style='width: 100%; height: 600px'><iframe style='border: 1px solid black' src='", val ,"'width='100%' height='100%'></iframe></div>",sep="")
   })
   
-  manhattan_data = reactive({
-    if (!is.null(gene())) {
-      qtls = clust_qtls[[gene()]]$qtl
-      rownames(qtls) = names(mrk)
-      # restrict based on 
-      if (!is.null(values$x)) {
-        qtls = qtls[values$x,]
-        tmp_mrk = mrk[values$x]
-      } else {
-        tmp_mrk = mrk
-      }
-      clustQTL::plotManhattan(qtls, tmp_mrk, gene = gene2(), trx_annot = tx_3utr,
-                              cutoff = 10^-input$alpha, qqman = TRUE, show = FALSE, 
-                              suggestiveline = input$alpha, genomewideline = FALSE)
-    }
-  })
-  
   output$manhattan = renderPlot({
-    if (!is.null(gene())) {
-      qtls = clust_qtls[[gene()]]$qtl
-      rownames(qtls) = names(mrk)
-      # restrict based on 
-      if (!is.null(values$x)) {
-        qtls = qtls[values$x,]
-        tmp_mrk = mrk[values$x]
-      } else {
-        tmp_mrk = mrk
-      }
-      clustQTL::plotManhattan(qtls, tmp_mrk, gene = gene2(), trx_annot = tx_3utr,
-                      cutoff = 10^-alpha, qqman = TRUE,
-                      suggestiveline = input$alpha, genomewideline = FALSE)
-    }
+      qtls = data[[input$m]]$qtl
+      type = "mlod"
+      names(qtls)[names(qtls) == type] = "pval"
+      qtls[,"pval"]  = 10^-qtls[,"pval"]
+      alpha_5 = data[[input$m]]$permout["5%",type]
+      alpha_10 = data[[input$m]]$permout["10%",type]
+      ymax = max(alpha_10,max(-log10(qtls[,"pval"])))
+      clustQTL::plotManhattan(qtls, mrk, qqman = TRUE,
+                      suggestiveline = alpha_5, genomewideline = alpha_10, ylab = "LOD", ylim = c(0,ymax+2))
   })
   
-  output$pqtl = renderPlot({
-    if (!is.null(gene())) {
-      data <- clust_qtls[[gene()]]$data
-      
-      # find peaks
-      peaks =  clustQTL::findQTLPeaks(clust_qtls[[gene()]]$qtl, mrk,
-                           pcutoff = 10^-input$alpha)
-      
-      # draw the qtl peak profile
-      if(input$dt_rows_selected != values$old_selection || is.null(values$marker)) {
-        print("normal")
-        print(names(peaks)[1])
-        clustQTL::plotPeakProfile(data, geno,
-                        names(peaks)[1], peak_sigma = 2,
-                        peak_threshold = 1)
-      } else {
-          clustQTL::plotPeakProfile(data, geno,
-                values$marker, peak_sigma = 2,
-                peak_threshold = 1)
-      }
-    }
-  })
 })

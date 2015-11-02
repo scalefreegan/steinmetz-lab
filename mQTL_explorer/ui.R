@@ -15,11 +15,10 @@ shinyUI(navbarPage("mQTL Explorer", selected = "Table Viewer",
             fluidRow(
               column(6,
                  fluidRow(
-                   column(12,selectInput("m", " Metabolite", choices = c("a","b","c"), selected = 1))
+                   column(12,selectInput("m", " Metabolite", choices = names(data), selected = 1))
                  ),
                 fluidRow(
-                  column(6,sliderInput("alpha", " QTL Threshold: -log10(pval),", max = 30, min = 0, value = 5)),
-                  column(6,sliderInput("bci", " Bayesian Confidence Interval (%),", max = 100, min = 0, value = 50))
+                  column(6,sliderInput("bci", " Bayesian Confidence Interval (%):,", max = 100, min = 0, value = 50))
                 ),
                 fluidRow(
                   column(12,DT::dataTableOutput('dt'))
@@ -35,13 +34,7 @@ shinyUI(navbarPage("mQTL Explorer", selected = "Table Viewer",
                               brush = "plot_brush",
                               dblclick = "plot_dblclick"))
                )
-            ),
-            fluidRow(
-              column(4,h4("Phenotype at selected location"),offset = 4)
-            ),
-            fluidRow(
-              column(12,plotOutput('pqtl'))
-              )
+            )
             )
           )
          ),

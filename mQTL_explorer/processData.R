@@ -14,6 +14,7 @@
 .plot = FALSE
 
 # Import packages ---------------------------------------------------
+library(funqtl)
 
 # tmp resource location / will be changed
 DDIR = "/Users/brooks/Documents/steinmetz_local/genphen/metabolome"
@@ -29,6 +30,7 @@ data = lapply(seq(1,length(mQTLs_funqtl_2014)), function(i){
     #print(i)
     o = list()
     o[["qtl"]] = mQTLs_funqtl_2014[[i]][["qtls_alt"]]
+    o[["permout"]] = summary(mQTLs_funqtl_2014[[i]]$permout)
     return(o)
   }
 })
