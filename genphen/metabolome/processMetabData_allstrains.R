@@ -20,6 +20,7 @@
 library(xlsx)
 library(ggplot2)
 #library(plotly)
+library(plyr)
 library(dplyr)
 library(reshape2)
 library(LSD)
@@ -53,7 +54,8 @@ devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-l
 cleanData = function(df, row.names = NULL, nap = 0.9) {
 	# remove columns or rows with all NA values
 	tokr = apply(df,1,function(i)sum(is.na(i))<=nap*length(i))
-	tokc = apply(df,2,function(i)sum(is.na(i))<=nap*length(i))
+	# no colnames
+	tokc = which(!is.na(colnames(df)))
 	df = df[tokr,tokc]
 	if (is.numeric(row.names)) {
 		rownames(df) = df[,row.names]
@@ -400,14 +402,37 @@ if (.plot) {
 	dev.off()
 
 	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/size_char_dynamics.pdf", width=11.5,height=8)
+
 	ggplot(
 		data = d,
 		aes(x = time, y = cellconc)) +
 	geom_point() +
 	geom_smooth() +
-	scale_x_continuous(name="Time (relative)") +
-	scale_y_continuous(name=expression(paste("[cells/ml]"))) +
+	facet_wrap( ~ strain, scales="fixed")
+	scale_x_continuous(name="Time (absolute)") +
+	ylab(expression(paste("cells/ml"))) +
 	ggtitle("Physical Characteristics: Cell Conc.")
+
+	ggplot(
+		data = d,
+		aes(x = time, y = biovol)) +
+	geom_point() +
+	geom_smooth() +
+	facet_wrap( ~ strain, scales="fixed")
+	scale_x_continuous(name="Time (absolute)") +
+	ylab(expression(paste("ul/ml"))) +
+	ggtitle("Physical Characteristics: Biovolume.")
+
+	ggplot(
+		data = d,
+		aes(x = time, y = singlecellvol)) +
+	geom_point() +
+	geom_smooth() +
+	facet_wrap( ~ strain, scales="fixed")
+	scale_x_continuous(name="Time (absolute)") +
+	ylab(name=expression(paste("fl"))) +
+	ggtitle("Physical Characteristics: Single cell volume")
+
 	dev.off()
 
 	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/size_char_dynamics_allstrains_cellconc.pdf", width=11.5,height=8)
@@ -422,6 +447,28 @@ if (.plot) {
  	facet_wrap( ~ strain, scales="free_y") +
 	ggtitle("Physical Characteristics: Cell Conc.")
 	dev.off()
+
+}
+
+#-------------------------------------------------------------------#
+# exploring rep behavior, etc
+#
+#-------------------------------------------------------------------#
+if (F) {
+	rep_all = filter(endometabolite,time_format=="absolute") %>% group_by(strain) %>% do(
+		{
+			o1 = try(cor(.$value.log2[.$replicate==1],.$value.log2[.$replicate==2],use="pair"),silent=T)
+			if (class(o1)=="try-error") {
+				o1 = NA
+			}
+			o2 = try(sd(.$value.log2[.$replicate==1],.$value.log2[.$replicate==2],na.rm=T),silent=T)
+			if (class(o2)=="try-error") {
+				o2 = NA
+			}
+			return(data.frame(mCor = o1, mSD = o2))
+		}
+		)
+
 
 }
 

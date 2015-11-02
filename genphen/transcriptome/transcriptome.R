@@ -70,6 +70,45 @@ if (.plot) {
 	pdf(file=file.path(BASEDIR, "plots","transcriptome_biorep_reproducibility.pdf"))
 		heatscatter(rep_mat_log[,1],rep_mat_log[,2],main="Transcript counts: Reproducibility across biological replicates", cor=T, xlab="Rep1, log2(transcript count)", ylab="RepX, log2(transcript count)")
 	dev.off()
+
+	# replicate perstrain
+	pdf(file=file.path(BASEDIR, "plots","transcriptome_biorep_reproducibility_perstrain.pdf"))
+	d = select(trx_df, strain, rep, value) %>%
+		group_by(.,strain) %>%
+	do({
+		x = filter(.,rep=="biorep1")
+		y = filter(.,rep=="biorep2")
+		x.log2 = log2(x$value+1)
+		y.log2 = log2(y$value+1)
+		if (length(x.log2)==length(y.log2)) {
+			data.frame(x.log2 = x.log2, y.log2 = y.log2)
+		} else {
+			data.frame()
+		}
+		})
+	ggplot(d, aes(x.log2, y.log2)) +
+		#geom_point() +
+		stat_density2d(aes(fill = ..level..), geom="polygon") +
+		facet_wrap(~ strain)
+	dev.off()
+
+	dcor = select(trx_df, strain, rep, value) %>%
+		group_by(.,strain) %>%
+		do({
+				o1 = try(cor(log2(.$value[.$rep=="biorep1"]+1),log2(.$value[.$rep=="biorep2"]+1),use="pair"),silent=T)
+				if (class(o1)=="try-error") {
+					o1 = NA
+				}
+				return(data.frame(cor = o1))
+			})
+	 pdf(file=file.path(BASEDIR, "plots","transcriptome_biorep_reproducibility_perstrain_corhist.pdf"))
+	 	hist(dcor$cor,100,xlim=c(0,1),main="Biorep correlation", xlab="Pearson correlation")
+		hist(dcor$cor,100,xlim=c(0.9,1),main="Biorep correlation", xlab="Pearson correlation")
+	 dev.off()
+
+
+
+
 }
 
 #-------------------------------------------------------------------#
