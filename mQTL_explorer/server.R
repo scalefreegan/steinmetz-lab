@@ -29,16 +29,24 @@ library(parallel)
 library(GenomicRanges)
 library(ggplot2)
 library(funqtl)
+library("BSgenome.Scerevisiae.UCSC.sacCer3")
+library("TxDb.Scerevisiae.UCSC.sacCer3.sgdGene")
 library("org.Sc.sgd.db")
-orf2name = org.Sc.sgdGENENAME
 
+# Global variables ---------------------------------------------------
+
+id2exon = id2name(TxDb.Scerevisiae.UCSC.sacCer3.sgdGene)
+type = "mlod"
+
+# Web resources ---------------------------------------------------
 
 addResourcePath('data', "/Users/brooks/Sites/JBrowse-1.11.6/data")
 
-# tmp resource location / will be changed
-DDIR = "/Users/brooks/Documents/steinmetz_local/genphen/metabolome"
+# Misc material ---------------------------------------------------
 
 # composite rda
+DDIR = "/Users/brooks/Documents/steinmetz_local/genphen/metabolome"
+
 f = file.path(DDIR,"mQTL.rda")
 if (!file.exists(f)) {
   # load and process data
@@ -46,25 +54,6 @@ if (!file.exists(f)) {
 } else {
   load(f)
 }
-
-
-# try to write
-
-if (!is.null(local)) {
-  load("~/Desktop/tmpdata/3TFill/clust_qtl_small.rda")
-  load("~/Desktop/tmpdata/3TFill/tx_3utr.rda")
-  #load("~/Desktop/tmpdata/3TFill/mergedCounts.rda")
-} else {
-  #load("/g/steinmetz/brooks/3prime_Tfill/clust_qtl.rda")
-  load("/g/steinmetz/brooks/3prime_Tfill/clust_qtl_1000.rda")
-  load( "/g/steinmetz/brooks/genphen/qtl_endometabolome_23042015/geno_mrk.RData" )
-  load("/g/steinmetz/brooks/3prime_Tfill/tx_3utr.rda")
-  #load("/g/steinmetz/project/GenPhen/data/3tagseq/all/mergedCounts.rda")
-}
-# load qt_file
-#
-#qtl_genes = sort(unlist(sapply(clust_qtls,function(i){min(as.numeric(i$qtl[,2]))})))
-names(clust_qtls) = gsub("%2","/",names(clust_qtls))
 
 shinyServer(function(input, output, session) {
 
@@ -82,8 +71,12 @@ shinyServer(function(input, output, session) {
     sprintf('<a href="http://localhost/~brooks/JBrowse-1.11.6/?loc=%s" target="_blank" class="btn btn-primary">Go to gene</a>',
             val)
   }
-
+  
   df = reactive({
+    
+    # select chromosomes
+    chrs = unique(c(data$qtl[data$qtl[,type]]>=summary(data[[input$m]]$permout[,type],input$co/100))) 
+    
     qtl_df = as.data.frame(do.call(rbind,lapply(names(clust_qtls),function(i){
       i_2 = gsub("/","%2",i)
       i_out = orf2name[[i]]
@@ -168,16 +161,27 @@ shinyServer(function(input, output, session) {
     paste("<div style='width: 100%; height: 600px'><iframe style='border: 1px solid black' src='", val ,"'width='100%' height='100%'></iframe></div>",sep="")
   })
   
+  qtls = reactive({
+    qtls = data[[input$m]]$qtl
+    names(qtls)[names(qtls) == type] = "pval"
+    qtls[,"pval"]  = 10^-qtls[,"pval"]
+  })
+  
+  manhattan_data = reactive({
+    alpha_5 = summary(data[[input$m]]$permout[,type],.05)
+    alpha_10 = summary(data[[input$m]]$permout[,type],input$co/100)
+    ymax = max(max(alpha_5, alpha_10),max(-log10(qtls[,"pval"])))
+    clustQTL::plotManhattan(qtls, mrk, qqman = TRUE, show = FALSE,
+                            suggestiveline = alpha_5, genomewideline = alpha_10, ylab = "LOD", ylim = c(0,ymax+2))
+  })
+  
   output$manhattan = renderPlot({
-      qtls = data[[input$m]]$qtl
-      type = "mlod"
-      names(qtls)[names(qtls) == type] = "pval"
-      qtls[,"pval"]  = 10^-qtls[,"pval"]
-      alpha_5 = data[[input$m]]$permout["5%",type]
-      alpha_10 = data[[input$m]]$permout["10%",type]
-      ymax = max(alpha_10,max(-log10(qtls[,"pval"])))
-      clustQTL::plotManhattan(qtls, mrk, qqman = TRUE,
-                      suggestiveline = alpha_5, genomewideline = alpha_10, ylab = "LOD", ylim = c(0,ymax+2))
+    alpha_5 = summary(data[[input$m]]$permout[,type],.05)
+    alpha_10 = summary(data[[input$m]]$permout[,type],input$co/100)
+    ymax = max(max(alpha_5, alpha_10),max(-log10(qtls[,"pval"])))
+    clustQTL::plotManhattan(qtls, mrk, qqman = TRUE, show = TRUE,
+                            suggestiveline = alpha_5, genomewideline = alpha_10, ylab = "LOD", ylim = c(0,ymax+2))
+      legend("topright", y.leg[i], c("5% FDR","10% FDR"), lty = c(1, 1), col = c("blue", "red"))
   })
   
 })

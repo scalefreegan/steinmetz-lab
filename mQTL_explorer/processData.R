@@ -30,7 +30,7 @@ data = lapply(seq(1,length(mQTLs_funqtl_2014)), function(i){
     #print(i)
     o = list()
     o[["qtl"]] = mQTLs_funqtl_2014[[i]][["qtls_alt"]]
-    o[["permout"]] = summary(mQTLs_funqtl_2014[[i]]$permout)
+    o[["permout"]] = mQTLs_funqtl_2014[[i]]$permout
     return(o)
   }
 })
