@@ -18,7 +18,7 @@ shinyUI(navbarPage("mQTL Explorer", selected = "Table Viewer",
                    column(12,selectInput("m", " Metabolite", choices = names(data), selected = 1))
                  ),
                 fluidRow(
-                  column(6,sliderInput("co", " Custom Permutation Cutoff (%):,", max = 25, min = 0, value = 5)),
+                  column(6,sliderInput("co", " Custom FDR (%):,", max = 50, min = 0, value = 5)),
                   column(6,sliderInput("bci", " Bayesian Confidence Interval (%):,", max = 100, min = 0, value = 50))
                 ),
                 fluidRow(
