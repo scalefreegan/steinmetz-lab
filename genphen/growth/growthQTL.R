@@ -102,12 +102,6 @@ if (FALSE) {
 		load(cross_f)
 	}
 
-	# first detect qtls individually
-	# have to run funqtl for each metabolite
-	# as shortcut, just replace cross object phenotypes
-	# for each metabolite
-
-	)
 	cross = calc.genoprob(cross, step = 0)
 	# last phenotype column is the "id" tag
 	pcols = seq(1, dim(cross$pheno)[2] - 1)
