@@ -68,6 +68,8 @@ strainRename = function(strains) {
 	o = sapply(strains,function(strain){
 		if (nchar(strain)==3) {
 			strain = gsub("^X","0",strain)
+		} elseif (nchar(strain)==2) {
+			strain = paste("0", strain, sep="")
 		} else {
 			strain = gsub("^X","",strain)
 		}
@@ -689,7 +691,7 @@ if (FALSE) {
 					phenotype = t(pheno),
 					marker_info = mrk,
 					return_cross = TRUE,
-					estimate.map=FALSE
+					estimate.map = FALSE
 					)
 		save(cross, file = cross_f)
 	} else {

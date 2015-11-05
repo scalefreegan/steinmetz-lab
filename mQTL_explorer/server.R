@@ -29,6 +29,7 @@ library(parallel)
 library(GenomicRanges)
 library(ggplot2)
 library(funqtl)
+library(stringr)
 library("BSgenome.Scerevisiae.UCSC.sacCer3")
 library("TxDb.Scerevisiae.UCSC.sacCer3.sgdGene")
 library("org.Sc.sgd.db")
@@ -100,7 +101,7 @@ shinyServer(function(input, output, session) {
     qtl_intervals = list()
     if (length(chrs)>0) {
       for (i in chrs) {
-        qtl_intervals[[i]] = try(mrk[rownames(bayesint(data[[input$m]]$qtl, chr = i, prob=input$bci/100, lodcolumn=lodcolumn))],silent = T)
+        qtl_intervals[[i]] = try(mrk[rownames(bayesint(data[[input$m]]$qtl, chr = str_pad(i, 2, pad = "0"), prob=input$bci/100, lodcolumn=lodcolumn))],silent = T)
         if (class(qtl_intervals[[i]])=="try-error") {
           qtl_intervals[[i]] = NULL
         } else {
