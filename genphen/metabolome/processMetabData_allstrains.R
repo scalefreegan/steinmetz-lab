@@ -68,7 +68,7 @@ strainRename = function(strains) {
 	o = sapply(strains,function(strain){
 		if (nchar(strain)==3) {
 			strain = gsub("^X","0",strain)
-		} elseif (nchar(strain)==2) {
+		} else if (nchar(strain)==2) {
 			strain = paste("0", strain, sep="")
 		} else {
 			strain = gsub("^X","",strain)
@@ -823,14 +823,6 @@ if (FALSE) {
 }
 
 #-------------------------------------------------------------------#
-# Table output of sig qtls
-#
-#-------------------------------------------------------------------#
-
-
-
-
-#-------------------------------------------------------------------#
-# Plot summaries
+# Stitch
 #
 #-------------------------------------------------------------------#
