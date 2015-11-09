@@ -826,3 +826,41 @@ if (FALSE) {
 # Stitch
 #
 #-------------------------------------------------------------------#
+fs = "/g/steinmetz/brooks/genphen/resources/stitch.rda"
+
+if (!file.exists(fs)) {
+	p2c = as.data.frame(read.table("/g/steinmetz/brooks/genphen/resources/4932.protein_chemical.links.transfer.v4.0.tsv",
+		sep = "\t", header=T))
+	# remove 4932 header on proteins
+	p2c$protein = sub("4932\\.","",p2c$protein)
+
+	chemNames = as.data.frame(read.delim("/g/steinmetz/brooks/genphen/resources/chemical.aliases.v4.0.tsv",
+		sep = "\t", header=T))
+
+	save(p2c, chemNames, file = fs)
+} else {
+	load(fs)
+}
+
+if (.plot) {
+	# assses features of p2c
+
+	pdf("/g/steinmetz/brooks/genphen/resources/plots/score_dist.pdf")
+		m <- ggplot(p2c, aes(x=combined_score)) + geom_histogram()
+		m
+	dev.off()
+	# per gene
+	hc = p2c %>% group_by(.,chemical) %>% summarise(.,mean = mean(combined_score))
+	colnames(hc)[1] = "name"
+	hc$source = "chemical"
+	gc = p2c %>% group_by(.,protein) %>% summarise(.,mean = mean(combined_score))
+	colnames(gc)[1] = "name"
+	gc$source = "protein"
+	cc = rbind(hc,gc)
+	pdf("/g/steinmetz/brooks/genphen/resources/plots/score_dist_bysub.pdf")
+		m <- ggplot(cc, aes(x = mean, fill = source)) + geom_density(alpha = 0.2)
+		m
+	dev.off()
+
+	# per chemical
+}

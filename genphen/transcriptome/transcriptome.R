@@ -170,7 +170,7 @@ pheno = acast(trx_df, formula =strain~name, fun.aggregate = mean, value.var = "v
 pheno = log2(pheno[intersect(rownames(pheno),colnames(geno)),]+1)
 
 qtl_f = file.path(BASEDIR,"data","eQTL.rda")
-if (!file.exists(qtl_f)) {
+if (F) {
 	cross_f = file.path(BASEDIR,"data","trx_cross.rda")
 	if (!file.exists(cross_f)) {
 		cross =	runQTL(
@@ -200,4 +200,17 @@ if (!file.exists(qtl_f)) {
 	save(eQTL, file = qtl_f)
 } else {
 	load(qtl_f)
+}
+
+if (.plot) {
+	# plot eqtls
+	for (i in 3:dim(eQTL$qtls)[2]) {
+		pdf(paste("/g/steinmetz/brooks/genphen/transcriptome/plots/lods/",colnames(eQTL$qtls)[i],".pdf",sep=""))
+			try({
+				tmp = tmp = eQTL$qtls[,1:3]
+				tmp[,3] = eQTL$qtls[,i]
+				plot(tmp, main = colnames(eQTL$qtls)[i], bandcol="gray90", ylab = "LOD")
+			})
+		dev.off()
+	}
 }
