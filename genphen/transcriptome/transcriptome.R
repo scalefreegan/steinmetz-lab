@@ -30,6 +30,7 @@ library( LSD )
 library( DESeq2 )
 library(dplyr)
 library(reshape2)
+library(pheatmap)
 
 # source rQTL utilities
 devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-lab/master/QTL/rQTL.R")
@@ -169,7 +170,7 @@ pheno = acast(trx_df, formula =strain~name, fun.aggregate = mean, value.var = "v
 # take the shifted logarithm
 pheno = log2(pheno[intersect(rownames(pheno),colnames(geno)),]+1)
 
-qtl_f = file.path(BASEDIR,"data","eQTL.rda")
+qtl_f = file.path(BASEDIR,"qtl","eQTL.rda")
 if (F) {
 	cross_f = file.path(BASEDIR,"data","trx_cross.rda")
 	if (!file.exists(cross_f)) {
@@ -211,6 +212,19 @@ if (.plot) {
 				tmp[,3] = eQTL$qtls[,i]
 				plot(tmp, main = colnames(eQTL$qtls)[i], bandcol="gray90", ylab = "LOD")
 			})
+		dev.off()
+
+		eQTL_cor = cor(eQTL$qtls[,3:60], use = "pair", method = "spearman")
+		pdf(paste("/g/steinmetz/brooks/genphen/transcriptome/plots/eQTL_cor.pdf")
+				tmp = tmp = eQTL$qtls[,1:3]
+				tmp[,3] = eQTL$qtls[,i]
+				plot(tmp, main = colnames(eQTL$qtls)[i], bandcol="gray90", ylab = "LOD")
+		dev.off()
+
+		jpeg(paste("/g/steinmetz/brooks/genphen/transcriptome/plots/eQTL_cor.pdf")
+				tmp = tmp = eQTL$qtls[,1:3]
+				tmp[,3] = eQTL$qtls[,i]
+				plot(tmp, main = colnames(eQTL$qtls)[i], bandcol="gray90", ylab = "LOD")
 		dev.off()
 	}
 }

@@ -837,6 +837,9 @@ if (!file.exists(fs)) {
 	chemNames = as.data.frame(read.delim("/g/steinmetz/brooks/genphen/resources/chemical.aliases.v4.0.tsv",
 		sep = "\t", header=T))
 
+	# only keep chemNames in p2c
+	chemNames = filter(chemNames,chemical %in% levels(p2c$chemical)[p2c$chemical])
+	p2c = filter(p2c, chemical %in% levels(chemNames$chemical)[chemNames$chemical])
 	save(p2c, chemNames, file = fs)
 } else {
 	load(fs)
