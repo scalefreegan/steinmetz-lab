@@ -214,11 +214,15 @@ if (.plot) {
 			})
 		dev.off()
 
-		eQTL_cor = cor(eQTL$qtls[,3:60], use = "pair", method = "spearman")
+		eQTL_cor = cor(eQTL$qtls[,3:dim(eQTL$qtls)[2]], use = "pair", method = "spearman")
+		while(sum(is.na(eQTL_cor))>0) {
+			tor = sort(apply(eQTL_cor,1,function(i){sum(is.na(i))}),decreasing=T)
+			tor1 = which(rownames(eQTL_cor)==names(tor)[1])
+			tor2 = which(colnames(eQTL_cor)==names(tor)[1])
+			eQTL_cor = eQTL_cor[-tor1,-tor2]
+		}
 		pdf(paste("/g/steinmetz/brooks/genphen/transcriptome/plots/eQTL_cor.pdf")
-				tmp = tmp = eQTL$qtls[,1:3]
-				tmp[,3] = eQTL$qtls[,i]
-				plot(tmp, main = colnames(eQTL$qtls)[i], bandcol="gray90", ylab = "LOD")
+				pheatmap(eQTL_cor,breaks=seq(-1,1,length.out=100))
 		dev.off()
 
 		jpeg(paste("/g/steinmetz/brooks/genphen/transcriptome/plots/eQTL_cor.pdf")

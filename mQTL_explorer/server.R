@@ -5,7 +5,7 @@
 #
 #-------------------------------------------------------------------#
 # Shiny interface for ploting/exploring mQTLs
-# 
+#
 #-------------------------------------------------------------------#
 
 .author = "Aaron Brooks"
@@ -17,6 +17,7 @@
 .email = "aaron.brooks@embl.de"
 .status = "Development"
 .plot = FALSE
+.local = TRUE
 
 # Import packages ---------------------------------------------------
 
@@ -59,12 +60,17 @@ dname_long <- as.list(x[keys])
 
 # Web resources ---------------------------------------------------
 
-addResourcePath('data', "/Users/brooks/Sites/JBrowse-1.11.6_mQTL/data")
+addResourcePath('data', "/var/www2/html/mQTL/data")
 
 # Misc material ---------------------------------------------------
 
 # composite rda
-DDIR = "/Users/brooks/Documents/steinmetz_local/genphen/metabolome"
+if (.local) {
+  DDIR = "/Users/brooks/Documents/steinmetz_local/genphen/metabolome"
+} else {
+  DDIR = "/g/steinmetz/brooks/genphen/metabolome/qtls"
+}
+
 
 f = file.path(DDIR,"mQTL.rda")
 if (!file.exists(f)) {
@@ -77,7 +83,7 @@ if (!file.exists(f)) {
 shinyServer(function(input, output, session) {
 
   options(DT.options = list(pageLength = 10, searching = TRUE))
-  
+
   gbrowse_link = function(chr,start,end,flanking = c(-2000,2000)) {
     start = start - abs(flanking[1])
     if (start < 0) {
@@ -87,16 +93,16 @@ shinyServer(function(input, output, session) {
     val = paste("chr",as.roman(chr),":",start,"..",end, sep = "")
     #sprintf('<a href="http://browse.yeastgenome.org/fgb2/gbrowse/scgenome/?name=%s" target="_blank" class="btn btn-primary">Go to gene</a>',
     #        val)
-    sprintf('<a href="http://localhost/~brooks/JBrowse-1.11.6_mQTL/?loc=%s" target="_blank" class="btn btn-primary">Go to gene</a>',
+    sprintf('<a href="http://steinmetzlab.embl.de/mQTL/?loc=%s" target="_blank" class="btn btn-primary">Go to gene</a>',
             val)
   }
-  
+
   df = reactive({
-    
+
     # select chromosomes
-    chrs = unique(data[[input$m]]$qtl[data[[input$m]]$qtl[,type]>=summary(data[[input$m]]$permout[,type],input$co/100)[1],"chr"]) 
+    chrs = unique(data[[input$m]]$qtl[data[[input$m]]$qtl[,type]>=summary(data[[input$m]]$permout[,type],input$co/100)[1],"chr"])
     chrs = levels(chrs)[chrs]
-    
+
     lodcolumn = if(type=="mlod"){ 2 } else { 1 }
     qtl_intervals = list()
     if (length(chrs)>0) {
@@ -132,10 +138,10 @@ shinyServer(function(input, output, session) {
       qtl_df = qtl_df[!duplicated(qtl_df),]
     }
   })
-  
+
   # DATA TABLE
   output$dt = DT::renderDataTable(
-    df(), server = TRUE, selection = "single", 
+    df(), server = TRUE, selection = "single",
     rownames = FALSE, extensions = 'Responsive', escape = FALSE)
 
   # REACTIVE VALUES
@@ -143,12 +149,12 @@ shinyServer(function(input, output, session) {
     old_selection = NULL,
     link = NULL
   )
-  
+
   # MONITOR OLD SELECTION
   session$onFlush(once=FALSE, function(){
     isolate({ values$old_selection <- input$dt_rows_selected })
   })
-  
+
   #output$link = renderPrint("hi")
   output$link = renderText({
     s = input$dt_rows_selected
@@ -160,39 +166,39 @@ shinyServer(function(input, output, session) {
       val = paste(chr,"%3A",start,"..",end, sep = "")
       val = paste('http://localhost/~brooks/JBrowse-1.11.6_mQTL/?loc=',val,sep="")
     } else {
-      val = "http://localhost/~brooks/JBrowse-1.11.6_mQTL/"
+      val = "http://steinmetzlab.embl.de/mQTL/"
     }
     paste("<div style='width: 100%; height: 600px'><iframe style='border: 1px solid black' src='", val ,"'width='100%' height='100%'></iframe></div>",sep="")
   })
-  
+
   reformatQTL = reactive({
     qtls = data[[input$m]]$qtl
     names(qtls)[names(qtls) == type] = "pval"
     qtls[,"pval"]  = 10^-qtls[,"pval"]
     qtls
   })
-  
+
   alpha_5 = reactive({
     summary(data[[input$m]]$permout[,type],.05)
   })
-  
+
   alpha_10 = reactive({
     summary(data[[input$m]]$permout[,type],input$co/100)
   })
-  
+
   ymax = reactive({
     max(max(alpha_5(), alpha_10()),max(-log10(reformatQTL()[,"pval"])))
   })
-  
+
   manhattan_data = reactive({
     clustQTL::plotManhattan(reformatQTL(), mrk, qqman = TRUE, show = FALSE,
                             suggestiveline = alpha_5(), genomewideline = alpha_10(), ylab = "LOD", ylim = c(0,ymax()+2))
   })
-  
+
   output$manhattan = renderPlot({
       clustQTL::plotManhattan(reformatQTL(), mrk, qqman = TRUE, show = TRUE,
                             suggestiveline = alpha_5(), genomewideline = alpha_10(), ylab = "LOD", ylim = c(0,ymax()+2))
       legend("topright", y.leg[i], c("5% FDR",paste(rownames(alpha_10())[1],"FDR")), lty = c(1, 1), col = c("blue", "red"))
   })
-  
+
 })

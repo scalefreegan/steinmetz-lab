@@ -827,7 +827,7 @@ if (FALSE) {
 #
 #-------------------------------------------------------------------#
 fs = "/g/steinmetz/brooks/genphen/resources/stitch.rda"
-
+# Load ---------------------------------------------------
 if (!file.exists(fs)) {
 	p2c = as.data.frame(read.table("/g/steinmetz/brooks/genphen/resources/4932.protein_chemical.links.transfer.v4.0.tsv",
 		sep = "\t", header=T))
@@ -839,12 +839,11 @@ if (!file.exists(fs)) {
 
 	# only keep chemNames in p2c
 	chemNames = filter(chemNames,chemical %in% levels(p2c$chemical)[p2c$chemical])
-	p2c = filter(p2c, chemical %in% levels(chemNames$chemical)[chemNames$chemical])
 	save(p2c, chemNames, file = fs)
 } else {
 	load(fs)
 }
-
+# Plot overall data trends ---------------------------------------------------
 if (.plot) {
 	# assses features of p2c
 
@@ -864,6 +863,41 @@ if (.plot) {
 		m <- ggplot(cc, aes(x = mean, fill = source)) + geom_density(alpha = 0.2)
 		m
 	dev.off()
-
-	# per chemical
 }
+# Try to map metabolites to chemID ---------------------------------------------------
+
+m = unique(endometabolite$metabolites)
+# annotated by hand. ANB 9/11/2015
+m = data.frame(name = m, alias = c(
+	"CID000000051", #AKG
+	"CID000643757", #CAN
+	"CID000000311", #CIT
+	"CID000005793", #GLUC
+	"CID000444972", #FUM
+	"CID000000525", #MAL
+	"CID000001005", #PEP
+	"CID000001060", #PYR
+	"CID000001110", #SUC
+	"CID000000602", #ALA
+	"CID000006322", #ARG
+	"CID000006267", #ASN
+	"CID000000424", #ASP
+	"CID000000594", #CYS
+	"CID000005961", #GLN
+	"CID000000611", #GLU
+	"CID000000750", #GLY
+	"CID000006274", #HIS
+	"CID000000779", #HSE
+	"CID000000791", #ILE
+	"CID000006106", #LEU
+	"CID000005962", #LYS
+	"CID000006137", #MET
+	"CID000000994", #PHE
+	"CID000145742", #PRO
+	"CID000005951", #SER
+	"CID000006305", #TRP
+	"CID000001153", #TYR
+	"CID000006287"  #VAL
+	))
+
+tmp = lapply(m, function(i){filter(chemNames, alias == i)})

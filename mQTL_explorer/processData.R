@@ -1,6 +1,6 @@
 #-------------------------------------------------------------------#
 # Shiny interface for ploting/exploring mQTLs
-# 
+#
 #-------------------------------------------------------------------#
 
 .author = "Aaron Brooks"
@@ -13,6 +13,7 @@
 .status = "Development"
 .makeBW = FALSE
 .makeeQTL = FALSE
+.local = FALSE
 # Import packages ---------------------------------------------------
 library(funqtl)
 library(GenomicRanges)
@@ -52,9 +53,16 @@ EQTL = strwrap('{"category": "eQTL",
                }')
 
 # tmp resource location / will be changed
-DDIR = "/Users/brooks/Documents/steinmetz_local/genphen/metabolome"
-WDIR = "/Users/brooks/Sites/JBrowse-1.11.6_mQTL"
-EDIR = "/Users/brooks/Documents/steinmetz_local/genphen/transcriptome"
+if (.local) {
+  DDIR = "/Users/brooks/Documents/steinmetz_local/genphen/metabolome"
+  WDIR = "/Users/brooks/Sites/JBrowse-1.11.6_mQTL"
+  EDIR = "/Users/brooks/Documents/steinmetz_local/genphen/transcriptome"
+} else {
+  DDIR = "/g/steinmetz/brooks/genphen/metabolome/qtls"
+  WDIR = "/var/www2/html/mQTL"
+  EDIR = "/g/steinmetz/brooks/genphen/transcriptome"
+}
+
 
 load(file.path(DDIR,"endometabolite_full_12102015.rda"))
 load(file.path(DDIR,"genotypes_S288c_R64.rda"))
@@ -79,7 +87,7 @@ data = data[!sapply(data,is.null)]
 if (.makeBW) {
   seqinfo = Seqinfo(genome="sacCer3")
   trackList = fromJSON(file.path(WDIR, "data/trackList.json"))
-  
+
   # make mQTL tracks
   nn = sapply(as.character(levels(seqnames(mrk))),function(i){
     paste(substr(i,1,3),as.roman(substr(i,4,5)),sep="")
@@ -97,7 +105,7 @@ if (.makeBW) {
   toadd = lapply(names(data), function(i) {
     if (!is.null(data[[i]]$qtl)) {
       g$score = unlist(lapply(g$revmap,function(j){mean(data[[i]]$qtl[j,4], na.rm=T)}))
-      export.bw(object = g, 
+      export.bw(object = g,
                 con = file.path(WDIR,paste("data/tracks/mqtls/",i,".bw",sep="")))
       # add trackList entry
       if (!(i %in% trackList$tracks[,"key"])) {
@@ -117,14 +125,14 @@ if (.makeBW) {
   }
   write(toJSON(trackList, pretty= TRUE, auto_unbox = T), file = file.path(WDIR, "data/trackList.json"))
 }
-  
+
   if (.makeeQTL) {
     # make eQTL tracks
     cat("Writing eQTL BigWig files and adding to JBrowse trackList config file. This may take some time.\n")
     load(file.path(EDIR,"eQTL.rda"))
     seqinfo = Seqinfo(genome="sacCer3")
     trackList = fromJSON(file.path(WDIR, "data/trackList.json"))
-    
+
     # make mQTL tracks
     nn = sapply(as.character(levels(seqnames(mrk))),function(i){
       paste(substr(i,1,3),as.roman(substr(i,4,5)),sep="")
@@ -152,7 +160,7 @@ if (.makeBW) {
         if (!file.exists(tof)) {
           print(ii)
           g$score = unlist(lapply(g$revmap,function(j){mean(eQTL$qtls[j,i], na.rm=T)}))
-          export.bw(object = g, 
+          export.bw(object = g,
                     con = tof)
         }
         # add trackList entry

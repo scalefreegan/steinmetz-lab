@@ -41,8 +41,14 @@ library(reshape2)
 #-------------------------------------------------------------------#
 
 DDIR = "/g/steinmetz/project/GenPhen/data/endometabolome"
-EDIR = "/Users/brooks/Documents/steinmetz_local/genphen/transcriptome"
+MDIR = "/g/steinmetz/brooks/genphen/metabolome"
+EDIR = "/g/steinmetz/brooks/genphen/transcriptome/qtl"
 
 load(file.path(DDIR,"data/endometabolite_full_12102015.rda"))
 load(file.path("/g/steinmetz/brooks/yeast/genomes/S288CxYJM789/genotypes_S288c_R64.rda"))
-load(file.path(DDIR,"qtls/mQTLs_comball_funqtl_2014.rda"))
+load(file.path(MDIR,"qtls/mQTLs_comball_funqtl_2014.rda"))
+load(file.path(EDIR,"eQTL.rda"))
+
+#-------------------------------------------------------------------#
+# mQTL/eQTL correlation
+#-------------------------------------------------------------------#
