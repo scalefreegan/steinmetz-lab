@@ -13,7 +13,7 @@
 .status = "Development"
 .makeBW = FALSE
 .makeeQTL = FALSE
-.local = FALSE
+.local = TRUE
 # Import packages ---------------------------------------------------
 library(funqtl)
 library(GenomicRanges)
