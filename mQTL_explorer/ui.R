@@ -12,6 +12,8 @@ shinyUI(navbarPage("mQTL Explorer", selected = "Table Viewer",
             title = "mQTL Explorer",
             #h1("Poly(A) Isoform Viewer"),
             hr(),
+            fluidRow(h1("GenPhen Viewer"),offset = 2
+            ),
             fluidRow(
               column(12,
                  fluidRow(

@@ -74,7 +74,7 @@ shinyServer(function(input, output, session) {
       qtl_df = merge(qtl_df,dname_t_long,by="gene_id",sort=F,all.x=T)
       qtl_df = qtl_df[,c("gene_id","name","seqnames","start","end","strand","alias","desc")]
       colnames(qtl_df) = c("Sys.Name","Name","Chr","Start","End","Strand","Alias","Desc")
-      rownames(qtl_df) = qtl_df[,"Sys.Name"]
+      #rownames(qtl_df) = qtl_df[,"Sys.Name"]
       qtl_df = qtl_df[!duplicated(qtl_df),]
       
     }
@@ -99,7 +99,7 @@ shinyServer(function(input, output, session) {
   #output$link = renderPrint("hi")
   output$link = renderText({
     s = input$dt_rows_selected[length(input$dt_rows_selected)]
-    #s = which(df()[,"Sys.Name"]==s)
+    s = which(df()[,"Sys.Name"]==s)
     print(s)
     if (length(s)) {
       #print(df())
