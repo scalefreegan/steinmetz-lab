@@ -105,10 +105,10 @@ shinyServer(function(input, output, session) {
       #print(df())
       #print(df()[s,])
       chr = levels(df()[s, "Chr"])[df()[s, "Chr"]]
-      start = df()[s, "Start"]-1000
-      end = df()[s, "End"]+1000
+      start = df()[s, "Start"]-10000
+      end = df()[s, "End"]+10000
       val = paste(chr,"%3A",start,"..",end, sep = "")
-      val = paste('http://steinmetzlab.embl.de/mQTL/?loc=',val,sep="")
+      val = paste('http://steinmetzlab.embl.de/mQTL/?loc=',val,"&tracks=",input$m,"%2C", df()[s, "Sys.Name"], sep="")
       print(val)
     } else {
       val = "http://steinmetzlab.embl.de/mQTL/"

@@ -194,7 +194,7 @@ plotPeakProfile = function(data, genotypes, marker, peak_sigma = 2, peak_thresho
 #' @return plot
 #' @export
 #'
-writePeakProfile = function(data, genotypes, marker, peak_sigma = 2, peak_threshold = 1, 
+writePeakProfile = function(data, genotypes, marker, peak_sigma = 2, peak_threshold = 1,
                             f1 = "/Users/brooks/Sites/JBrowse-1.11.6/data/d1.bw", f2 = "/Users/brooks/Sites/JBrowse-1.11.6/data/d2.bw") {
   library(reshape2)
   library(Peaks)

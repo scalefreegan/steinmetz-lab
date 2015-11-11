@@ -183,19 +183,26 @@ shinyServer(function(input, output, session) {
     }
   })
   
-  gene = reactive({
+  s = reactive({
     s = input$dt_rows_selected
-    if (length(s)) {
-     levels(df()[s, "ORF"])[df()[s, "ORF"]]
+    s = s[length(s)]
+    which(df()[, "Name"]==s)
+  })
+  
+  gene = reactive({
+    print(paste("It is",s()))
+    if (length(s())) {
+     o = levels(df()[s(), "ORF"])[df()[s(), "ORF"]]
+     print(o)
+     o
     } else {
       NULL
     }
   })
   
   gene2 = reactive({
-    s = input$dt_rows_selected
-    if (length(s)) {
-      gsub("/", "%2", df()[s, "ORF"])
+    if (length(s())) {
+      gsub("/", "%2", df()[s(), "ORF"])
     } else {
       NULL
     }
@@ -203,13 +210,11 @@ shinyServer(function(input, output, session) {
   
   #output$link = renderPrint("hi")
   output$link = renderText({
-    s = input$dt_rows_selected
-    print(s)
-    if (length(s)) {
+    if (length(s())) {
       #print(df()[s,])
-      chr = levels(df()[s, "Chr"])[df()[s, "Chr"]]
-      start = df()[s, "Start"]-1000
-      end = df()[s, "End"]+1000
+      chr = levels(df()[s, "Chr"])[df()[s(), "Chr"]]
+      start = df()[s(), "Start"]-1000
+      end = df()[s(), "End"]+1000
       val = paste("chr",as.roman(chr),"%3A",start,"..",end, sep = "")
       val = paste('http://localhost/~brooks/JBrowse-1.11.6/?loc=',val,sep="")
     } else {
