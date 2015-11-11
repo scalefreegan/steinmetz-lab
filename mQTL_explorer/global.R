@@ -22,8 +22,9 @@ library("BSgenome.Scerevisiae.UCSC.sacCer3")
 library("TxDb.Scerevisiae.UCSC.sacCer3.sgdGene")
 library("org.Sc.sgd.db")
 
-options(RCurlOptions = c(getOption("RCurlOptions"),   ssl.verifypeer = FALSE,  ssl.verifyhost = FALSE ) )
-
+library(RCurl)
+library(httr)
+set_config( config( ssl_verifypeer = 0L ) )
 # Global variables ---------------------------------------------------
 
 id2name = id2name(TxDb.Scerevisiae.UCSC.sacCer3.sgdGene)
