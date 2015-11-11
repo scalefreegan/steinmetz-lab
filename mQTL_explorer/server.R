@@ -19,6 +19,7 @@
 .plot = FALSE
 .local = FALSE
 if (system("hostname",intern=T) == "mac-steinmetz55.embl.de") {
+  print("yes")
   .local = TRUE
 }
 
