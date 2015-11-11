@@ -21,6 +21,8 @@
 if (system("hostname",intern=T) == "mac-steinmetz55.embl.de") {
   print("yes")
   .local = TRUE
+} else {
+  print(system("hostname"))
 }
 
 # Import packages ---------------------------------------------------
