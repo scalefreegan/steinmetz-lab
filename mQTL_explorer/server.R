@@ -18,6 +18,9 @@
 .status = "Development"
 .plot = FALSE
 .local = FALSE
+if (system("hostname",intern=T) == "mac-steinmetz55.embl.de") {
+  .local = TRUE
+}
 
 # Import packages ---------------------------------------------------
 
