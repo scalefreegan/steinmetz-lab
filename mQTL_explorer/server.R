@@ -17,13 +17,7 @@ e# This is the server logic for a Shiny web application.
 .email = "aaron.brooks@embl.de"
 .status = "Development"
 .plot = FALSE
-.local = FALSE
-if (system("hostname",intern=T) == "mac-steinmetz55.embl.de") {
-  print("yes")
-  .local = TRUE
-} else {
-  print(system("hostname"))
-}
+
 
 shinyServer(function(input, output, session) {
 
