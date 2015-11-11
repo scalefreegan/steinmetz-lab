@@ -24,10 +24,7 @@ shinyUI(navbarPage("mQTL Explorer", selected = "Table Viewer",
             fluidRow(
               column(12,
                  fluidRow(
-                   column(12, plotOutput('manhattan',
-                              click = "plot_click",
-                              brush = "plot_brush",
-                              dblclick = "plot_dblclick"))
+                   column(12, plotOutput('manhattan'))
                )
               )
             ),
