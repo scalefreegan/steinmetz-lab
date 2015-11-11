@@ -13,29 +13,26 @@ shinyUI(navbarPage("mQTL Explorer", selected = "Table Viewer",
             #h1("Poly(A) Isoform Viewer"),
             hr(),
             fluidRow(
-              column(6,
+              column(12,
                  fluidRow(
-                   column(12,selectInput("m", " Metabolite", choices = names(data), selected = 1))
-                 ),
-                fluidRow(
-                  column(6,sliderInput("co", " Custom FDR (%):,", max = 50, min = 0, value = 5)),
-                  column(6,sliderInput("bci", " Bayesian Confidence Interval (%):,", max = 100, min = 0, value = 50))
-                ),
-                fluidRow(
-                  column(12,DT::dataTableOutput('dt'))
+                   column(4,selectInput("m", " Metabolite", choices = names(data), selected = 1)),
+                   column(4,sliderInput("co", " Custom FDR (%):,", max = 50, min = 0, value = 5)),
+                   column(4,sliderInput("bci", " Bayesian Confidence Interval (%):,", max = 100, min = 0, value = 50))
+                 )
                 )
               ),
-              column(6,
-                 fluidRow(
-                   column(12,h4("Manhattan Plot"),offset = 4)
-                 ),
+            fluidRow(
+              column(12,
                  fluidRow(
                    column(12, plotOutput('manhattan',
                               click = "plot_click",
                               brush = "plot_brush",
                               dblclick = "plot_dblclick"))
                )
-            )
+              )
+            ),
+            fluidRow(
+              column(12,DT::dataTableOutput('dt'))
             )
           )
          ),

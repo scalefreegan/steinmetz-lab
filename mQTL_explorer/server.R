@@ -17,7 +17,7 @@
 .email = "aaron.brooks@embl.de"
 .status = "Development"
 .plot = FALSE
-.local = TRUE
+.local = FALSE
 
 # Import packages ---------------------------------------------------
 
@@ -60,7 +60,7 @@ dname_long <- as.list(x[keys])
 
 # Web resources ---------------------------------------------------
 
-addResourcePath('data', "/var/www2/html/mQTL/data")
+#addResourcePath('data', "/var/www2/html/mQTL/data")
 
 # Misc material ---------------------------------------------------
 
@@ -135,6 +135,7 @@ shinyServer(function(input, output, session) {
       qtl_df = merge(qtl_df,dname_t_long,by="gene_id",sort=F,all.x=T)
       qtl_df = qtl_df[,c("gene_id","name","seqnames","start","end","strand","alias","desc")]
       colnames(qtl_df) = c("Sys.Name","Name","Chr","Start","End","Strand","Alias","Desc")
+      rownames(qtl_df) = qtl_df[,"Sys.Name"]
       qtl_df = qtl_df[!duplicated(qtl_df),]
     }
   })
@@ -157,14 +158,18 @@ shinyServer(function(input, output, session) {
 
   #output$link = renderPrint("hi")
   output$link = renderText({
-    s = input$dt_rows_selected
+    s = input$dt_rows_selected[length(input$dt_rows_selected)]
+    #s = which(df()[,"Sys.Name"]==s)
+    print(s)
     if (length(s)) {
+      #print(df())
       #print(df()[s,])
       chr = levels(df()[s, "Chr"])[df()[s, "Chr"]]
       start = df()[s, "Start"]-1000
       end = df()[s, "End"]+1000
       val = paste(chr,"%3A",start,"..",end, sep = "")
-      val = paste('http://localhost/~brooks/JBrowse-1.11.6_mQTL/?loc=',val,sep="")
+      val = paste('http://steinmetzlab.embl.de/mQTL/?loc=',val,sep="")
+      print(val)
     } else {
       val = "http://steinmetzlab.embl.de/mQTL/"
     }
