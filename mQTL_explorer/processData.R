@@ -41,23 +41,25 @@ MQTL = strwrap('{"category": "mQTL",
   "style": {
     "pos_color": "purple",
     "neg_color": "green"
-  }
+  },
+  "scoreType"     : "maxScore"
 }')
 
 EQTL = strwrap('{"category": "eQTL",
-               "label"         : "%s",
-               "key"           : "%s",
-               "storeClass"    : "JBrowse/Store/SeqFeature/BigWig",
-               "urlTemplate"   : "tracks/eqtls/%s.bw",
-               "type"          : "JBrowse/View/Track/Wiggle/Density",
-               "bicolor_pivot" : "zero",
-               "min_score"     : "0",
-               "max_score"     : "10",
-               "style": {
-               "pos_color": "green",
-               "neg_color": "purple"
-               }
-               }')
+   "label"         : "%s",
+   "key"           : "%s",
+   "storeClass"    : "JBrowse/Store/SeqFeature/BigWig",
+   "urlTemplate"   : "tracks/eqtls/%s.bw",
+   "type"          : "JBrowse/View/Track/Wiggle/Density",
+   "bicolor_pivot" : "zero",
+   "min_score"     : "0",
+   "max_score"     : "10",
+   "style": {
+   "pos_color": "green",
+   "neg_color": "purple"
+   },
+   "scoreType"     : "maxScore"
+}')
 
 # tmp resource location / will be changed
 if (.local) {

@@ -99,7 +99,7 @@ shinyServer(function(input, output, session) {
   #output$link = renderPrint("hi")
   output$link = renderText({
     s = input$dt_rows_selected[length(input$dt_rows_selected)]
-    s = which(df()[,"Sys.Name"]==s)
+    s = which(df()[,"Sys.Name"]==s)[1]
     print(s)
     if (length(s)) {
       #print(df())
