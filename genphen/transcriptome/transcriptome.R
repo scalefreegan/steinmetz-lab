@@ -221,7 +221,7 @@ if (.plot) {
 			tor2 = which(colnames(eQTL_cor)==names(tor)[1])
 			eQTL_cor = eQTL_cor[-tor1,-tor2]
 		}
-		pdf(paste("/g/steinmetz/brooks/genphen/transcriptome/plots/eQTL_cor.pdf")
+		pdf(paste("/g/steinmetz/brooks/genphen/transcriptome/plots/eQTL_cor.pdf"))
 				pheatmap(eQTL_cor,breaks=seq(-1,1,length.out=100))
 		dev.off()
 
