@@ -196,8 +196,7 @@ if (F) {
   # eQTL$qtls = c( lapply(seq(1,dim(phenotype)[2]),function( i ) { qtl::scanone( cross, pheno.col = i ) } ) )
 	phes = which(colnames(cross$pheno)!="id")
 	eQTL$qtls = qtl::scanone(cross, pheno.col = phes, method = "hk")
-	# eQTL$resamples = qtl::scanone( cross, pheno.col = phes, n.perm = 1000, n.cluster = 24)
-	# names(eQTL$qtls_permuted) = colnames(phenotype)
+	eQTL$resamples = qtl::scanone( cross, pheno.col = phes, n.perm = 1000, n.cluster = 6)
 	save(eQTL, file = qtl_f)
 } else {
 	load(qtl_f)

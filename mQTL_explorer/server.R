@@ -135,11 +135,6 @@ shinyServer(function(input, output, session) {
     max(max(alpha_5(), alpha_10()),max(-log10(reformatQTL()[,"pval"])))
   })
 
-  manhattan_data = reactive({
-    clustQTL::plotManhattan(reformatQTL(), mrk, qqman = TRUE, show = FALSE,
-                            suggestiveline = alpha_5(), genomewideline = alpha_10(), ylab = "LOD", ylim = c(0,ymax()+2))
-  })
-
   output$manhattan = renderPlot({
       clustQTL::plotManhattan(reformatQTL(), mrk, qqman = TRUE, show = TRUE,
                             suggestiveline = alpha_5(), genomewideline = alpha_10(), ylab = "LOD", ylim = c(0,ymax()+2))
