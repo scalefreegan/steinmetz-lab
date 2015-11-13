@@ -225,7 +225,7 @@ if (.plot) {
 				pheatmap(eQTL_cor,breaks=seq(-1,1,length.out=100))
 		dev.off()
 
-		jpeg(paste("/g/steinmetz/brooks/genphen/transcriptome/plots/eQTL_cor.pdf")
+		jpeg(paste("/g/steinmetz/brooks/genphen/transcriptome/plots/eQTL_cor.pdf"))
 				tmp = tmp = eQTL$qtls[,1:3]
 				tmp[,3] = eQTL$qtls[,i]
 				plot(tmp, main = colnames(eQTL$qtls)[i], bandcol="gray90", ylab = "LOD")
