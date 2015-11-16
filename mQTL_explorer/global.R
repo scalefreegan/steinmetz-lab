@@ -70,4 +70,4 @@ if (!file.exists(f)) {
   load(f)
 }
 
-load("//g/steinmetz/brooks/genphen/metabolome/qtls/plot_tab.rda")
+#load("//g/steinmetz/brooks/genphen/metabolome/qtls/plot_tab.rda")

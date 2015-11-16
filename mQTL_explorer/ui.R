@@ -24,7 +24,7 @@ shinyUI(navbarPage("mQTL Explorer", selected = "Table Viewer",
             fluidRow(
               column(12,
                  fluidRow(
-                   column(12, plotOutput('manhattan'))
+                   column(12, htmlOutput('manhattan'))
                )
               )
             ),

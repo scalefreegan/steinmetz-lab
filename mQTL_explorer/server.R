@@ -126,7 +126,9 @@ shinyServer(function(input, output, session) {
    output$manhattan = renderText(
    {
    paste0('<td align="middle"><img src="http://steinmetzlab.embl.de/GenPhen/mQTL_plots/', 
-   sub("/g/steinmetz/project/GenPhen/web/mQTL_plots/20151113","", plot_tab[plot_tab$FDR == alpha_10() & plot_tab$metabolite == input$m, "fname"]),'" valign="middle" style="width: 100%;max-height: 100%"></td>')})
+    input$m, "/mQTL_", input$m, "_FDR_", alpha_10(), '.png" ',
+    'valign="middle" style="width: 100%;max-height: 100%"></td>')
+   })
 
 
 #  output$manhattan = renderPlot({
