@@ -69,3 +69,5 @@ if (!file.exists(f)) {
 } else {
   load(f)
 }
+
+load("//g/steinmetz/brooks/genphen/metabolome/qtls/plot_tab.rda")
