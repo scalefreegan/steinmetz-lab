@@ -116,29 +116,23 @@ shinyServer(function(input, output, session) {
     paste("<div style='width: 100%; height: 600px'><iframe style='border: 1px solid black' src='", val ,"'width='100%' height='100%'></iframe></div>",sep="")
   })
 
-  reformatQTL = reactive({
-    qtls = data[[input$m]]$qtl
-    names(qtls)[names(qtls) == type] = "pval"
-    qtls[,"pval"]  = 10^-qtls[,"pval"]
-    qtls
-  })
 
-  alpha_5 = reactive({
-    summary(data[[input$m]]$permout[,type],.05)
-  })
 
   alpha_10 = reactive({
-    summary(data[[input$m]]$permout[,type],input$co/100)
+    #summary(data[[input$m]]$permout[,type],input$co/100)
+    as.integer(input$co)[1]
   })
 
-  ymax = reactive({
-    max(max(alpha_5(), alpha_10()),max(-log10(reformatQTL()[,"pval"])))
-  })
+   output$manhattan = renderText(
+   {
+   paste0('<td align="middle"><img src="http://steinmetzlab.embl.de/GenPhen/mQTL_plots/', 
+   sub("/g/steinmetz/project/GenPhen/web/mQTL_plots/20151113","", plot_tab[plot_tab$FDR == alpha_10() & plot_tab$metabolite == input$m, "fname"]),'" valign="middle" style="width: 100%;max-height: 100%"></td>')})
 
-  output$manhattan = renderPlot({
-      clustQTL::plotManhattan(reformatQTL(), mrk, qqman = TRUE, show = TRUE,
-                            suggestiveline = alpha_5(), genomewideline = alpha_10(), ylab = "LOD", ylim = c(0,ymax()+2))
-      legend("topright", y.leg[i], c("5% FDR",paste(rownames(alpha_10())[1],"FDR")), lty = c(1, 1), col = c("blue", "red"))
-  })
+
+#  output$manhattan = renderPlot({
+ #     clustQTL::plotManhattan(reformatQTL(), mrk, qqman = TRUE, show = TRUE,
+   #                         suggestiveline = alpha_5(), genomewideline = alpha_10(), ylab = "LOD", ylim = c(0,ymax()+2))
+  #    legend("topright", y.leg[i], c("5% FDR",paste(rownames(alpha_10())[1],"FDR")), lty = c(1, 1), col = c("blue", "red"))
+  #})
 
 })

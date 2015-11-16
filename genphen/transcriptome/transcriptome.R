@@ -196,7 +196,12 @@ if (F) {
   # eQTL$qtls = c( lapply(seq(1,dim(phenotype)[2]),function( i ) { qtl::scanone( cross, pheno.col = i ) } ) )
 	phes = which(colnames(cross$pheno)!="id")
 	eQTL$qtls = qtl::scanone(cross, pheno.col = phes, method = "hk")
-	eQTL$resamples = qtl::scanone( cross, pheno.col = phes, n.perm = 1000, n.cluster = 6)
+	pb = txtProgressBar(min = 0, max = dim(eQTL$qtls)[2], style = 3)
+	eQTL$resamples = lapply(seq(1,dim(eQTL$qtls)[2]), function(i) {
+		setTxtProgressBar(pb, i)
+		try(qtl::scanone( cross, pheno.col = phes[i], n.perm = 1000, n.cluster = 6))
+	})
+	close(pb)
 	save(eQTL, file = qtl_f)
 } else {
 	load(qtl_f)
