@@ -30,6 +30,7 @@ library(funqtl)
 library(parallel)
 options(mc.cores = 24)
 library(snow)
+library(igraph)
 #library(clustQTL)
 #devtools::install_github("scalefreegan/steinmetz-lab/clustQTL")
 
@@ -819,7 +820,7 @@ if (FALSE) {
 		dev.off()
 	}
 } else {
-	#load(f)
+	load(f)
 }
 
 #-------------------------------------------------------------------#
@@ -843,30 +844,10 @@ if (!file.exists(fs)) {
 } else {
 	load(fs)
 }
-# Plot overall data trends ---------------------------------------------------
-if (.plot) {
-	# assses features of p2c
 
-	pdf("/g/steinmetz/brooks/genphen/resources/plots/score_dist.pdf")
-		m <- ggplot(p2c, aes(x=combined_score)) + geom_histogram()
-		m
-	dev.off()
-	# per gene
-	hc = p2c %>% group_by(.,chemical) %>% summarise(.,mean = mean(combined_score))
-	colnames(hc)[1] = "name"
-	hc$source = "chemical"
-	gc = p2c %>% group_by(.,protein) %>% summarise(.,mean = mean(combined_score))
-	colnames(gc)[1] = "name"
-	gc$source = "protein"
-	cc = rbind(hc,gc)
-	pdf("/g/steinmetz/brooks/genphen/resources/plots/score_dist_bysub.pdf")
-		m <- ggplot(cc, aes(x = mean, fill = source)) + geom_density(alpha = 0.2)
-		m
-	dev.off()
-}
 # Try to map metabolites to chemID ---------------------------------------------------
 
-m = unique(endometabolite$metabolites)
+m = unique(endometabolite$metabolite)
 # annotated by hand. ANB 9/11/2015
 m = data.frame(name = m, alias = c(
 	"CID000000051", #AKG
@@ -899,5 +880,122 @@ m = data.frame(name = m, alias = c(
 	"CID000001153", #TYR
 	"CID000006287"  #VAL
 	))
+rownames(m) = m$alias
 
-tmp = lapply(m, function(i){filter(chemNames, alias == i)})
+# how many m are in p2c
+# sum(m$alias%in%p2c$chemical)/length(m$alias)
+# 100%
+
+# only chemicals in genephen, only combined score, normalize by each chemical such that the sum of scores per chemical equals 1
+genphen_stitch = filter(p2c, chemical%in%m$alias) %>% select(., chemical, protein, combined_score)
+genphen_stitch$alias = m[levels(genphen_stitch$chemical)[genphen_stitch$chemical],"name"]
+genphen_stitch = genphen_stitch %>% group_by(., chemical) %>% do({
+	s = .$combined_score
+	score = .$combined_score/sum(.$combined_score)
+	return(data.frame(chemical = .$chemical, alias = .$alias, protein = .$protein, score = score))
+	})
+# > dim(genphen_stitch)
+# [1] 8308   3
+save(genphen_stitch, file="/g/steinmetz/brooks/genphen/resources/genphen_stitch.rda")
+
+# make it a network
+v_meta = data.frame(vertex = c(levels(genphen_stitch$alias), genphen_stitch$protein), size = 3)
+v_meta$vtype =  levels(v_meta$vertex)[v_meta$vertex]%in%levels(genphen_stitch$alias)
+v_meta$shape[v_meta$vtype==TRUE] = "square"
+v_meta$shape[v_meta$vtype==FALSE] = "circle"
+v_meta$color[v_meta$vtype==TRUE] = RColorBrewer::brewer.pal(3,"Pastel2")[2]
+v_meta$color[v_meta$vtype==FALSE] = RColorBrewer::brewer.pal(3,"Pastel2")[1]
+v_meta$size[v_meta$vtype==TRUE] = 6
+v_meta$size[v_meta$vtype==FALSE] = 3
+v_meta$label[v_meta$vtype==TRUE] = levels(v_meta$vertex[v_meta$vtype==TRUE])[v_meta$vertex[v_meta$vtype==TRUE]]
+v_meta$label[v_meta$vtype==FALSE] = NA
+v_meta = v_meta[!duplicated(v_meta),]
+v_meta = v_meta[rev(seq(1:dim(v_meta)[1])),]
+g = graph_from_data_frame(genphen_stitch%>%select(.,alias,protein,score,chemical), directed = FALSE, vertices = v_meta)
+
+# Select sig QTLs ---------------------------------------------------
+#
+# Taken directly from mQTL_explorer
+devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-lab/master/mQTL_explorer/global.R")
+
+input = list()
+input$m = "AKG"
+input$co = 5
+input$bco = 95
+# select chromosomes
+chrs = unique(data[[input$m]]$qtl[data[[input$m]]$qtl[,type]>=summary(data[[input$m]]$permout[,type],input$co/100)[1],"chr"])
+chrs = levels(chrs)[chrs]
+
+lodcolumn = if(type=="mlod"){ 2 } else { 1 }
+qtl_intervals = list()
+if (length(chrs)>0) {
+	for (i in chrs) {
+		qtl_intervals[[i]] = try(mrk[rownames(bayesint(data[[input$m]]$qtl, chr = str_pad(i, 2, pad = "0"), prob=input$bci/100, lodcolumn=lodcolumn))],silent = T)
+		if (class(qtl_intervals[[i]])=="try-error") {
+			qtl_intervals[[i]] = NULL
+		} else {
+			nn = sapply(as.character(seqnames(qtl_intervals[[i]])),function(i){
+				paste(substr(i,1,3),as.roman(substr(i,4,5)),sep="")
+			})
+			qtl_intervals[[i]] = renameSeqlevels(qtl_intervals[[i]],nn)
+			qtl_intervals[[i]] = keepSeqlevels(qtl_intervals[[i]],unique(nn))
+			qtl_intervals[[i]] = range(qtl_intervals[[i]])
+			qtl_intervals[[i]] = as.data.frame(cdsByOverlaps(TxDb.Scerevisiae.UCSC.sacCer3.sgdGene,qtl_intervals[[i]], type = "any", columns = "gene_id"))
+		}
+	}
+}
+qtl_df = do.call(rbind,qtl_intervals)
+if (length(qtl_df) != 0) {
+	qtl_df$gene_id = unlist(qtl_df$gene_id)
+	gname_t = unlist(gname[unlist(qtl_df$gene_id)])
+	gname_t = data.frame(gene_id = names(gname_t), name = gname_t)
+	dname_t = unlist(dname[unlist(qtl_df$gene_id)])
+	dname_t = data.frame(gene_id = names(dname_t), alias = dname_t)
+	dname_t_long = unlist(dname_long[unlist(qtl_df$gene_id)])
+	dname_t_long = data.frame(gene_id = names(dname_t_long), desc = dname_t_long)
+	qtl_df = merge(qtl_df,gname_t,by="gene_id",sort=F,all.x=T)
+	qtl_df = merge(qtl_df,dname_t,by="gene_id",sort=F,all.x=T)
+	qtl_df = merge(qtl_df,dname_t_long,by="gene_id",sort=F,all.x=T)
+	qtl_df = qtl_df[,c("gene_id","name","seqnames","start","end","strand","alias","desc")]
+	colnames(qtl_df) = c("Sys.Name","Name","Chr","Start","End","Strand","Alias","Desc")
+	#rownames(qtl_df) = qtl_df[,"Sys.Name"]
+	qtl_df = qtl_df[!duplicated(qtl_df),]
+
+}
+
+# Plot  ---------------------------------------------------
+if (.plot) {
+	# assses features of p2c
+	pdf("/g/steinmetz/brooks/genphen/resources/plots/stitch_score_dist.pdf")
+		m <- ggplot(p2c, aes(x=combined_score)) + geom_histogram()
+		m
+	dev.off()
+	# per gene
+	hc = p2c %>% group_by(.,chemical) %>% summarise(.,mean = mean(combined_score))
+	colnames(hc)[1] = "name"
+	hc$source = "chemical"
+	gc = p2c %>% group_by(.,protein) %>% summarise(.,mean = mean(combined_score))
+	colnames(gc)[1] = "name"
+	gc$source = "protein"
+	cc = rbind(hc,gc)
+
+	pdf("/g/steinmetz/brooks/genphen/resources/plots/stitch_score_dist_bysub.pdf")
+		m <- ggplot(cc, aes(x = mean, fill = source)) + geom_density(alpha = 0.2)
+		m
+	dev.off()
+
+	# normalized weights, genphen network
+	pdf("/g/steinmetz/brooks/genphen/resources/plots/stitch_genphen_normweights.pdf")
+		m <- ggplot(genphen_stitch, aes(x=score)) + geom_histogram()
+		m
+	dev.off()
+	pdf("/g/steinmetz/brooks/genphen/resources/plots/stitch_genphen_normweights_perchem.pdf")
+		m <- ggplot(genphen_stitch, aes(x=score)) + geom_histogram() + facet_wrap(~ alias)
+		m
+	dev.off()
+
+	# genphen stitch network
+	pdf("/g/steinmetz/brooks/genphen/resources/plots/stitch_genphen_network.pdf")
+		plot.igraph(g, vertex.size = V(g)$size, vertex.label = NA, vertex.shape = V(g)$shape, vertex.color = V(g)$color)
+	dev.off()
+}
