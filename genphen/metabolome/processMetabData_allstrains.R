@@ -846,122 +846,130 @@ if (!file.exists(fs)) {
 }
 
 # Try to map metabolites to chemID ---------------------------------------------------
+f = "/g/steinmetz/brooks/genphen/resources/genphen_stitch.rda"
+if (!file.exists(f)) {
+	m = unique(endometabolite$metabolite)
+	# annotated by hand. ANB 9/11/2015
+	m = data.frame(name = m, alias = c(
+		"CID000000051", #AKG
+		"CID000643757", #CAN
+		"CID000000311", #CIT
+		"CID000005793", #GLUC
+		"CID000444972", #FUM
+		"CID000000525", #MAL
+		"CID000001005", #PEP
+		"CID000001060", #PYR
+		"CID000001110", #SUC
+		"CID000000602", #ALA
+		"CID000006322", #ARG
+		"CID000006267", #ASN
+		"CID000000424", #ASP
+		"CID000000594", #CYS
+		"CID000005961", #GLN
+		"CID000000611", #GLU
+		"CID000000750", #GLY
+		"CID000006274", #HIS
+		"CID000000779", #HSE
+		"CID000000791", #ILE
+		"CID000006106", #LEU
+		"CID000005962", #LYS
+		"CID000006137", #MET
+		"CID000000994", #PHE
+		"CID000145742", #PRO
+		"CID000005951", #SER
+		"CID000006305", #TRP
+		"CID000001153", #TYR
+		"CID000006287"  #VAL
+		))
+	rownames(m) = m$alias
 
-m = unique(endometabolite$metabolite)
-# annotated by hand. ANB 9/11/2015
-m = data.frame(name = m, alias = c(
-	"CID000000051", #AKG
-	"CID000643757", #CAN
-	"CID000000311", #CIT
-	"CID000005793", #GLUC
-	"CID000444972", #FUM
-	"CID000000525", #MAL
-	"CID000001005", #PEP
-	"CID000001060", #PYR
-	"CID000001110", #SUC
-	"CID000000602", #ALA
-	"CID000006322", #ARG
-	"CID000006267", #ASN
-	"CID000000424", #ASP
-	"CID000000594", #CYS
-	"CID000005961", #GLN
-	"CID000000611", #GLU
-	"CID000000750", #GLY
-	"CID000006274", #HIS
-	"CID000000779", #HSE
-	"CID000000791", #ILE
-	"CID000006106", #LEU
-	"CID000005962", #LYS
-	"CID000006137", #MET
-	"CID000000994", #PHE
-	"CID000145742", #PRO
-	"CID000005951", #SER
-	"CID000006305", #TRP
-	"CID000001153", #TYR
-	"CID000006287"  #VAL
-	))
-rownames(m) = m$alias
+	# how many m are in p2c
+	# sum(m$alias%in%p2c$chemical)/length(m$alias)
+	# 100%
 
-# how many m are in p2c
-# sum(m$alias%in%p2c$chemical)/length(m$alias)
-# 100%
+	# only chemicals in genephen, only combined score, normalize by each chemical such that the sum of scores per chemical equals 1
+	genphen_stitch = filter(p2c, chemical%in%m$alias) %>% select(., chemical, protein, combined_score)
+	genphen_stitch$alias = m[levels(genphen_stitch$chemical)[genphen_stitch$chemical],"name"]
+	genphen_stitch = genphen_stitch %>% group_by(., chemical) %>% do({
+		s = .$combined_score
+		score = .$combined_score/sum(.$combined_score)
+		return(data.frame(chemical = .$chemical, alias = .$alias, protein = .$protein, score = score))
+		})
+	# > dim(genphen_stitch)
+	# [1] 8308   3
+	save(genphen_stitch, file=f)
+} else {
+	load(f)
+}
 
-# only chemicals in genephen, only combined score, normalize by each chemical such that the sum of scores per chemical equals 1
-genphen_stitch = filter(p2c, chemical%in%m$alias) %>% select(., chemical, protein, combined_score)
-genphen_stitch$alias = m[levels(genphen_stitch$chemical)[genphen_stitch$chemical],"name"]
-genphen_stitch = genphen_stitch %>% group_by(., chemical) %>% do({
-	s = .$combined_score
-	score = .$combined_score/sum(.$combined_score)
-	return(data.frame(chemical = .$chemical, alias = .$alias, protein = .$protein, score = score))
-	})
-# > dim(genphen_stitch)
-# [1] 8308   3
-save(genphen_stitch, file="/g/steinmetz/brooks/genphen/resources/genphen_stitch.rda")
 
-# make it a network
-v_meta = data.frame(vertex = c(levels(genphen_stitch$alias), genphen_stitch$protein), size = 3)
-v_meta$vtype =  levels(v_meta$vertex)[v_meta$vertex]%in%levels(genphen_stitch$alias)
-v_meta$shape[v_meta$vtype==TRUE] = "square"
-v_meta$shape[v_meta$vtype==FALSE] = "circle"
-v_meta$color[v_meta$vtype==TRUE] = RColorBrewer::brewer.pal(3,"Pastel2")[2]
-v_meta$color[v_meta$vtype==FALSE] = RColorBrewer::brewer.pal(3,"Pastel2")[1]
-v_meta$size[v_meta$vtype==TRUE] = 6
-v_meta$size[v_meta$vtype==FALSE] = 3
-v_meta$label[v_meta$vtype==TRUE] = levels(v_meta$vertex[v_meta$vtype==TRUE])[v_meta$vertex[v_meta$vtype==TRUE]]
-v_meta$label[v_meta$vtype==FALSE] = NA
-v_meta = v_meta[!duplicated(v_meta),]
-v_meta = v_meta[rev(seq(1:dim(v_meta)[1])),]
-g = graph_from_data_frame(genphen_stitch%>%select(.,alias,protein,score,chemical), directed = FALSE, vertices = v_meta)
+if (F) {
+	# make it a network
+	v_meta = data.frame(vertex = c(levels(genphen_stitch$alias), genphen_stitch$protein), size = 3)
+	v_meta$vtype =  levels(v_meta$vertex)[v_meta$vertex]%in%levels(genphen_stitch$alias)
+	v_meta$shape[v_meta$vtype==TRUE] = "square"
+	v_meta$shape[v_meta$vtype==FALSE] = "circle"
+	v_meta$color[v_meta$vtype==TRUE] = RColorBrewer::brewer.pal(3,"Pastel2")[2]
+	v_meta$color[v_meta$vtype==FALSE] = RColorBrewer::brewer.pal(3,"Pastel2")[1]
+	v_meta$size[v_meta$vtype==TRUE] = 6
+	v_meta$size[v_meta$vtype==FALSE] = 3
+	v_meta$label[v_meta$vtype==TRUE] = levels(v_meta$vertex[v_meta$vtype==TRUE])[v_meta$vertex[v_meta$vtype==TRUE]]
+	v_meta$label[v_meta$vtype==FALSE] = NA
+	v_meta = v_meta[!duplicated(v_meta),]
+	v_meta = v_meta[rev(seq(1:dim(v_meta)[1])),]
+	g = graph_from_data_frame(genphen_stitch%>%select(.,alias,protein,score,chemical), directed = FALSE, vertices = v_meta)
 
-# Select sig QTLs ---------------------------------------------------
-#
-# Taken directly from mQTL_explorer
-devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-lab/master/mQTL_explorer/global.R")
+	# Select sig QTLs ---------------------------------------------------
+	#
+	# Taken directly from mQTL_explorer
+	devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-lab/master/general/yeastGeneStuff.R")
 
-input = list()
-input$m = "AKG"
-input$co = 5
-input$bco = 95
-# select chromosomes
-chrs = unique(data[[input$m]]$qtl[data[[input$m]]$qtl[,type]>=summary(data[[input$m]]$permout[,type],input$co/100)[1],"chr"])
-chrs = levels(chrs)[chrs]
+	input = list()
+	input$m = "AKG"
+	input$co = 5
+	input$bco = 95
+	# select chromosomes
+	chrs = unique(mQTLs_funqtl_2014[[input$m]]$qtl[mQTLs_funqtl_2014[[input$m]]$qtl[,type]>=summary(mQTLs_funqtl_2014[[input$m]]$permout[,type],input$co/100)[1],"chr"])
+	chrs = levels(chrs)[chrs]
 
-lodcolumn = if(type=="mlod"){ 2 } else { 1 }
-qtl_intervals = list()
-if (length(chrs)>0) {
-	for (i in chrs) {
-		qtl_intervals[[i]] = try(mrk[rownames(bayesint(data[[input$m]]$qtl, chr = str_pad(i, 2, pad = "0"), prob=input$bci/100, lodcolumn=lodcolumn))],silent = T)
-		if (class(qtl_intervals[[i]])=="try-error") {
-			qtl_intervals[[i]] = NULL
-		} else {
-			nn = sapply(as.character(seqnames(qtl_intervals[[i]])),function(i){
-				paste(substr(i,1,3),as.roman(substr(i,4,5)),sep="")
-			})
-			qtl_intervals[[i]] = renameSeqlevels(qtl_intervals[[i]],nn)
-			qtl_intervals[[i]] = keepSeqlevels(qtl_intervals[[i]],unique(nn))
-			qtl_intervals[[i]] = range(qtl_intervals[[i]])
-			qtl_intervals[[i]] = as.data.frame(cdsByOverlaps(TxDb.Scerevisiae.UCSC.sacCer3.sgdGene,qtl_intervals[[i]], type = "any", columns = "gene_id"))
+	lodcolumn = if(type=="mlod"){ 2 } else { 1 }
+	qtl_intervals = list()
+	if (length(chrs)>0) {
+		for (i in chrs) {
+			qtl_intervals[[i]] = try(mrk[rownames(bayesint(mQTLs_funqtl_2014[[input$m]]$qtl, chr = str_pad(i, 2, pad = "0"), prob=input$bci/100, lodcolumn=lodcolumn))],silent = T)
+			if (class(qtl_intervals[[i]])=="try-error") {
+				qtl_intervals[[i]] = NULL
+			} else {
+				nn = sapply(as.character(seqnames(qtl_intervals[[i]])),function(i){
+					paste(substr(i,1,3),as.roman(substr(i,4,5)),sep="")
+				})
+				qtl_intervals[[i]] = renameSeqlevels(qtl_intervals[[i]],nn)
+				qtl_intervals[[i]] = keepSeqlevels(qtl_intervals[[i]],unique(nn))
+				qtl_intervals[[i]] = range(qtl_intervals[[i]])
+				qtl_intervals[[i]] = as.data.frame(cdsByOverlaps(TxDb.Scerevisiae.UCSC.sacCer3.sgdGene,qtl_intervals[[i]], type = "any", columns = "gene_id"))
+			}
 		}
 	}
-}
-qtl_df = do.call(rbind,qtl_intervals)
-if (length(qtl_df) != 0) {
-	qtl_df$gene_id = unlist(qtl_df$gene_id)
-	gname_t = unlist(gname[unlist(qtl_df$gene_id)])
-	gname_t = data.frame(gene_id = names(gname_t), name = gname_t)
-	dname_t = unlist(dname[unlist(qtl_df$gene_id)])
-	dname_t = data.frame(gene_id = names(dname_t), alias = dname_t)
-	dname_t_long = unlist(dname_long[unlist(qtl_df$gene_id)])
-	dname_t_long = data.frame(gene_id = names(dname_t_long), desc = dname_t_long)
-	qtl_df = merge(qtl_df,gname_t,by="gene_id",sort=F,all.x=T)
-	qtl_df = merge(qtl_df,dname_t,by="gene_id",sort=F,all.x=T)
-	qtl_df = merge(qtl_df,dname_t_long,by="gene_id",sort=F,all.x=T)
-	qtl_df = qtl_df[,c("gene_id","name","seqnames","start","end","strand","alias","desc")]
-	colnames(qtl_df) = c("Sys.Name","Name","Chr","Start","End","Strand","Alias","Desc")
-	#rownames(qtl_df) = qtl_df[,"Sys.Name"]
-	qtl_df = qtl_df[!duplicated(qtl_df),]
+	qtl_df = do.call(rbind,qtl_intervals)
+	if (length(qtl_df) != 0) {
+		qtl_df$gene_id = unlist(qtl_df$gene_id)
+		gname_t = unlist(gname[unlist(qtl_df$gene_id)])
+		gname_t = data.frame(gene_id = names(gname_t), name = gname_t)
+		dname_t = unlist(dname[unlist(qtl_df$gene_id)])
+		dname_t = data.frame(gene_id = names(dname_t), alias = dname_t)
+		dname_t_long = unlist(dname_long[unlist(qtl_df$gene_id)])
+		dname_t_long = data.frame(gene_id = names(dname_t_long), desc = dname_t_long)
+		qtl_df = merge(qtl_df,gname_t,by="gene_id",sort=F,all.x=T)
+		qtl_df = merge(qtl_df,dname_t,by="gene_id",sort=F,all.x=T)
+		qtl_df = merge(qtl_df,dname_t_long,by="gene_id",sort=F,all.x=T)
+		qtl_df = qtl_df[,c("gene_id","name","seqnames","start","end","strand","alias","desc")]
+		colnames(qtl_df) = c("Sys.Name","Name","Chr","Start","End","Strand","Alias","Desc")
+		#rownames(qtl_df) = qtl_df[,"Sys.Name"]
+		qtl_df = qtl_df[!duplicated(qtl_df),]
 
+	}
 }
+
 
 # Plot  ---------------------------------------------------
 if (.plot) {
