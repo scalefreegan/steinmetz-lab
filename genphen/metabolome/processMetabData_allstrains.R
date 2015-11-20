@@ -827,27 +827,29 @@ if (FALSE) {
 # Stitch
 #
 #-------------------------------------------------------------------#
-fs = "/g/steinmetz/brooks/genphen/resources/stitch.rda"
-# Load ---------------------------------------------------
-if (!file.exists(fs)) {
-	p2c = as.data.frame(read.table("/g/steinmetz/brooks/genphen/resources/4932.protein_chemical.links.transfer.v4.0.tsv",
-		sep = "\t", header=T))
-	# remove 4932 header on proteins
-	p2c$protein = sub("4932\\.","",p2c$protein)
-
-	chemNames = as.data.frame(read.delim("/g/steinmetz/brooks/genphen/resources/chemical.aliases.v4.0.tsv",
-		sep = "\t", header=T))
-
-	# only keep chemNames in p2c
-	chemNames = filter(chemNames,chemical %in% levels(p2c$chemical)[p2c$chemical])
-	save(p2c, chemNames, file = fs)
-} else {
-	load(fs)
-}
 
 # Try to map metabolites to chemID ---------------------------------------------------
 f = "/g/steinmetz/brooks/genphen/resources/genphen_stitch.rda"
 if (!file.exists(f)) {
+
+	fs = "/g/steinmetz/brooks/genphen/resources/stitch.rda"
+	# Load ---------------------------------------------------
+	if (!file.exists(fs)) {
+		p2c = as.data.frame(read.table("/g/steinmetz/brooks/genphen/resources/4932.protein_chemical.links.transfer.v4.0.tsv",
+			sep = "\t", header=T))
+		# remove 4932 header on proteins
+		p2c$protein = sub("4932\\.","",p2c$protein)
+
+		chemNames = as.data.frame(read.delim("/g/steinmetz/brooks/genphen/resources/chemical.aliases.v4.0.tsv",
+			sep = "\t", header=T))
+
+		# only keep chemNames in p2c
+		chemNames = filter(chemNames,chemical %in% levels(p2c$chemical)[p2c$chemical])
+		save(p2c, chemNames, file = fs)
+	} else {
+		load(fs)
+	}
+
 	m = unique(endometabolite$metabolite)
 	# annotated by hand. ANB 9/11/2015
 	m = data.frame(name = m, alias = c(
