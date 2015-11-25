@@ -78,9 +78,11 @@ shinyServer(function(input, output, session) {
       qtl_df = qtl_df[!duplicated(qtl_df),]
       # add stitch predictions
       stitch = as.data.frame(filter(genphen_stitch,
-                protein%in%unlist(qtl_df$gene_id),alias==input$m)%>%ungroup())[,c("protein","score")]
-      colnames(stitch)[2] = "stitch"
-      qtl_df = merge(qtl_df,stitch,by.x="gene_id",by.y="protein",sort=F,all.x=T)
+                protein%in%unlist(qtl_df$Sys.Name),alias==input$m)%>%ungroup())[,c("protein","score")]
+      colnames(stitch)[2] = "Stitch"
+      qtl_df = merge(qtl_df,stitch,by.x="Sys.Name",by.y="protein",sort=F,all.x=T)
+      # reorder
+      qtl_df = qtl_df[,c("Sys.Name","Name","Chr","Start","End","Strand","Alias","Desc","Stitch")]
     }
   })
 
