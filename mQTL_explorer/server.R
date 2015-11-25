@@ -76,7 +76,11 @@ shinyServer(function(input, output, session) {
       colnames(qtl_df) = c("Sys.Name","Name","Chr","Start","End","Strand","Alias","Desc")
       #rownames(qtl_df) = qtl_df[,"Sys.Name"]
       qtl_df = qtl_df[!duplicated(qtl_df),]
-      
+      # add stitch predictions
+      stitch = as.data.frame(filter(genphen_stitch,
+                protein%in%unlist(qtl_df$gene_id),alias==input$m)%>%ungroup())[,c("protein","score")]
+      colnames(stitch)[2] = "stitch"
+      qtl_df = merge(qtl_df,stitch,by.x="gene_id",by.y="protein",sort=F,all.x=T)
     }
   })
 
@@ -125,7 +129,7 @@ shinyServer(function(input, output, session) {
 
    output$manhattan = renderText(
    {
-   paste0('<td align="middle"><img src="http://steinmetzlab.embl.de/GenPhen/mQTL_plots/', 
+   paste0('<td align="middle"><img src="http://steinmetzlab.embl.de/GenPhen/mQTL_plots/',
     input$m, "/mQTL_", input$m, "_FDR_", alpha_10(), '.png" ',
     'valign="middle" style="width: 100%;max-height: 100%"></td>')
    })

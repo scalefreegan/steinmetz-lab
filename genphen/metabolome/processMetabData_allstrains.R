@@ -897,6 +897,7 @@ if (!file.exists(f)) {
 		score = .$combined_score/sum(.$combined_score)
 		return(data.frame(chemical = .$chemical, alias = .$alias, protein = .$protein, score = score))
 		})
+	genphen_stitch = ungroup(genphen_stitch)
 	# > dim(genphen_stitch)
 	# [1] 8308   3
 	save(genphen_stitch, file=f)
@@ -925,51 +926,53 @@ if (F) {
 	#
 	# Taken directly from mQTL_explorer
 	devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-lab/master/general/yeastGeneStuff.R")
+	devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-lab/master/mQTL_explorer/global.R")
 
-	input = list()
-	input$m = "AKG"
-	input$co = 5
-	input$bco = 95
-	# select chromosomes
-	chrs = unique(mQTLs_funqtl_2014[[input$m]]$qtl[mQTLs_funqtl_2014[[input$m]]$qtl[,type]>=summary(mQTLs_funqtl_2014[[input$m]]$permout[,type],input$co/100)[1],"chr"])
-	chrs = levels(chrs)[chrs]
-
-	lodcolumn = if(type=="mlod"){ 2 } else { 1 }
-	qtl_intervals = list()
-	if (length(chrs)>0) {
-		for (i in chrs) {
-			qtl_intervals[[i]] = try(mrk[rownames(bayesint(mQTLs_funqtl_2014[[input$m]]$qtl, chr = str_pad(i, 2, pad = "0"), prob=input$bci/100, lodcolumn=lodcolumn))],silent = T)
-			if (class(qtl_intervals[[i]])=="try-error") {
-				qtl_intervals[[i]] = NULL
+	alpha = 0.1
+	type = "mlod"
+	bci = .95
+	mQTL_df = do.call(rbind,lapply(names(mQTLs_funqtl_2014),function(m){
+		print(m)
+		if (class(mQTLs_funqtl_2014[[m]])=="try-error") {
+			return(data.frame())
+		} else {
+			chrs = mQTLs_funqtl_2014[[m]]$qtls_alt[mQTLs_funqtl_2014[[m]]$qtls_alt[,type]>=summary(mQTLs_funqtl_2014[[m]]$permout,alpha)[,type],"chr"]
+			# select chromosomes
+			chrs = unique(levels(chrs)[chrs])
+			lodcolumn = if(type=="mlod"){ 2 } else { 1 }
+			qtl_intervals = list()
+			if (length(chrs)>0) {
+				for (i in chrs) {
+					qtl_intervals[[i]] = try(mrk[rownames(bayesint(mQTLs_funqtl_2014[[m]]$qtls_alt, chr = str_pad(i, 2, pad = "0"), prob=.95, lodcolumn=lodcolumn))],silent = T)
+					if (class(qtl_intervals[[i]])=="try-error") {
+						qtl_intervals[[i]] = NULL
+					} else {
+						nn = sapply(as.character(seqnames(qtl_intervals[[i]])),function(i){
+							paste(substr(i,1,3),as.roman(substr(i,4,5)),sep="")
+						})
+						qtl_intervals[[i]] = renameSeqlevels(qtl_intervals[[i]],nn)
+						qtl_intervals[[i]] = keepSeqlevels(qtl_intervals[[i]],unique(nn))
+						qtl_intervals[[i]] = range(qtl_intervals[[i]])
+						qtl_intervals[[i]] = as.data.frame(cdsByOverlaps(TxDb.Scerevisiae.UCSC.sacCer3.sgdGene,qtl_intervals[[i]], type = "any", columns = "gene_id"))
+					}
+				}
+				qtl_df = do.call(rbind,qtl_intervals)
+				stitch = as.data.frame(filter(genphen_stitch,protein%in%unlist(qtl_df$gene_id),alias==m)%>%ungroup())[,c("protein","score")]
+				colnames(stitch)[2] = "stitch"
+				o = merge(qtl_df,stitch,by.x="gene_id",by.y="protein",sort=F,all.x=T)
+				o = cbind(metabolite = m, o)
+				return(o)
 			} else {
-				nn = sapply(as.character(seqnames(qtl_intervals[[i]])),function(i){
-					paste(substr(i,1,3),as.roman(substr(i,4,5)),sep="")
-				})
-				qtl_intervals[[i]] = renameSeqlevels(qtl_intervals[[i]],nn)
-				qtl_intervals[[i]] = keepSeqlevels(qtl_intervals[[i]],unique(nn))
-				qtl_intervals[[i]] = range(qtl_intervals[[i]])
-				qtl_intervals[[i]] = as.data.frame(cdsByOverlaps(TxDb.Scerevisiae.UCSC.sacCer3.sgdGene,qtl_intervals[[i]], type = "any", columns = "gene_id"))
+				return(data.frame())
 			}
 		}
-	}
-	qtl_df = do.call(rbind,qtl_intervals)
-	if (length(qtl_df) != 0) {
-		qtl_df$gene_id = unlist(qtl_df$gene_id)
-		gname_t = unlist(gname[unlist(qtl_df$gene_id)])
-		gname_t = data.frame(gene_id = names(gname_t), name = gname_t)
-		dname_t = unlist(dname[unlist(qtl_df$gene_id)])
-		dname_t = data.frame(gene_id = names(dname_t), alias = dname_t)
-		dname_t_long = unlist(dname_long[unlist(qtl_df$gene_id)])
-		dname_t_long = data.frame(gene_id = names(dname_t_long), desc = dname_t_long)
-		qtl_df = merge(qtl_df,gname_t,by="gene_id",sort=F,all.x=T)
-		qtl_df = merge(qtl_df,dname_t,by="gene_id",sort=F,all.x=T)
-		qtl_df = merge(qtl_df,dname_t_long,by="gene_id",sort=F,all.x=T)
-		qtl_df = qtl_df[,c("gene_id","name","seqnames","start","end","strand","alias","desc")]
-		colnames(qtl_df) = c("Sys.Name","Name","Chr","Start","End","Strand","Alias","Desc")
-		#rownames(qtl_df) = qtl_df[,"Sys.Name"]
-		qtl_df = qtl_df[!duplicated(qtl_df),]
+	}))
+	mQTL_df[with(mQTL_df,order(stitch,decreasing=T)),]
+	mQTL_stitch = filter(mQTL_df,stitch>0)
 
-	}
+
+
+
 }
 
 
@@ -1007,5 +1010,11 @@ if (.plot) {
 	# genphen stitch network
 	pdf("/g/steinmetz/brooks/genphen/resources/plots/stitch_genphen_network.pdf")
 		plot.igraph(g, vertex.size = V(g)$size, vertex.label = NA, vertex.shape = V(g)$shape, vertex.color = V(g)$color)
+	dev.off()
+
+	# genphen stitch network - edges per protein
+	pdf("/g/steinmetz/brooks/genphen/resources/plots/stitch_genphen_edgesperprotein.pdf")
+		m <- ggplot(data.frame(table(genphen_stitch$protein)), aes(x=Freq)) + geom_histogram()
+		m
 	dev.off()
 }

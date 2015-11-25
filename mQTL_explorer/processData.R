@@ -66,16 +66,20 @@ if (.local) {
   DDIR = "/Users/brooks/Documents/steinmetz_local/genphen/metabolome"
   WDIR = "/Users/brooks/Sites/JBrowse-1.11.6_mQTL"
   EDIR = "/Users/brooks/Documents/steinmetz_local/genphen/transcriptome"
+  SDIR = "/Users/brooks/Documents/steinmetz_local/genphen/resources"
 } else {
   DDIR = "/g/steinmetz/brooks/genphen/metabolome/qtls"
   WDIR = "/var/www2/html/mQTL"
   EDIR = "/g/steinmetz/brooks/genphen/transcriptome"
+  SDIR = "/g/steinmetz/brooks/genphen/resources"
 }
 
 
 load(file.path(DDIR,"endometabolite_full_12102015.rda"))
 load(file.path(DDIR,"genotypes_S288c_R64.rda"))
 load(file.path(DDIR,"mQTLs_comball_funqtl_2014.rda"))
+load(file.path(SDIR,"genphen_stitch.rda"))
+
 
 data = lapply(seq(1,length(mQTLs_funqtl_2014)), function(i){
   if (class(mQTLs_funqtl_2014[[i]])=="try-error") {

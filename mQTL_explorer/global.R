@@ -16,7 +16,6 @@ library(DT)
 library(parallel)
 library(GenomicRanges)
 library(ggplot2)
-library(funqtl)
 library(stringr)
 library("BSgenome.Scerevisiae.UCSC.sacCer3")
 library("TxDb.Scerevisiae.UCSC.sacCer3.sgdGene")
@@ -25,6 +24,8 @@ library("org.Sc.sgd.db")
 library(RCurl)
 library(httr)
 set_config( config( ssl_verifypeer = 0L ) )
+library(funqtl)
+
 # Global variables ---------------------------------------------------
 
 id2name = id2name(TxDb.Scerevisiae.UCSC.sacCer3.sgdGene)
