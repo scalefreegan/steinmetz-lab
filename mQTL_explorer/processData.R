@@ -81,7 +81,7 @@ load(file.path(SDIR,"genphen_stitch.rda"))
 indels = readVcf(file.path(VDIR,"yjm789indels.annotated.vcf"),"sacCer3")
 indels_info = as.data.frame(info(indels))
 snps = readVcf(file.path(VDIR,"yjm789snps.annotated.vcf"), "sacCer3")
-snps_info = as.data.frame(info(indels))
+snps_info = as.data.frame(info(snps))
 
 
 

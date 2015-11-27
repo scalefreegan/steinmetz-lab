@@ -1,3 +1,5 @@
+devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-lab/master/mQTL_explorer/global.R")
+
 input = list()
 input$m = "AKG"
 input$co = 15
