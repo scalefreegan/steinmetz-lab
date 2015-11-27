@@ -22,10 +22,7 @@ if (system("hostname",intern=T) == "mac-steinmetz55.embl.de") {
 }
 
 # Import packages ---------------------------------------------------
-library(funqtl)
-library(GenomicRanges)
-library(rtracklayer)
-library(jsonlite)
+
 
 # Templates ---------------------------------------------------
 # mqtl
@@ -67,11 +64,13 @@ if (.local) {
   WDIR = "/Users/brooks/Sites/JBrowse-1.11.6_mQTL"
   EDIR = "/Users/brooks/Documents/steinmetz_local/genphen/transcriptome"
   SDIR = "/Users/brooks/Documents/steinmetz_local/genphen/resources"
+  VDIR = "/Users/brooks/Documents/steinmetz_local/yeast/genomes/S288CxYJM789"
 } else {
   DDIR = "/g/steinmetz/brooks/genphen/metabolome/qtls"
   WDIR = "/var/www2/html/mQTL"
   EDIR = "/g/steinmetz/brooks/genphen/transcriptome"
   SDIR = "/g/steinmetz/brooks/genphen/resources"
+  VDIR = "/g/steinmetz/brooks/yeast/genomes/S288CxYJM789"
 }
 
 
@@ -79,6 +78,11 @@ load(file.path(DDIR,"endometabolite_full_12102015.rda"))
 load(file.path(DDIR,"genotypes_S288c_R64.rda"))
 load(file.path(DDIR,"mQTLs_comball_funqtl_2014.rda"))
 load(file.path(SDIR,"genphen_stitch.rda"))
+indels = readVcf(file.path(VDIR,"yjm789indels.annotated.vcf"),"sacCer3")
+indels_info = as.data.frame(info(indels))
+snps = readVcf(file.path(VDIR,"yjm789snps.annotated.vcf"), "sacCer3")
+snps_info = as.data.frame(info(indels))
+
 
 
 data = lapply(seq(1,length(mQTLs_funqtl_2014)), function(i){

@@ -81,6 +81,8 @@ shinyServer(function(input, output, session) {
                 protein%in%unlist(qtl_df$Sys.Name),alias==input$m)%>%ungroup())[,c("protein","score")]
       colnames(stitch)[2] = "Stitch"
       qtl_df = merge(qtl_df,stitch,by.x="Sys.Name",by.y="protein",sort=F,all.x=T)
+      # add snps
+      snp_df = filter(snps_info,SNPEFF_TRANSCRIPT_ID%in%unlist(qtl_df$gene_id))
       # reorder
       qtl_df = qtl_df[,c("Sys.Name","Name","Chr","Start","End","Strand","Alias","Desc","Stitch")]
     }

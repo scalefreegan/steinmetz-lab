@@ -20,11 +20,14 @@ library(stringr)
 library("BSgenome.Scerevisiae.UCSC.sacCer3")
 library("TxDb.Scerevisiae.UCSC.sacCer3.sgdGene")
 library("org.Sc.sgd.db")
-
+library(rtracklayer)
+library(jsonlite)
 library(RCurl)
 library(httr)
 set_config( config( ssl_verifypeer = 0L ) )
 library(funqtl)
+library(VariantAnnotation)
+
 
 # Global variables ---------------------------------------------------
 
@@ -70,5 +73,3 @@ if (!file.exists(f)) {
 } else {
   load(f)
 }
-
-#load("//g/steinmetz/brooks/genphen/metabolome/qtls/plot_tab.rda")

@@ -890,11 +890,13 @@ if (!file.exists(f)) {
 	# 100%
 
 	# only chemicals in genephen, only combined score, normalize by each chemical such that the sum of scores per chemical equals 1
-	genphen_stitch = filter(p2c, chemical%in%m$alias) %>% select(., chemical, protein, combined_score)
+	genphen_stitch = filter(p2c, chemical%in%m$alias)
+	genphen_stitch = genphen_stitch[,c("chemical", "protein", "combined_score")]
 	genphen_stitch$alias = m[levels(genphen_stitch$chemical)[genphen_stitch$chemical],"name"]
 	genphen_stitch = genphen_stitch %>% group_by(., chemical) %>% do({
 		s = .$combined_score
 		score = .$combined_score/sum(.$combined_score)
+		score = percent_rank(score)
 		return(data.frame(chemical = .$chemical, alias = .$alias, protein = .$protein, score = score))
 		})
 	genphen_stitch = ungroup(genphen_stitch)
