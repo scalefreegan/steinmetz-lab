@@ -78,12 +78,15 @@ load(file.path(DDIR,"endometabolite_full_12102015.rda"))
 load(file.path(DDIR,"genotypes_S288c_R64.rda"))
 load(file.path(DDIR,"mQTLs_comball_funqtl_2014.rda"))
 load(file.path(SDIR,"genphen_stitch.rda"))
-indels = readVcf(file.path(VDIR,"yjm789indels.annotated.vcf"),"sacCer3")
-indels_info = as.data.frame(info(indels))
-snps = readVcf(file.path(VDIR,"yjm789snps.annotated.vcf"), "sacCer3")
-snps_info = as.data.frame(info(snps))
+# indels = readVcf(file.path(VDIR,"yjm789indels.annotated.vcf"),"sacCer3")
+# indels_info = as.data.frame(info(indels))
+# indels_info$id = "indel"
+# snps = readVcf(file.path(VDIR,"yjm789snps.annotated.vcf"), "sacCer3")
+# snps_info = as.data.frame(info(snps))
+# snps_info$id = "snp"
+# var_info = rbind(snps_info,indels_info)
 
-
+load(file.path(VDIR,"yjm789snpsANDindels_info.rda"))
 
 data = lapply(seq(1,length(mQTLs_funqtl_2014)), function(i){
   if (class(mQTLs_funqtl_2014[[i]])=="try-error") {

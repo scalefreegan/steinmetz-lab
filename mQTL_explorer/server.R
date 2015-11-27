@@ -82,9 +82,36 @@ shinyServer(function(input, output, session) {
       colnames(stitch)[2] = "Stitch"
       qtl_df = merge(qtl_df,stitch,by.x="Sys.Name",by.y="protein",sort=F,all.x=T)
       # add snps
-      snp_df = filter(snps_info,SNPEFF_TRANSCRIPT_ID%in%unlist(qtl_df$gene_id))
+      var_df = filter(var_info, SNPEFF_TRANSCRIPT_ID%in%unlist(qtl_df$Sys.Name)) %>%
+        group_by(.,SNPEFF_TRANSCRIPT_ID) %>%
+        do({
+          data.frame(
+            N_SNPS = sum(.$id=="snp"),
+            N_INDELS = sum(.$id=="indel"),
+            N_UPSTREAM = sum(.$SNPEFF_EFFECT=="UPSTREAM"),
+            N_DOWNSTREAM = sum(.$SNPEFF_EFFECT=="DOWNSTREAM"),
+            N_INTRONS = sum(.$SNPEFF_EFFECT=="INTRONS"),
+            N_CODING = sum(.$SNPEFF_EFFECT%in%c("UPSTREAM","DOWNSTREAM","INTRONS")==FALSE),
+            IMPACT_HIGH = sum(.$SNPEFF_IMPACT=="HIGH"),
+            START_LOST = sum(.$SNPEFF_EFFECT=="START_LOST"),
+            STOP_GAINED = sum(.$SNPEFF_EFFECT=="STOP_GAINED"),
+            STOP_LOST = sum(.$SNPEFF_EFFECT=="STOP_LOST"),
+            FRAME_SHIFT = sum(.$SNPEFF_EFFECT=="FRAME_SHIFT"),
+            IMPACT_MODERATE = sum(.$SNPEFF_IMPACT=="MODERATE"),
+            NON_SYNONYMOUS_CODING = sum(.$SNPEFF_EFFECT=="NON_SYNONYMOUS_CODING"),
+            CODON_DELETION = sum(.$SNPEFF_EFFECT=="CODON_DELETION"),
+            CODON_INSERTION = sum(.$SNPEFF_EFFECT=="CODON_INSERTION"),                  
+            CODON_CHANGE_PLUS_CODON_DELETION = sum(.$SNPEFF_EFFECT=="CODON_CHANGE_PLUS_CODON_DELETION"),
+            CODON_CHANGE_PLUS_CODON_INSERTION = sum(.$SNPEFF_EFFECT=="CODON_CHANGE_PLUS_CODON_INSERTION"),
+            IMPACT_LOW = sum(.$SNPEFF_IMPACT=="IMPACT_LOW"),
+            SYNONYMOUS_CODING = sum(.$SNPEFF_EFFECT=="SYNONYMOUS_CODING"),
+            SYNONYMOUS_STOP = sum(.$SNPEFF_EFFECT=="SYNONYMOUS_STOP"),
+            NON_SYNONYMOUS_START = sum(.$SNPEFF_EFFECT=="NON_SYNONYMOUS_START")
+          )
+        }) %>% ungroup(.)
+      qtl_df = merge(qtl_df,var_df,by.x="Sys.Name",by.y="SNPEFF_TRANSCRIPT_ID",sort=F,all.x=T)  
       # reorder
-      qtl_df = qtl_df[,c("Sys.Name","Name","Chr","Start","End","Strand","Alias","Desc","Stitch")]
+      # qtl_df = qtl_df[,c("Sys.Name","Name","Chr","Start","End","Strand","Alias","Desc","Stitch")]
     }
   })
 
