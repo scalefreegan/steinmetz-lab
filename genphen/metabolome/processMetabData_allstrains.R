@@ -895,8 +895,10 @@ if (!file.exists(f)) {
 	genphen_stitch$alias = m[levels(genphen_stitch$chemical)[genphen_stitch$chemical],"name"]
 	genphen_stitch = genphen_stitch %>% group_by(., chemical) %>% do({
 		s = .$combined_score
-		score = .$combined_score/sum(.$combined_score)
-		score = percent_rank(score)
+		#score = .$combined_score/sum(.$combined_score)
+		#score = percent_rank(score)
+		# do it like stitch itself
+		score = .$combined_score/max(p2c$combined_score)
 		return(data.frame(chemical = .$chemical, alias = .$alias, protein = .$protein, score = score))
 		})
 	genphen_stitch = ungroup(genphen_stitch)

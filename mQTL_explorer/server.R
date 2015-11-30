@@ -36,7 +36,7 @@ shinyServer(function(input, output, session) {
             val)
   }
 
-  df = reactive({
+  df_full = reactive({
 
     # select chromosomes
     chrs = unique(data[[input$m]]$qtl[data[[input$m]]$qtl[,type]>=summary(data[[input$m]]$permout[,type],input$co/100)[1],"chr"])
@@ -82,42 +82,84 @@ shinyServer(function(input, output, session) {
       colnames(stitch)[2] = "Stitch"
       qtl_df = merge(qtl_df,stitch,by.x="Sys.Name",by.y="protein",sort=F,all.x=T)
       # add snps
-      var_df = filter(var_info, SNPEFF_TRANSCRIPT_ID%in%unlist(qtl_df$Sys.Name)) %>%
-        group_by(.,SNPEFF_TRANSCRIPT_ID) %>%
-        do({
-          data.frame(
-            N_SNPS = sum(.$id=="snp"),
-            N_INDELS = sum(.$id=="indel"),
-            N_UPSTREAM = sum(.$SNPEFF_EFFECT=="UPSTREAM"),
-            N_DOWNSTREAM = sum(.$SNPEFF_EFFECT=="DOWNSTREAM"),
-            N_INTRONS = sum(.$SNPEFF_EFFECT=="INTRONS"),
-            N_CODING = sum(.$SNPEFF_EFFECT%in%c("UPSTREAM","DOWNSTREAM","INTRONS")==FALSE),
-            IMPACT_HIGH = sum(.$SNPEFF_IMPACT=="HIGH"),
-            START_LOST = sum(.$SNPEFF_EFFECT=="START_LOST"),
-            STOP_GAINED = sum(.$SNPEFF_EFFECT=="STOP_GAINED"),
-            STOP_LOST = sum(.$SNPEFF_EFFECT=="STOP_LOST"),
-            FRAME_SHIFT = sum(.$SNPEFF_EFFECT=="FRAME_SHIFT"),
-            IMPACT_MODERATE = sum(.$SNPEFF_IMPACT=="MODERATE"),
-            NON_SYNONYMOUS_CODING = sum(.$SNPEFF_EFFECT=="NON_SYNONYMOUS_CODING"),
-            CODON_DELETION = sum(.$SNPEFF_EFFECT=="CODON_DELETION"),
-            CODON_INSERTION = sum(.$SNPEFF_EFFECT=="CODON_INSERTION"),                  
-            CODON_CHANGE_PLUS_CODON_DELETION = sum(.$SNPEFF_EFFECT=="CODON_CHANGE_PLUS_CODON_DELETION"),
-            CODON_CHANGE_PLUS_CODON_INSERTION = sum(.$SNPEFF_EFFECT=="CODON_CHANGE_PLUS_CODON_INSERTION"),
-            IMPACT_LOW = sum(.$SNPEFF_IMPACT=="IMPACT_LOW"),
-            SYNONYMOUS_CODING = sum(.$SNPEFF_EFFECT=="SYNONYMOUS_CODING"),
-            SYNONYMOUS_STOP = sum(.$SNPEFF_EFFECT=="SYNONYMOUS_STOP"),
-            NON_SYNONYMOUS_START = sum(.$SNPEFF_EFFECT=="NON_SYNONYMOUS_START")
-          )
-        }) %>% ungroup(.)
-      qtl_df = merge(qtl_df,var_df,by.x="Sys.Name",by.y="SNPEFF_TRANSCRIPT_ID",sort=F,all.x=T)  
-      # reorder
-      # qtl_df = qtl_df[,c("Sys.Name","Name","Chr","Start","End","Strand","Alias","Desc","Stitch")]
+      #
+      # TODO: break out sub categrories as pie charts or something similar
+      return(qtl_df)
     }
   })
 
+  df_var = reactive({
+    qtl_df = df_full()
+    var_df = filter(var_info, SNPEFF_TRANSCRIPT_ID%in%unlist(qtl_df$Sys.Name)) %>%
+      group_by(.,SNPEFF_TRANSCRIPT_ID) %>%
+      do({
+        data.frame(
+          N_SNPS = sum(.$id=="snp"),
+          N_INDELS = sum(.$id=="indel"),
+          N_UPSTREAM = sum(.$SNPEFF_EFFECT=="UPSTREAM"),
+          N_DOWNSTREAM = sum(.$SNPEFF_EFFECT=="DOWNSTREAM"),
+          N_INTRONS = sum(.$SNPEFF_EFFECT=="INTRONS"),
+          N_CODING = sum(.$SNPEFF_EFFECT%in%c("UPSTREAM","DOWNSTREAM","INTRONS")==FALSE),
+          IMPACT_HIGH = sum(.$SNPEFF_IMPACT=="HIGH"),
+          START_LOST = sum(.$SNPEFF_EFFECT=="START_LOST"),
+          STOP_GAINED = sum(.$SNPEFF_EFFECT=="STOP_GAINED"),
+          STOP_LOST = sum(.$SNPEFF_EFFECT=="STOP_LOST"),
+          FRAME_SHIFT = sum(.$SNPEFF_EFFECT=="FRAME_SHIFT"),
+          IMPACT_MODERATE = sum(.$SNPEFF_IMPACT=="MODERATE"),
+          NON_SYNONYMOUS_CODING = sum(.$SNPEFF_EFFECT=="NON_SYNONYMOUS_CODING"),
+          CODON_DELETION = sum(.$SNPEFF_EFFECT=="CODON_DELETION"),
+          CODON_INSERTION = sum(.$SNPEFF_EFFECT=="CODON_INSERTION"),                  
+          CODON_CHANGE_PLUS_CODON_DELETION = sum(.$SNPEFF_EFFECT=="CODON_CHANGE_PLUS_CODON_DELETION"),
+          CODON_CHANGE_PLUS_CODON_INSERTION = sum(.$SNPEFF_EFFECT=="CODON_CHANGE_PLUS_CODON_INSERTION"),
+          IMPACT_LOW = sum(.$SNPEFF_IMPACT=="IMPACT_LOW"),
+          SYNONYMOUS_CODING = sum(.$SNPEFF_EFFECT=="SYNONYMOUS_CODING"),
+          SYNONYMOUS_STOP = sum(.$SNPEFF_EFFECT=="SYNONYMOUS_STOP"),
+          NON_SYNONYMOUS_START = sum(.$SNPEFF_EFFECT=="NON_SYNONYMOUS_START")
+        )
+      }) %>% ungroup(.)
+    return(var_df)
+  })
+  
+  df_dt = reactive({
+    # reorder
+    qtl_df = merge(df_full(),df_var(),by.x="Sys.Name",by.y="SNPEFF_TRANSCRIPT_ID",sort=F,all.x=T)  
+    qtl_df = qtl_df[,c("Sys.Name","Name","Stitch","N_SNPS", "N_INDELS", "N_UPSTREAM", 
+                       "N_DOWNSTREAM", "N_INTRONS", "N_CODING",
+                       "Chr","Start","End","Strand","Alias","Desc")]
+  })
+  
+  output$snptype = renderPlot({
+    # reorder
+    qtl_df = df_var()
+    high = c("START_LOST","STOP_GAINED","STOP_LOST","FRAME_SHIFT")
+    moderate = c("NON_SYNONYMOUS_CODING", "CODON_DELETION","CODON_INSERTION", 
+                 "CODON_CHANGE_PLUS_CODON_DELETION", "CODON_CHANGE_PLUS_CODON_INSERTION")
+    low = c("SYNONYMOUS_CODING","SYNONYMOUS_STOP","NON_SYNONYMOUS_START")
+    var_df_melt = melt(qtl_df,id.vars="SNPEFF_TRANSCRIPT_ID") %>% filter(.,value>0,variable%in%c(high,moderate,low))
+    var_df_melt$impact = sapply(var_df_melt$variable,function(i){
+      if (i %in% high) {
+        return("High Impact")
+      } else if (i %in% moderate) {
+        return("Moderate Impact")
+      } else {
+        return ("Low Impact")
+      }
+    })
+    var_df_melt2 = do.call(rbind,lapply(seq(1,dim(var_df_melt)[1]),function(i){
+      do.call(rbind,lapply(seq(1,as.numeric(var_df_melt[i,"value"])),function(j){
+        var_df_melt[i,]
+      }))
+    }))
+    var_df_melt2$impact = factor(var_df_melt2$impact, levels = c("High Impact","Moderate Impact","Low Impact"))
+    var_df_melt2$SNPEFF_TRANSCRIPT_ID = factor(var_df_melt2$SNPEFF_TRANSCRIPT_ID, levels = sort(unique(var_df_melt2$SNPEFF_TRANSCRIPT_ID)))
+    ggplot(var_df_melt2, aes(x = factor(SNPEFF_TRANSCRIPT_ID), fill=variable)) + geom_bar(width=.8) +
+      coord_flip() + facet_wrap(~ impact) + scale_x_discrete(limits=rev(levels(var_df_melt2$SNPEFF_TRANSCRIPT_ID))) +
+      xlab("Gene") + ylab("# SNPs/Indels")
+  })
+  
   # DATA TABLE
   output$dt = DT::renderDataTable(
-    df(), server = TRUE, selection = "single",
+    df_dt(), server = TRUE, selection = "single",
     rownames = FALSE, extensions = 'Responsive', escape = FALSE)
 
   # REACTIVE VALUES
@@ -165,11 +207,5 @@ shinyServer(function(input, output, session) {
     'valign="middle" style="width: 100%;max-height: 100%"></td>')
    })
 
-
-#  output$manhattan = renderPlot({
- #     clustQTL::plotManhattan(reformatQTL(), mrk, qqman = TRUE, show = TRUE,
-   #                         suggestiveline = alpha_5(), genomewideline = alpha_10(), ylab = "LOD", ylim = c(0,ymax()+2))
-  #    legend("topright", y.leg[i], c("5% FDR",paste(rownames(alpha_10())[1],"FDR")), lty = c(1, 1), col = c("blue", "red"))
-  #})
 
 })

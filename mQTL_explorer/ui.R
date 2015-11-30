@@ -30,6 +30,10 @@ shinyUI(navbarPage("mQTL Explorer", selected = "Table Viewer",
             ),
             fluidRow(
               column(12,DT::dataTableOutput('dt'))
+            ),
+            fluidRow(
+              h3("SNPs and Indels"),
+              column(12,plotOutput('snptype', height = "600px"))
             )
           )
          ),
