@@ -79,7 +79,7 @@ shinyServer(function(input, output, session) {
       # add stitch predictions
       stitch = as.data.frame(filter(genphen_stitch,
                 protein%in%unlist(qtl_df$Sys.Name),alias==input$m)%>%ungroup())[,c("protein","score")]
-      colnames(stitch)[2] = "Stitch"
+      colnames(stitch)[2] = "STITCH"
       qtl_df = merge(qtl_df,stitch,by.x="Sys.Name",by.y="protein",sort=F,all.x=T)
       # add snps
       #
@@ -94,24 +94,24 @@ shinyServer(function(input, output, session) {
       group_by(.,SNPEFF_TRANSCRIPT_ID) %>%
       do({
         data.frame(
-          N_SNPS = sum(.$id=="snp"),
-          N_INDELS = sum(.$id=="indel"),
-          N_UPSTREAM = sum(.$SNPEFF_EFFECT=="UPSTREAM"),
-          N_DOWNSTREAM = sum(.$SNPEFF_EFFECT=="DOWNSTREAM"),
-          N_INTRONS = sum(.$SNPEFF_EFFECT=="INTRONS"),
-          N_CODING = sum(.$SNPEFF_EFFECT%in%c("UPSTREAM","DOWNSTREAM","INTRONS")==FALSE),
-          IMPACT_HIGH = sum(.$SNPEFF_IMPACT=="HIGH"),
+          SNPS = sum(.$id=="snp"),
+          INDELS = sum(.$id=="indel"),
+          UPSTREAM = sum(.$SNPEFF_EFFECT=="UPSTREAM"),
+          DOWNSTREAM = sum(.$SNPEFF_EFFECT=="DOWNSTREAM"),
+          INTRONS = sum(.$SNPEFF_EFFECT=="INTRONS"),
+          CODING = sum(.$SNPEFF_EFFECT%in%c("UPSTREAM","DOWNSTREAM","INTRONS")==FALSE),
+          HIGH = sum(.$SNPEFF_IMPACT=="HIGH"),
           START_LOST = sum(.$SNPEFF_EFFECT=="START_LOST"),
           STOP_GAINED = sum(.$SNPEFF_EFFECT=="STOP_GAINED"),
           STOP_LOST = sum(.$SNPEFF_EFFECT=="STOP_LOST"),
           FRAME_SHIFT = sum(.$SNPEFF_EFFECT=="FRAME_SHIFT"),
-          IMPACT_MODERATE = sum(.$SNPEFF_IMPACT=="MODERATE"),
+          MODERATE = sum(.$SNPEFF_IMPACT=="MODERATE"),
           NON_SYNONYMOUS_CODING = sum(.$SNPEFF_EFFECT=="NON_SYNONYMOUS_CODING"),
           CODON_DELETION = sum(.$SNPEFF_EFFECT=="CODON_DELETION"),
           CODON_INSERTION = sum(.$SNPEFF_EFFECT=="CODON_INSERTION"),                  
           CODON_CHANGE_PLUS_CODON_DELETION = sum(.$SNPEFF_EFFECT=="CODON_CHANGE_PLUS_CODON_DELETION"),
           CODON_CHANGE_PLUS_CODON_INSERTION = sum(.$SNPEFF_EFFECT=="CODON_CHANGE_PLUS_CODON_INSERTION"),
-          IMPACT_LOW = sum(.$SNPEFF_IMPACT=="IMPACT_LOW"),
+          LOW = sum(.$SNPEFF_IMPACT=="IMPACT_LOW"),
           SYNONYMOUS_CODING = sum(.$SNPEFF_EFFECT=="SYNONYMOUS_CODING"),
           SYNONYMOUS_STOP = sum(.$SNPEFF_EFFECT=="SYNONYMOUS_STOP"),
           NON_SYNONYMOUS_START = sum(.$SNPEFF_EFFECT=="NON_SYNONYMOUS_START")
@@ -123,8 +123,8 @@ shinyServer(function(input, output, session) {
   df_dt = reactive({
     # reorder
     qtl_df = merge(df_full(),df_var(),by.x="Sys.Name",by.y="SNPEFF_TRANSCRIPT_ID",sort=F,all.x=T)  
-    qtl_df = qtl_df[,c("Sys.Name","Name","Stitch","N_SNPS", "N_INDELS", "N_UPSTREAM", 
-                       "N_DOWNSTREAM", "N_INTRONS", "N_CODING",
+    qtl_df = qtl_df[,c("Sys.Name","Name","STITCH","SNPS", "INDELS", "UPSTREAM", 
+                       "DOWNSTREAM", "INTRONS", "CODING","HIGH","MODERATE","LOW",
                        "Chr","Start","End","Strand","Alias","Desc")]
   })
   
@@ -154,7 +154,7 @@ shinyServer(function(input, output, session) {
     var_df_melt2$SNPEFF_TRANSCRIPT_ID = factor(var_df_melt2$SNPEFF_TRANSCRIPT_ID, levels = sort(unique(var_df_melt2$SNPEFF_TRANSCRIPT_ID)))
     ggplot(var_df_melt2, aes(x = factor(SNPEFF_TRANSCRIPT_ID), fill=variable)) + geom_bar(width=.8) +
       coord_flip() + facet_wrap(~ impact) + scale_x_discrete(limits=rev(levels(var_df_melt2$SNPEFF_TRANSCRIPT_ID))) +
-      xlab("Gene") + ylab("# SNPs/Indels")
+      xlab("Gene") + ylab("# SNPs/Indels") + theme(legend.position="bottom")
   })
   
   # DATA TABLE
