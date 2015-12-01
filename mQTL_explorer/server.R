@@ -176,16 +176,15 @@ shinyServer(function(input, output, session) {
   #output$link = renderPrint("hi")
   output$link = renderText({
     s = input$dt_rows_selected[length(input$dt_rows_selected)]
-    s = which(df()[,"Sys.Name"]==s)[1]
+    d = df_full()
+    s = which(d[,"Sys.Name"]==s)[1]
     print(s)
     if (length(s)) {
-      #print(df())
-      #print(df()[s,])
-      chr = levels(df()[s, "Chr"])[df()[s, "Chr"]]
-      start = df()[s, "Start"]-10000
-      end = df()[s, "End"]+10000
+      chr = levels(d[s, "Chr"])[d[s, "Chr"]]
+      start = d[s, "Start"]-10000
+      end = d[s, "End"]+10000
       val = paste(chr,"%3A",start,"..",end, sep = "")
-      val = paste('http://steinmetzlab.embl.de/mQTL/?loc=',val,"&tracks=",input$m,"%2C", df()[s, "Sys.Name"], sep="")
+      val = paste('http://steinmetzlab.embl.de/mQTL/?loc=',val,"&tracks=",input$m,"%2C", d[s, "Sys.Name"], sep="")
       print(val)
     } else {
       val = "http://steinmetzlab.embl.de/mQTL/"

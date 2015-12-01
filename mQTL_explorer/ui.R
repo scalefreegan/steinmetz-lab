@@ -30,7 +30,7 @@ shinyUI(navbarPage("mQTL Explorer", selected = "Table Viewer",
             ),
             fluidRow(
               column(1),
-              column(10,DT::dataTableOutput('dt')),
+              column(10,align="center",DT::dataTableOutput('dt')),
               column(1)
             ),
             fluidRow(
