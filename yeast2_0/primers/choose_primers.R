@@ -1,6 +1,6 @@
 #! /usr/bin/env Rscript
 # designed to be saved as .Rprofile in working dir
-# devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-lab/master/genphen/metabolome/processMetabData_allstrains.R")
+# devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-lab/master/yeast2_0/primers/choose_primers.R")
 #-------------------------------------------------------------------#
 # Choose primers for strain validation
 #
@@ -22,3 +22,5 @@ library(dplyr)
 library(reshape2)
 
 # Load files --------------------------------------------------------
+GITHUBDIR = "http://scalefreegan.github.io/steinmetz-lab/master/yeast2_0/primers/"
+synIII = read.tsv(url(paste(GITHUBDIR, "synIII.tsv", sep = "")))
