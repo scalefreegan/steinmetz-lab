@@ -31,6 +31,7 @@ library(parallel)
 options(mc.cores = 24)
 library(snow)
 library(igraph)
+library(stringr)
 #library(clustQTL)
 #devtools::install_github("scalefreegan/steinmetz-lab/clustQTL")
 
@@ -83,7 +84,7 @@ strainRename = function(strains) {
 	return(o)
 }
 
-processData = function( f1, f2, f3, startRow = 2,... ) {
+processData = function( f1, f2, f3, f4, f5, startRow = 2,... ) {
 	# f1 is relative time - defined by "cultivation phase"
 	# eg. Endometabolome_1B_25A_sorted by cultivation phase.xlsx
 	# f2 contains measurements at absolute time
@@ -91,6 +92,8 @@ processData = function( f1, f2, f3, startRow = 2,... ) {
 	# f3 contains additional measurements for the strains
 	# including Cell_conc, biovolume, single cell volume, and traits
 	# we will not use "traits" sheet - will calculate them myself if needed
+	# f4 contains raw peak areas for all strains
+	# f5 contains batch information
 	wb1 = loadWorkbook(f1)
 	wb2 = loadWorkbook(f2)
 	wb3 = loadWorkbook(f3)
@@ -174,7 +177,76 @@ processData = function( f1, f2, f3, startRow = 2,... ) {
 		# to_r = to_r[!is.na(to_r$value),]
 		return(to_r)
 	}))
+	o$strain = strainRename(levels(o$strain)[o$strain])
+	# fix replicate problem: change 28B_1/28B_1 to 28B_1/28B_2
+	o[which(o$replicate==1.1),"replicate"] = 2
+	o$replicate = as.factor(o$replicate)
 	close(pb)
+	# add peak areas
+	pa = read.table(f4, sep = "\t",header=T, stringsAsFactors = F)
+	for (i in 1:(dim(pa)[1]/5)) {
+		for (j in 1:5) {
+			idx = j+((i-1)*5)
+			if (j == 1) {
+				mname = pa[idx,1]
+			}
+			rownames(pa)[idx] = paste(mname, j, sep="_")
+		}
+	}
+	pa = pa[,-1] #remove row name
+	pa[which(pa=="N/F",arr.ind=T)] = NA #change N/F to NA
+	pa[which(pa=="",arr.ind=T)] = NA #change empty strings to NA
+	pam = melt(as.matrix(pa), varnames = names(dimnames(pa)), na.rm = FALSE, as.is = FALSE, value.name = "peakarea")
+	toadd = with(pam,cbind(
+		colsplit(string=levels(pam$Var1)[pam$Var1], pattern="_", names=c("metabolite", "time")),
+		colsplit(string=levels(pam$Var2)[pam$Var2], pattern="_", names=c("strain", "replicate")),
+		peakarea,
+		time_format = "absolute"))
+	toadd$strain = strainRename(toadd$strain)
+	batch = unique(read.table(f5, sep = "\t",header=T, stringsAsFactors = F)[,1])
+	batch = batch[-4] # remove repeated batch
+	batch = batch[-18] # rneed to ask Nicole about this one - seems to be repeated
+	b = as.data.frame(do.call(rbind,lapply(seq(1,length(batch)), function(i){
+		#print(i)
+		bi = strsplit(batch[[i]], split="_")[[1]]
+		start_n = as.numeric(sub("[A-D]","",bi[2]))
+		start_s = sub("[0-9]*","",bi[2])
+		end_n = as.numeric(sub("[A-D]","",bi[3]))
+		end_s = sub("[0-9]*","",bi[3])
+		n2s = c("A","B","C","D"); names(n2s) = 1:4
+		s2n = 1:4; names(s2n) = c("A","B","C","D")
+		b2e = seq(start_n,end_n)
+		tor = do.call(c,lapply(seq(1,length(b2e)), function(x){
+			if (x == 1) {
+				ss = n2s[seq(s2n[start_s], 4)] # strains
+				o = paste0(b2e[x],ss)
+			} else if (x == length(b2e)) {
+				ss = n2s[seq(1,s2n[end_s])]
+				o = paste0(b2e[x],ss)
+			} else {
+				ss = n2s[seq(1, 4)]
+				o = paste0(b2e[x],ss)
+			}
+		}))
+		tor = cbind(strain = tor, batch = i)
+		return(tor)
+	})))
+	b$strain = strainRename(levels(b$strain)[b$strain])
+	toadd = merge(toadd,b, by = "strain",all.x = T,all.y=T)
+	toadd$time = toadd$time + 15 # make time right scale to match other data
+	o = merge(o,toadd,by=c("strain","metabolite","replicate","time_format","time"),all.x=T)
+	# complete batch info
+	o = o %>% group_by(.,strain) %>% do({
+		bb = unique(levels(.$batch)[.$batch])
+		bb = bb[!is.na(bb)]
+		if (length(bb)==0) {
+			bb = NA
+		}
+		.$batch = bb
+		return(.)
+		}) %>% ungroup(.)
+	o$peakarea = as.numeric(levels(o$peakarea)[o$peakarea])
+	o$peakarea[o$peakarea == 0] = NA
 	return(o)
 }
 
@@ -186,6 +258,8 @@ data_dir = "/g/steinmetz/project/GenPhen/data/endometabolome/data/"
 f1 = paste(data_dir, "Endometabolome_1B_46B_sorted by cultivation phase.xlsx", sep="")
 f2 = paste(data_dir, "Endometabolome_46B_sorted by cultivation time.xlsx", sep="")
 f3 = paste(data_dir, "Dynamic_Metabolome_growth_and_morphology_113_strains.xlsx", sep="")
+f4 = paste(data_dir, "Peakareas_automated integration_2710.txt", sep="")
+f5 = paste(data_dir, "batches.txt", sep="")
 
 endo_f = "/g/steinmetz/project/GenPhen/data/endometabolome/data/endometabolite_full_12102015.rda"
 #endo_f = "~/Desktop/tmpdata/full_endometabolome/endometabolite_full_23082015.rda"
@@ -193,12 +267,11 @@ endo_f = "/g/steinmetz/project/GenPhen/data/endometabolome/data/endometabolite_f
 if (file.exists(endo_f)) {
   load(endo_f)
 } else{
-  endometabolite = processData(f1, f2, f3, startRow = 2)
+  endometabolite = processData(f1, f2, f3, f4, f5, startRow = 2)
 	# fix replicate problem: change 28B_1/28B_1 to 28B_1/28B_2
-	endometabolite[which(endometabolite$replicate==1.1),"replicate"] = 2
-	endometabolite$replicate = as.factor(endometabolite$replicate)
+	# endometabolite[which(endometabolite$replicate==1.1),"replicate"] = 2
+	# endometabolite$replicate = as.factor(endometabolite$replicate)
 	# replace NaN with NA
-
   save(endometabolite, file = endo_f)
 }
 
@@ -286,24 +359,31 @@ if (.plot) {
 		hist(apply(geno,1,function(i)sum(i==1)/length(i)),main="Genotype composition, all markers",xlab="Genotype == 1, Freq",xlim=c(0,1))
 	dev.off()
 
+	######################
+	#
+	# ABS TIME
+	#
+	######################
+
 	repdata_abs = endometabolite %>%
-	  group_by(metabolite,strain) %>%
-	  filter(.,time_format=="absolute") %>%
-	  do({
-	    x = filter(.,replicate==1)
-	    y = filter(.,replicate==2)
-	    t = sort(intersect(x$time,y$time))
-	    x.log2 = x$value.log2[x$time%in%t]
-	    y.log2 = y$value.log2[y$time%in%t]
+		group_by(metabolite,strain) %>%
+		filter(.,time_format=="absolute") %>%
+		do({
+			x = filter(.,replicate==1)
+			y = filter(.,replicate==2)
+			t = sort(intersect(x$time,y$time))
+			x.log2 = x$value.log2[x$time%in%t]
+			y.log2 = y$value.log2[y$time%in%t]
 			x.diffBYmean = x$derivative.log2[x$time%in%t]/mean(x.log2)
-	    y.diffBYmean = y$derivative.log2[y$time%in%t]/mean(y.log2)
-	    if (length(x.log2)==length(y.log2)) {
-	      data.frame(x.log2 = x.log2, y.log2 = y.log2,
+			y.diffBYmean = y$derivative.log2[y$time%in%t]/mean(y.log2)
+			if (length(x.log2)==length(y.log2)) {
+				data.frame(x.log2 = x.log2, y.log2 = y.log2,
 					x.diffBYmean = x.diffBYmean, y.diffBYmean = y.diffBYmean)
-	    } else {
-	      data.frame()
-	    }
-	  })
+			} else {
+				data.frame()
+			}
+		})
+
 
 	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/replicates_allmetabolites_abstime.pdf")
 	  heatscatter(repdata_abs$x.log2,repdata_abs$y.log2,main="Reproducibility,
@@ -366,9 +446,74 @@ if (.plot) {
 		ggplot(d, aes(x.log2, y.log2)) +
 			geom_point() +
 			facet_wrap(~ strain)
-
-
 	dev.off()
+
+	######################
+	#
+	# PEAK AREAS
+	#
+	######################
+
+	repdata_peakarea = endometabolite %>%
+		group_by(metabolite,strain) %>%
+		filter(.,time_format=="absolute") %>%
+		do({
+			x = filter(.,replicate==1)
+			y = filter(.,replicate==2)
+			t = sort(intersect(x$time,y$time))
+			x.log2 = log2(x$peakarea[x$time%in%t]+1e-6)
+			y.log2 = log2(y$peakarea[y$time%in%t])
+			if (length(x.log2)==length(y.log2)) {
+				data.frame(x.log2 = x.log2, y.log2 = y.log2)
+			} else {
+				data.frame()
+			}
+		})
+
+	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/replicates_allmetabolites_peakarea.pdf")
+	  heatscatter(repdata_peakarea$x.log2,repdata_peakarea$y.log2,main="Reproducibility,
+	  All Metabolites, Paired Time",
+	    ylab="[X]] Log2(PeakArea), Rep 2",xlab="[X] Log2(PeakArea), Rep 1")
+		text(1,1,paste("Cor =",round(cor(repdata_peakarea$x.log2,repdata_peakarea$y.log2,use="pair"),digits=4)))
+	dev.off()
+
+	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/replicates_permetabolite_peakarea.pdf")
+	  par(mfrow = c(2,2))
+	  for (i in sort(levels(repdata_peakarea$metabolite))) {
+	    d = filter(repdata_peakarea,metabolite==i)
+			try({
+		    heatscatter(d$x.log2,d$y.log2,main=i,ylab="[X] Log2(uM), Rep 2",xlab="[X] Log2(uM) Rep 1",
+		      ylim=c(min(c(repdata_peakarea$x.log2,repdata_peakarea$y.log2),na.rm=T),
+		        max(c(repdata_peakarea$x.log2,repdata_peakarea$y.log),na.rm=T)),
+		      xlim=c(min(c(repdata_peakarea$x.log2,repdata_peakarea$y.log2),na.rm=T),
+		        max(c(repdata_peakarea$x.log2,repdata_peakarea$y.log),na.rm=T))
+		    )
+			})
+	  }
+	dev.off()
+
+	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/replicates_perstrain_peakarea.pdf")
+	  par(mfrow = c(2,2))
+		d = filter(endometabolite, time_format == "absolute") %>%
+		select(replicate,time,strain,peakarea) %>%
+		group_by(strain) %>%
+		do({
+			x = filter(.,replicate==1)
+	    y = filter(.,replicate==2)
+	    t = sort(intersect(x$time,y$time))
+	    x.log2 = log2(x$peakarea[x$time%in%t])
+	    y.log2 = log2(y$peakarea[y$time%in%t])
+			if (length(x.log2)==length(y.log2)) {
+				data.frame(x.log2 = x.log2, y.log2 = y.log2)
+			} else {
+				data.frame()
+			}
+			})
+		ggplot(d, aes(x.log2, y.log2)) +
+			geom_point() +
+			facet_wrap(~ strain)
+	dev.off()
+
 
 	# Plot overall data trends ---------------------------------------------------
 
@@ -376,14 +521,36 @@ if (.plot) {
 	ggplot(
 	  data = endometabolite %>%
 	    filter(! is.na(value.log2)) %>%
-	    filter(time_format=="relative") %>%
+	    filter(time_format=="absolute") %>%
 	    group_by(metabolite) %>%
 	    do({filter(.,abs(.$value.log2-mean(.$value.log2))<5*sd(.$value.log2))}),
 	  aes(x = time, y = value.log2)) +
 	    geom_point() +
 	  geom_smooth() +
 	  facet_wrap( ~ metabolite, scales="free_y") +
-	  scale_x_discrete(name="Time (relative)") +
+	  scale_x_continuous(name="Time (absolute)") +
+	    scale_y_continuous(name=expression(paste("Level log2(",mu,"M)"))) +
+	    ggtitle("Endo- Metabolome Levels Across All Strains All Metabolites")
+	dev.off()
+
+	# With peak areas ---------------------------------------------------
+
+	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/metabolome_peakarea.pdf", width=11.5,height=8)
+	ggplot(
+	  data = endometabolite %>%
+	    filter(! is.na(peakarea)) %>%
+	    filter(time_format=="absolute") %>%
+	    group_by(metabolite) %>%
+			do({
+				.$peakarea = log2(.$peakarea)
+				return(.)
+				}) %>%
+	    do({filter(.,abs(.$peakarea-mean(.$peakarea))<5*sd(.$peakarea))}),
+	  aes(x = time, y = peakarea)) +
+	    geom_point() +
+	  geom_smooth() +
+	  facet_wrap( ~ metabolite, scales="free_y") +
+	  scale_x_continuous(name="Time (relative)") +
 	    scale_y_continuous(name=expression(paste("Level log2(",mu,"M)"))) +
 	    ggtitle("Endo- Metabolome Levels Across All Strains All Metabolites")
 	dev.off()
@@ -475,14 +642,11 @@ if (F) {
 
 }
 
-
 #-------------------------------------------------------------------#
 # detect QTLs the traditional way, rQTL
 #
 #-------------------------------------------------------------------#
 
-
-#
 # Don't think this is necessary for rqtl package
 # in fact, I think it will cause imputaition of genotypes, which I would like to
 # avoid
@@ -676,7 +840,6 @@ if (FALSE) {
 #-------------------------------------------------------------------#
 f = "/g/steinmetz/brooks/genphen/metabolome/qtls/mQTLs_comball_funqtl_2014.rda"
 if (FALSE) {
-#if (!file.exists(f)) {
 	# group phenotype timepoints
 
 	rep2metabolites = sapply(rownames(pheno), function(i) {
@@ -909,7 +1072,6 @@ if (!file.exists(f)) {
 	load(f)
 }
 
-
 if (F) {
 	# make it a network
 	v_meta = data.frame(vertex = c(levels(genphen_stitch$alias), genphen_stitch$protein), size = 3)
@@ -973,11 +1135,202 @@ if (F) {
 	}))
 	mQTL_df[with(mQTL_df,order(stitch,decreasing=T)),]
 	mQTL_stitch = filter(mQTL_df,stitch>0)
-
-
-
-
 }
+
+#-------------------------------------------------------------------#
+# Var QTL: Detection of metabolite variance related QTLs
+#
+#
+#-------------------------------------------------------------------#
+if (F) {
+	varM = filter(endometabolite,time_format=="relative") %>% group_by(., metabolite,strain) %>% do({
+		v = unlist(sapply(unique(.$time), function(t) {
+			log2(diff(filter(.,time==t)$value)^2+1e-6)
+		}))
+		if (length(v) < length(unique(.$time))) {
+			v = rep(NA,length(unique(.$time)))
+		}
+		#print(v)
+		return(data.frame(time = unique(.$time), var = v))
+	}) %>% ungroup()
+
+	varMm = acast(varM, formula = strain + metabolite ~ time, value.var="var")
+
+	pdf("/g/steinmetz/brooks/genphen/resources/plots/variance_phenotype_scatter.pdf")
+		heatpairs(varMm,
+		main = "Log2 Variance across timepoints, all metabolites", labels = c("16hr","17hr","18hr","19hr"))
+	dev.off()
+
+	pdf("/g/steinmetz/brooks/genphen/resources/plots/variance_phenotype_hist.pdf")
+		par(mfrow=c(2,2))
+		for (i in 1:dim(varMm)[2]) {
+			hist(varMm[,i], main = paste("Var phenotype: t =",i+15), xlab="Log2 Variance", xlim = c(-30,30))
+		}
+	dev.off()
+
+	pdf("/g/steinmetz/brooks/genphen/resources/plots/variance_phenotype_permetabolite.pdf")
+		p <- ggplot(varM, aes(factor(time), var)) + geom_boxplot() + facet_wrap(~ metabolite)
+		p
+	dev.off()
+
+	pdf("/g/steinmetz/brooks/genphen/resources/plots/variance_phenotype_perstrain.pdf")
+		p <- ggplot(varM, aes(factor(time), var)) + geom_boxplot() + facet_wrap(~ strain)
+		p
+	dev.off()
+
+	pdf("/g/steinmetz/brooks/genphen/resources/plots/variance_phenotype_perstrain2.pdf")
+		# order by mean
+		tmp = varM
+		var_order = group_by(varM, strain) %>% summarise(stat = median(var,na.rm=T))
+		var_order = var_order[order(var_order$stat),"strain"]$strain
+		#var_order = with(varM,reorder(strain,var,median,na.rm=T))
+		tmp$strain = factor(tmp$strain, levels = var_order)
+		p <- ggplot(tmp, aes(strain, var)) + geom_boxplot()
+		#p <- ggplot(varM, aes(factor(strain)[var_order], var)) + geom_boxplot()
+		p
+	dev.off()
+
+	# order by mean
+	lapply(levels(varM$metabolite), function(i) {
+		#print(i)
+		tmp = filter(varM, metabolite == i)
+		var_order = group_by(tmp, strain) %>% summarise(stat = median(var,na.rm=T))
+		var_order = var_order[order(var_order$stat),"strain"]$strain
+		#var_order = with(varM,reorder(strain,var,median,na.rm=T))
+		tmp$strain = factor(tmp$strain, levels = var_order)
+		o <- ggplot(tmp, aes(strain, var)) + geom_boxplot() +
+		scale_y_continuous(limits = c(min(varM$var,na.rm=T), max(varM$var,na.rm=T)))  +
+		ggtitle(i) + theme(axis.text.x = element_text(angle = -90, hjust = 1, size = 5))
+		ggsave(o, file=paste("/g/steinmetz/brooks/genphen/resources/plots/variance_phenotype_perstrain_permetabolite/",
+                         i, ".pdf", sep=''))
+	})
+
+	f = "/g/steinmetz/brooks/genphen/metabolome/qtls/varQTLs_funqtl.rda"
+	if (!file.exists(f)) {
+		# QTLs
+		pheno = acast(varM, formula = metabolite + time ~ strain, value.var="var")
+		cross =	runQTL(
+					genotype = geno,
+					phenotype = t(pheno),
+					marker_info = mrk,
+					return_cross = TRUE,
+					estimate.map = FALSE
+					)
+		rep2metabolites = sapply(rownames(pheno), function(i) {
+			o = strsplit(i,"_")[[1]][1]
+			return(o)
+		})
+		# first detect qtls individually
+		# have to run funqtl for each metabolite
+		# as shortcut, just replace cross object phenotypes
+		# for each metabolite
+		pb = txtProgressBar(min = 0, max = length(unique(rep2metabolites)), style = 3)
+		varQTLs_funqtl = mclapply(1:length(unique(rep2metabolites)), function(i) {
+			try({
+				m = unique(rep2metabolites)[i]
+				setTxtProgressBar(pb, i)
+				these_phe = c(names(which(rep2metabolites == m)),"id")
+				cross_tmp = cross
+				cross_tmp$pheno = cross_tmp$pheno[,these_phe]
+				colnames(cross_tmp$pheno) = c(sapply(colnames(cross_tmp$pheno), function(i){
+					o = strsplit(i, split = "_")[[1]][2]
+					if (is.na(o)) {
+						o = "id"
+					}
+					return(o)
+					}))
+				cross_tmp = calc.genoprob(cross_tmp, step = 0)
+				# last phenotype column is the "id" tag
+				pcols = seq(1, length(these_phe) - 1)
+			 	qtls = scanone(cross_tmp, method = "hk",pheno.col = pcols)
+				eff = geteffects(cross_tmp, pheno.col = pcols)
+				qtls_alt = scanoneF(cross_tmp, pheno.cols = pcols, method = "hk")
+				# calc permutation threshold
+				permout = scanoneF(cross_tmp, pheno.cols = pcols,
+				                    method = "hk", n.perm = 1000, n.cluster = 20, verbose = F)
+				# identify chrs with slod/lod above permute val
+				chrs = unique(c(
+					qtls_alt[qtls_alt[,"slod"]>=summary(permout)["5%","slod"],"chr"],
+					qtls_alt[qtls_alt[,"mlod"]>=summary(permout)["5%","mlod"],"chr"]
+					)
+				)
+				qtl_intervals = list()
+				if (length(chrs)>0) {
+					for (i in chrs) {
+						qtl_intervals[[as.character(i)]] = mrk[rownames(bayesint(qtls_alt, chr = str_pad(i, 2, pad = "0"), prob=0.95, lodcolumn=1))]
+					}
+				}
+				return(list(qtls = qtls, eff = eff,
+					qtls_alt = qtls_alt, qtl_intervals = qtl_intervals,
+					permout = permout, pcols = pcols))
+			})
+		})
+		names(varQTLs_funqtl)  = unique(rep2metabolites)
+		save(varQTLs_funqtl, file = f)
+		close(pb)
+
+		# effect plots
+		pdf("/g/steinmetz/brooks/genphen/metabolome/plots/funqtl_2014/effects.pdf")
+			for (i in 1:length(mQTLs_funqtl_2014)) {
+				try({
+					plotlod(mQTLs_funqtl_2014[[i]]$qtls, mQTLs_funqtl_2014[[i]]$eff, mQTLs_funqtl_2014[[i]]$pcols, gap=25, ylab="Time")
+					mtext(names(mQTLs_funqtl_2014)[i], side = 3)
+				})
+			}
+		dev.off()
+
+		# effect plots: jpeg
+		for (i in 1:length(mQTLs_funqtl_2014)) {
+			try({
+				jpeg(paste("/g/steinmetz/brooks/genphen/metabolome/plots/funqtl_2014/effects",names(mQTLs_funqtl_2014)[i],".jpeg",sep=""))
+					plotlod(mQTLs_funqtl_2014[[i]]$qtls, mQTLs_funqtl_2014[[i]]$eff, mQTLs_funqtl_2014[[i]]$pcols, gap=25, ylab="Time")
+					mtext(names(mQTLs_funqtl_2014)[i], side = 3)
+				dev.off()
+			})
+		}
+
+		m_slod = max(as.numeric(unlist(lapply(seq(1:length(mQTLs_funqtl_2014)),function(i){try(max(mQTLs_funqtl_2014[[i]]$qtls_alt[,'slod']))}))), na.rm = T)
+		m_mlod = max(as.numeric(unlist(lapply(seq(1:length(mQTLs_funqtl_2014)),function(i){try(max(mQTLs_funqtl_2014[[i]]$qtls_alt[,'mlod']))}))), na.rm = T)
+
+		# lod plots
+		pdf("/g/steinmetz/brooks/genphen/metabolome/plots/funqtl_2014/lods.jpeg")
+			for (i in 1:length(mQTLs_funqtl_2014)) {
+				try({
+					par(mfrow=c(2,1))
+					plot(mQTLs_funqtl_2014[[i]]$qtls_alt, ylim=c(0,m_slod), main=paste(names(mQTLs_funqtl_2014)[i],"SLOD"),bandcol="gray90")
+					abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["5%","slod"], col="red", lty=2)
+					abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["10%","slod"], col="blue", lty=3)
+					legend("topright", y.leg[i], c("5% FDR","10% FDR"), lty = c(2, 3), col = c("red","blue"))
+					plot(mQTLs_funqtl_2014[[i]]$qtls_alt, lodcolumn=2, ylim=c(0,m_mlod),
+							main=paste(names(mQTLs_funqtl_2014)[i],"MLOD"), bandcol="gray90")
+					abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["5%","mlod"], col="red", lty=2)
+					abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["10%","mlod"], col="blue", lty=3)
+				})
+			}
+		dev.off()
+
+		# lod plots: jpeg
+
+		for (i in 1:length(mQTLs_funqtl_2014)) {
+			jpeg(paste("/g/steinmetz/brooks/genphen/metabolome/plots/funqtl_2014/lods",names(mQTLs_funqtl_2014)[i],".jpeg",sep=""))
+				try({
+					par(mfrow=c(2,1))
+					plot(mQTLs_funqtl_2014[[i]]$qtls_alt, ylim=c(0,m_slod), main=paste(names(mQTLs_funqtl_2014)[i],"SLOD"),bandcol="gray90")
+					abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["5%","slod"], col="red", lty=2)
+					abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["10%","slod"], col="blue", lty=3)
+					legend("topright", y.leg[i], c("5% FDR","10% FDR"), lty = c(2, 3), col = c("red","blue"))
+					plot(mQTLs_funqtl_2014[[i]]$qtls_alt, lodcolumn=2, ylim=c(0,m_mlod),
+							main=paste(names(mQTLs_funqtl_2014)[i],"MLOD"), bandcol="gray90")
+					abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["5%","mlod"], col="red", lty=2)
+					abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["10%","mlod"], col="blue", lty=3)
+				})
+			dev.off()
+			}
+		} else {
+
+	}
+}
+
 
 
 # Plot  ---------------------------------------------------
