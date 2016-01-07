@@ -1270,65 +1270,63 @@ if (F) {
 		close(pb)
 
 		# effect plots
-		pdf("/g/steinmetz/brooks/genphen/metabolome/plots/funqtl_2014/effects.pdf")
-			for (i in 1:length(mQTLs_funqtl_2014)) {
+		pdf("/g/steinmetz/brooks/genphen/metabolome/plots/varQTL/effects.pdf")
+			for (i in 1:length(varQTLs_funqtl)) {
 				try({
-					plotlod(mQTLs_funqtl_2014[[i]]$qtls, mQTLs_funqtl_2014[[i]]$eff, mQTLs_funqtl_2014[[i]]$pcols, gap=25, ylab="Time")
-					mtext(names(mQTLs_funqtl_2014)[i], side = 3)
+					plotlod(varQTLs_funqtl[[i]]$qtls, varQTLs_funqtl[[i]]$eff, varQTLs_funqtl[[i]]$pcols, gap=25, ylab="Time")
+					mtext(names(varQTLs_funqtl)[i], side = 3)
 				})
 			}
 		dev.off()
 
 		# effect plots: jpeg
-		for (i in 1:length(mQTLs_funqtl_2014)) {
+		for (i in 1:length(varQTLs_funqtl)) {
 			try({
-				jpeg(paste("/g/steinmetz/brooks/genphen/metabolome/plots/funqtl_2014/effects",names(mQTLs_funqtl_2014)[i],".jpeg",sep=""))
-					plotlod(mQTLs_funqtl_2014[[i]]$qtls, mQTLs_funqtl_2014[[i]]$eff, mQTLs_funqtl_2014[[i]]$pcols, gap=25, ylab="Time")
-					mtext(names(mQTLs_funqtl_2014)[i], side = 3)
+				jpeg(paste("/g/steinmetz/brooks/genphen/metabolome/plots/varQTL/effects",names(varQTLs_funqtl)[i],".jpeg",sep=""))
+					plotlod(varQTLs_funqtl[[i]]$qtls, varQTLs_funqtl[[i]]$eff, varQTLs_funqtl[[i]]$pcols, gap=25, ylab="Time")
+					mtext(names(varQTLs_funqtl)[i], side = 3)
 				dev.off()
 			})
 		}
 
-		m_slod = max(as.numeric(unlist(lapply(seq(1:length(mQTLs_funqtl_2014)),function(i){try(max(mQTLs_funqtl_2014[[i]]$qtls_alt[,'slod']))}))), na.rm = T)
-		m_mlod = max(as.numeric(unlist(lapply(seq(1:length(mQTLs_funqtl_2014)),function(i){try(max(mQTLs_funqtl_2014[[i]]$qtls_alt[,'mlod']))}))), na.rm = T)
+		m_slod = max(as.numeric(unlist(lapply(seq(1:length(varQTLs_funqtl)),function(i){try(max(varQTLs_funqtl[[i]]$qtls_alt[,'slod']))}))), na.rm = T)
+		m_mlod = max(as.numeric(unlist(lapply(seq(1:length(varQTLs_funqtl)),function(i){try(max(varQTLs_funqtl[[i]]$qtls_alt[,'mlod']))}))), na.rm = T)
 
 		# lod plots
-		pdf("/g/steinmetz/brooks/genphen/metabolome/plots/funqtl_2014/lods.jpeg")
-			for (i in 1:length(mQTLs_funqtl_2014)) {
+		pdf("/g/steinmetz/brooks/genphen/metabolome/plots/varQTL/lods.pdf")
+			for (i in 1:length(varQTLs_funqtl)) {
 				try({
 					par(mfrow=c(2,1))
-					plot(mQTLs_funqtl_2014[[i]]$qtls_alt, ylim=c(0,m_slod), main=paste(names(mQTLs_funqtl_2014)[i],"SLOD"),bandcol="gray90")
-					abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["5%","slod"], col="red", lty=2)
-					abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["10%","slod"], col="blue", lty=3)
+					plot(varQTLs_funqtl[[i]]$qtls_alt, ylim=c(0,m_slod), main=paste(names(varQTLs_funqtl)[i],"SLOD"),bandcol="gray90")
+					abline(h=summary(varQTLs_funqtl[[i]]$permout)["5%","slod"], col="red", lty=2)
+					abline(h=summary(varQTLs_funqtl[[i]]$permout)["10%","slod"], col="blue", lty=3)
 					legend("topright", y.leg[i], c("5% FDR","10% FDR"), lty = c(2, 3), col = c("red","blue"))
-					plot(mQTLs_funqtl_2014[[i]]$qtls_alt, lodcolumn=2, ylim=c(0,m_mlod),
-							main=paste(names(mQTLs_funqtl_2014)[i],"MLOD"), bandcol="gray90")
-					abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["5%","mlod"], col="red", lty=2)
-					abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["10%","mlod"], col="blue", lty=3)
+					plot(varQTLs_funqtl[[i]]$qtls_alt, lodcolumn=2, ylim=c(0,m_mlod),
+							main=paste(names(varQTLs_funqtl)[i],"MLOD"), bandcol="gray90")
+					abline(h=summary(varQTLs_funqtl[[i]]$permout)["5%","mlod"], col="red", lty=2)
+					abline(h=summary(varQTLs_funqtl[[i]]$permout)["10%","mlod"], col="blue", lty=3)
 				})
 			}
 		dev.off()
 
 		# lod plots: jpeg
 
-		for (i in 1:length(mQTLs_funqtl_2014)) {
-			jpeg(paste("/g/steinmetz/brooks/genphen/metabolome/plots/funqtl_2014/lods",names(mQTLs_funqtl_2014)[i],".jpeg",sep=""))
+		for (i in 1:length(varQTLs_funqtl)) {
+			jpeg(paste("/g/steinmetz/brooks/genphen/metabolome/plots/varQTL/lods",names(varQTLs_funqtl)[i],".jpeg",sep=""))
 				try({
 					par(mfrow=c(2,1))
-					plot(mQTLs_funqtl_2014[[i]]$qtls_alt, ylim=c(0,m_slod), main=paste(names(mQTLs_funqtl_2014)[i],"SLOD"),bandcol="gray90")
-					abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["5%","slod"], col="red", lty=2)
-					abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["10%","slod"], col="blue", lty=3)
+					plot(varQTLs_funqtl[[i]]$qtls_alt, ylim=c(0,m_slod), main=paste(names(varQTLs_funqtl)[i],"SLOD"),bandcol="gray90")
+					abline(h=summary(varQTLs_funqtl[[i]]$permout)["5%","slod"], col="red", lty=2)
+					abline(h=summary(varQTLs_funqtl[[i]]$permout)["10%","slod"], col="blue", lty=3)
 					legend("topright", y.leg[i], c("5% FDR","10% FDR"), lty = c(2, 3), col = c("red","blue"))
-					plot(mQTLs_funqtl_2014[[i]]$qtls_alt, lodcolumn=2, ylim=c(0,m_mlod),
-							main=paste(names(mQTLs_funqtl_2014)[i],"MLOD"), bandcol="gray90")
-					abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["5%","mlod"], col="red", lty=2)
-					abline(h=summary(mQTLs_funqtl_2014[[i]]$permout)["10%","mlod"], col="blue", lty=3)
+					plot(varQTLs_funqtl[[i]]$qtls_alt, lodcolumn=2, ylim=c(0,m_mlod),
+							main=paste(names(varQTLs_funqtl)[i],"MLOD"), bandcol="gray90")
+					abline(h=summary(varQTLs_funqtl[[i]]$permout)["5%","mlod"], col="red", lty=2)
+					abline(h=summary(varQTLs_funqtl[[i]]$permout)["10%","mlod"], col="blue", lty=3)
 				})
 			dev.off()
 			}
-		} else {
-
-	}
+		}
 }
 
 
