@@ -1,0 +1,41 @@
+name  email
+lsteinme aaron.brooks@embl.de
+adjalley   sophieady@gmail.com
+aiyar raiyar@stanford.edu
+ajones  allan.jones@embl.de,
+briganti  francesca.briganti@embl.de
+brooks  aaron.brooks@embl.de
+chabbert  chrischabbert@gmail.com
+clauder clauder@embl.de
+czhu  chenchen.zhu@embl.de
+delhomme  delhomme@embl.de
+fritsch
+gagneur gagneur@genzentrum.lmu.de
+gen gen@embl.de
+gupta ishaan.gupta@embl.de
+hennig  bianca.hennig@embl.de
+hsun
+hughes
+jaerveli
+jakob jakob@embl.de
+klett
+landry
+mancera
+parts leopold.parts@sanger.ac.uk
+pelechan  vicente.pelechano.garcia@ki.se
+pxie
+schuon
+tekkedil
+tessmer william.mueller@embl.de
+velten  lars.velten@embl.de
+vonesch sibylle.vonesch@embl.de
+wegener
+wertek  aaron.brooks@embl.de
+wilkenin
+wmueller  william.mueller@embl.de
+wuwei
+xing
+xshi
+zaugg judith.zaugg@embl.de
+zeis  vicente.pelechano.garcia@ki.se
+zxu

@@ -1,5 +1,11 @@
 #!/usr/bin/python
 
+import os
+import pandas as pd
+import numpy as np
+import subprocess
+
+
 def du(path):
   """disk usage in human readable format (e.g. '2,1GB')"""
   import subprocess
@@ -29,3 +35,10 @@ def subdirQuant(path):
     return df
 
 if __name__ == "__main__":
+
+    proc = subprocess.Popen(["find `pwd` -type f -exec ls -l -k --time-style=long-iso {} \; 2> /dev/null"], stdout=subprocess.PIPE, shell=True)
+    (out, err) = proc.communicate()
+    out2 = pd.DataFrame([s.split(None, ) for s in out.splitlines()],
+        columns = ["permissions","nlinks","owner","group","size","date","time","fname"],
+        dtype = "str")
+    out2["size"] = out2["size"].astype(float)
