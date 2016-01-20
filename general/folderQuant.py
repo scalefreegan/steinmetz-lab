@@ -7,6 +7,11 @@ import subprocess
 import csv
 import datetime as dt
 
+# special for remote server with no Xterm
+import matplotlib as mpl
+mpl.use('Agg')
+import matplotlib.pyplot as plt
+
 
 def calcDateCumSum(df, startDate = "min", endMax = 3650, rangeFreq = "30D", corrF = 1e9):
     end = pd.to_datetime(dt.date.today())
