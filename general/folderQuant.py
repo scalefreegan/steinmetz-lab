@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import numpy as np
 import subprocess
+import csv
 
 
 def du(path):
@@ -36,9 +37,32 @@ def subdirQuant(path):
 
 if __name__ == "__main__":
 
+    name2email = {}
+    with open("/g/steinmetz/brooks/steinmetzUsers.csv") as f:
+        next(f)
+        reader = csv.reader(f,delimiter=",")
+        print reader
+        for x,y in reader:
+            name2email[x] = y
+
     proc = subprocess.Popen(["find `pwd` -type f -exec ls -l -k --time-style=long-iso {} \; 2> /dev/null"], stdout=subprocess.PIPE, shell=True)
     (out, err) = proc.communicate()
     out2 = pd.DataFrame([s.split(None, ) for s in out.splitlines()],
-        columns = ["permissions","nlinks","owner","group","size","date","time","fname"],
-        dtype = "str")
-    out2["size"] = out2["size"].astype(float)
+        columns = ["permissions","nlinks","owner","group","size","date","time","fname"])
+    #out2 = out2.convert_objects(convert_numeric=True)
+    out2.loc[:,"size"] = pd.to_numeric(out2.loc[:,"size"])
+    out2.loc[:,"date"] = pd.to_datetime(out2.loc[:,"date"])
+
+    owners = [i for i in out2["owner"].unique()]
+    owners_pass = []
+    for i in owners:
+        if i not in name2email.keys(): # send email alert to aaron.brooks@embl.de
+            print "Not in"
+        else:
+            print "Yup"
+            if name2email[i] == "NA":
+                # send email alert to aaron.brooks@embl.de
+                print "NA"
+            else:
+                # compile alert for named individual
+                owners_pass.append(i)
