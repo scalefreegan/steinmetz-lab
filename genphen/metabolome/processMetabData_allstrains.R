@@ -17,7 +17,7 @@
 .plot = FALSE
 
 # Import packages ---------------------------------------------------
-library(xlsx)
+# library(xlsx)
 library(ggplot2)
 #library(plotly)
 library(plyr)
