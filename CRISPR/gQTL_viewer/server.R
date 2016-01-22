@@ -189,16 +189,8 @@ shinyServer(function(input, output, session) {
   })
 
   output$image <- renderText({
-    filename <- normalizePath(file.path('../data/ge_vals.png'))
-    
-    # Return a list containing the filename and alt text
-    list(src = filename,
-         alt = "GE vals",
-         contentType = "image/png",
-         height = "300")
-    paste0('<td align="middle"><img src="http://steinmetzlab.embl.de/GenPhen/mQTL_plots/',
-           input$m, "/mQTL_", input$m, "_FDR_", alpha_10(), '.png" ',
-           'valign="middle" style="width: 100%;max-height: 100%"></td>')
+   return('<td align="middle"><img src="http://scalefreegan.github.io/steinmetz-lab/CRISPR/data/ge_vals.png" ',
+           'valign="middle" style="width: 50%;max-height: 100%"></td>')
     })
   
   output$link = renderText({
