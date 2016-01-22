@@ -37,57 +37,7 @@ shinyServer(function(input, output, session) {
   }
 
   df_full = reactive({
-
-    # select chromosomes
-    chrs = unique(data[[input$m]]$qtl[data[[input$m]]$qtl[,type]>=summary(data[[input$m]]$permout[,type],input$co/100)[1],"chr"])
-    chrs = levels(chrs)[chrs]
-
-    lodcolumn = if(type=="mlod"){ 2 } else { 1 }
-    qtl_intervals = list()
-    if (length(chrs)>0) {
-      for (i in chrs) {
-        qtl_intervals[[i]] = try(mrk[rownames(bayesint(data[[input$m]]$qtl, chr = str_pad(i, 2, pad = "0"), prob=input$bci/100, lodcolumn=lodcolumn))],silent = T)
-        if (class(qtl_intervals[[i]])=="try-error") {
-          qtl_intervals[[i]] = NULL
-        } else {
-          nn = sapply(as.character(seqnames(qtl_intervals[[i]])),function(i){
-            paste(substr(i,1,3),as.roman(substr(i,4,5)),sep="")
-          })
-          qtl_intervals[[i]] = renameSeqlevels(qtl_intervals[[i]],nn)
-          qtl_intervals[[i]] = keepSeqlevels(qtl_intervals[[i]],unique(nn))
-          qtl_intervals[[i]] = range(qtl_intervals[[i]])
-          qtl_intervals[[i]] = as.data.frame(cdsByOverlaps(TxDb.Scerevisiae.UCSC.sacCer3.sgdGene,qtl_intervals[[i]], type = "any", columns = "gene_id"))
-        }
-      }
-    }
-    qtl_df = do.call(rbind,qtl_intervals)
-    if (length(qtl_df) != 0) {
-      qtl_df$gene_id = unlist(qtl_df$gene_id)
-      gname_t = unlist(gname[unlist(qtl_df$gene_id)])
-      gname_t = data.frame(gene_id = names(gname_t), name = gname_t)
-      dname_t = unlist(dname[unlist(qtl_df$gene_id)])
-      dname_t = data.frame(gene_id = names(dname_t), alias = dname_t)
-      dname_t_long = unlist(dname_long[unlist(qtl_df$gene_id)])
-      dname_t_long = data.frame(gene_id = names(dname_t_long), desc = dname_t_long)
-      qtl_df = merge(qtl_df,gname_t,by="gene_id",sort=F,all.x=T)
-      qtl_df = merge(qtl_df,dname_t,by="gene_id",sort=F,all.x=T)
-      qtl_df = merge(qtl_df,dname_t_long,by="gene_id",sort=F,all.x=T)
-      qtl_df = qtl_df[,c("gene_id","name","seqnames","start","end","strand","alias","desc")]
-      colnames(qtl_df) = c("Sys.Name","Name","Chr","Start","End","Strand","Alias","Desc")
-      #rownames(qtl_df) = qtl_df[,"Sys.Name"]
-      qtl_df = qtl_df[!duplicated(qtl_df),]
-      # add stitch predictions
-      stitch = as.data.frame(filter(genphen_stitch,
-                protein%in%unlist(qtl_df$Sys.Name),alias==input$m)%>%ungroup())[,c("protein","score")]
-      colnames(stitch)[2] = "STITCH"
-      qtl_df = merge(qtl_df,stitch,by.x="Sys.Name",by.y="protein",sort=F,all.x=T)
-      # add snps
-      #
-      # TODO: break out sub categrories as pie charts or something similar
-      return(qtl_df)
-    } else {
-      return(data.frame())
-    }
+    return(data.frame())
   })
 
   df_var = reactive({
@@ -189,8 +139,8 @@ shinyServer(function(input, output, session) {
   })
 
   output$image <- renderText({
-   return('<td align="middle"><img src="http://scalefreegan.github.io/steinmetz-lab/CRISPR/data/ge_vals.png" ',
-           'valign="middle" style="width: 50%;max-height: 100%"></td>')
+   paste0('<td align="middle"><img src="http://scalefreegan.github.io/steinmetz-lab/CRISPR/data/ge_vals.png" ',
+           'valign="middle" style="width: 40%;max-height: 100%"></td>')
     })
   
   output$link = renderText({

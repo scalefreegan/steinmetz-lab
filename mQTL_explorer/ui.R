@@ -7,25 +7,17 @@
 
 library(shiny)
 library(markdown)
-<<<<<<< HEAD
+
 shinyUI(navbarPage("mQTL Explorer", selected = "Table Viewer",
-=======
-shinyUI(navbarPage("mQTL Explorer", selected = "Table Viewer",            
->>>>>>> origin/gh-pages
          tabPanel("Table Viewer",id = "inspect", fluidPage(
             title = "mQTL Explorer",
-            #h1("Poly(A) Isoform Viewer"),
             hr(),
             fluidRow(
               column(12,
                  fluidRow(
                    column(4,selectInput("m", " Metabolite", choices = names(data), selected = 1)),
                    column(4,sliderInput("co", " Custom FDR (%):,", max = 50, min = 0, value = 5)),
-<<<<<<< HEAD
                    column(4,sliderInput("bci", " Bayesian Confidence Interval (%):,", max = 100, min = 0, value = 95))
-=======
-                   column(4,sliderInput("bci", " Bayesian Confidence Interval (%):,", max = 100, min = 0, value = 50))
->>>>>>> origin/gh-pages
                  )
                 )
               ),

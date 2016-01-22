@@ -15,16 +15,18 @@ shinyUI(navbarPage("gQTL Explorer", selected = "Table Viewer",
             fluidRow(
               column(12,
                  fluidRow(
-                   column(4,sliderInput("co", " Custom FDR (%):,", max = 50, min = 0, value = 5)),
-                   column(4,sliderInput("bci", " Bayesian Confidence Interval (%):,", max = 100, min = 0, value = 95))
-                 )
-                )
-              ),
-            fluidRow(
-              column(12,
+                   column(12, h2("gQTLs From Gagneur et al 2013",align = "center"))
+                   ),
                  fluidRow(
                    column(12, htmlOutput("image"))
                )
+              )
+            ),
+            fluidRow(
+              column(12,
+                     fluidRow(
+                       column(12,sliderInput("cr", "Custom Interval (bp)", max = 100000, min = 0, value = 5, step = 100, width = "100%"))
+                     )
               )
             ),
             fluidRow(

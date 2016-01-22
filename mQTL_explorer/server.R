@@ -195,7 +195,7 @@ shinyServer(function(input, output, session) {
           MODERATE = sum(.$SNPEFF_IMPACT=="MODERATE"),
           NON_SYNONYMOUS_CODING = sum(.$SNPEFF_EFFECT=="NON_SYNONYMOUS_CODING"),
           CODON_DELETION = sum(.$SNPEFF_EFFECT=="CODON_DELETION"),
-          CODON_INSERTION = sum(.$SNPEFF_EFFECT=="CODON_INSERTION"),                  
+          CODON_INSERTION = sum(.$SNPEFF_EFFECT=="CODON_INSERTION"),
           CODON_CHANGE_PLUS_CODON_DELETION = sum(.$SNPEFF_EFFECT=="CODON_CHANGE_PLUS_CODON_DELETION"),
           CODON_CHANGE_PLUS_CODON_INSERTION = sum(.$SNPEFF_EFFECT=="CODON_CHANGE_PLUS_CODON_INSERTION"),
           LOW = sum(.$SNPEFF_IMPACT=="IMPACT_LOW"),
@@ -206,20 +206,20 @@ shinyServer(function(input, output, session) {
       }) %>% ungroup(.)
     return(var_df)
   })
-  
+
   df_dt = reactive({
     # reorder
-    qtl_df = merge(df_full(),df_var(),by.x="Sys.Name",by.y="SNPEFF_TRANSCRIPT_ID",sort=F,all.x=T)  
-    qtl_df = qtl_df[,c("Sys.Name","Name","STITCH","SNPS", "INDELS", "UPSTREAM", 
+    qtl_df = merge(df_full(),df_var(),by.x="Sys.Name",by.y="SNPEFF_TRANSCRIPT_ID",sort=F,all.x=T)
+    qtl_df = qtl_df[,c("Sys.Name","Name","STITCH","SNPS", "INDELS", "UPSTREAM",
                        "DOWNSTREAM", "INTRONS", "CODING","HIGH","MODERATE","LOW",
                        "Chr","Start","End","Strand","Alias","Desc")]
   })
-  
+
   output$snptype = renderPlot({
     # reorder
     qtl_df = df_var()
     high = c("START_LOST","STOP_GAINED","STOP_LOST","FRAME_SHIFT")
-    moderate = c("NON_SYNONYMOUS_CODING", "CODON_DELETION","CODON_INSERTION", 
+    moderate = c("NON_SYNONYMOUS_CODING", "CODON_DELETION","CODON_INSERTION",
                  "CODON_CHANGE_PLUS_CODON_DELETION", "CODON_CHANGE_PLUS_CODON_INSERTION")
     low = c("SYNONYMOUS_CODING","SYNONYMOUS_STOP","NON_SYNONYMOUS_START")
     var_df_melt = melt(qtl_df,id.vars="SNPEFF_TRANSCRIPT_ID") %>% filter(.,value>0,variable%in%c(high,moderate,low))
@@ -243,7 +243,7 @@ shinyServer(function(input, output, session) {
       coord_flip() + facet_wrap(~ impact) + scale_x_discrete(limits=rev(levels(var_df_melt2$SNPEFF_TRANSCRIPT_ID))) +
       xlab("Gene") + ylab("# SNPs/Indels") + theme(legend.position="bottom")
   })
-  
+
 >>>>>>> origin/gh-pages
   # DATA TABLE
   output$dt = DT::renderDataTable(
