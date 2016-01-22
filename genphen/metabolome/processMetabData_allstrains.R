@@ -17,7 +17,11 @@
 .plot = FALSE
 
 # Import packages ---------------------------------------------------
+<<<<<<< HEAD
 # library(xlsx)
+=======
+library(xlsx)
+>>>>>>> origin/gh-pages
 library(ggplot2)
 #library(plotly)
 library(plyr)
@@ -31,7 +35,10 @@ library(parallel)
 options(mc.cores = 24)
 library(snow)
 library(igraph)
+<<<<<<< HEAD
 library(stringr)
+=======
+>>>>>>> origin/gh-pages
 #library(clustQTL)
 #devtools::install_github("scalefreegan/steinmetz-lab/clustQTL")
 
@@ -84,7 +91,11 @@ strainRename = function(strains) {
 	return(o)
 }
 
+<<<<<<< HEAD
 processData = function( f1, f2, f3, f4, f5, startRow = 2,... ) {
+=======
+processData = function( f1, f2, f3, startRow = 2,... ) {
+>>>>>>> origin/gh-pages
 	# f1 is relative time - defined by "cultivation phase"
 	# eg. Endometabolome_1B_25A_sorted by cultivation phase.xlsx
 	# f2 contains measurements at absolute time
@@ -92,8 +103,11 @@ processData = function( f1, f2, f3, f4, f5, startRow = 2,... ) {
 	# f3 contains additional measurements for the strains
 	# including Cell_conc, biovolume, single cell volume, and traits
 	# we will not use "traits" sheet - will calculate them myself if needed
+<<<<<<< HEAD
 	# f4 contains raw peak areas for all strains
 	# f5 contains batch information
+=======
+>>>>>>> origin/gh-pages
 	wb1 = loadWorkbook(f1)
 	wb2 = loadWorkbook(f2)
 	wb3 = loadWorkbook(f3)
@@ -177,6 +191,7 @@ processData = function( f1, f2, f3, f4, f5, startRow = 2,... ) {
 		# to_r = to_r[!is.na(to_r$value),]
 		return(to_r)
 	}))
+<<<<<<< HEAD
 	o$strain = strainRename(levels(o$strain)[o$strain])
 	# fix replicate problem: change 28B_1/28B_1 to 28B_1/28B_2
 	o[which(o$replicate==1.1),"replicate"] = 2
@@ -247,6 +262,9 @@ processData = function( f1, f2, f3, f4, f5, startRow = 2,... ) {
 		}) %>% ungroup(.)
 	o$peakarea = as.numeric(levels(o$peakarea)[o$peakarea])
 	o$peakarea[o$peakarea == 0] = NA
+=======
+	close(pb)
+>>>>>>> origin/gh-pages
 	return(o)
 }
 
@@ -258,8 +276,11 @@ data_dir = "/g/steinmetz/project/GenPhen/data/endometabolome/data/"
 f1 = paste(data_dir, "Endometabolome_1B_46B_sorted by cultivation phase.xlsx", sep="")
 f2 = paste(data_dir, "Endometabolome_46B_sorted by cultivation time.xlsx", sep="")
 f3 = paste(data_dir, "Dynamic_Metabolome_growth_and_morphology_113_strains.xlsx", sep="")
+<<<<<<< HEAD
 f4 = paste(data_dir, "Peakareas_automated integration_2710.txt", sep="")
 f5 = paste(data_dir, "batches.txt", sep="")
+=======
+>>>>>>> origin/gh-pages
 
 endo_f = "/g/steinmetz/project/GenPhen/data/endometabolome/data/endometabolite_full_12102015.rda"
 #endo_f = "~/Desktop/tmpdata/full_endometabolome/endometabolite_full_23082015.rda"
@@ -267,11 +288,20 @@ endo_f = "/g/steinmetz/project/GenPhen/data/endometabolome/data/endometabolite_f
 if (file.exists(endo_f)) {
   load(endo_f)
 } else{
+<<<<<<< HEAD
   endometabolite = processData(f1, f2, f3, f4, f5, startRow = 2)
 	# fix replicate problem: change 28B_1/28B_1 to 28B_1/28B_2
 	# endometabolite[which(endometabolite$replicate==1.1),"replicate"] = 2
 	# endometabolite$replicate = as.factor(endometabolite$replicate)
 	# replace NaN with NA
+=======
+  endometabolite = processData(f1, f2, f3, startRow = 2)
+	# fix replicate problem: change 28B_1/28B_1 to 28B_1/28B_2
+	endometabolite[which(endometabolite$replicate==1.1),"replicate"] = 2
+	endometabolite$replicate = as.factor(endometabolite$replicate)
+	# replace NaN with NA
+
+>>>>>>> origin/gh-pages
   save(endometabolite, file = endo_f)
 }
 
@@ -359,6 +389,7 @@ if (.plot) {
 		hist(apply(geno,1,function(i)sum(i==1)/length(i)),main="Genotype composition, all markers",xlab="Genotype == 1, Freq",xlim=c(0,1))
 	dev.off()
 
+<<<<<<< HEAD
 	######################
 	#
 	# ABS TIME
@@ -384,6 +415,26 @@ if (.plot) {
 			}
 		})
 
+=======
+	repdata_abs = endometabolite %>%
+	  group_by(metabolite,strain) %>%
+	  filter(.,time_format=="absolute") %>%
+	  do({
+	    x = filter(.,replicate==1)
+	    y = filter(.,replicate==2)
+	    t = sort(intersect(x$time,y$time))
+	    x.log2 = x$value.log2[x$time%in%t]
+	    y.log2 = y$value.log2[y$time%in%t]
+			x.diffBYmean = x$derivative.log2[x$time%in%t]/mean(x.log2)
+	    y.diffBYmean = y$derivative.log2[y$time%in%t]/mean(y.log2)
+	    if (length(x.log2)==length(y.log2)) {
+	      data.frame(x.log2 = x.log2, y.log2 = y.log2,
+					x.diffBYmean = x.diffBYmean, y.diffBYmean = y.diffBYmean)
+	    } else {
+	      data.frame()
+	    }
+	  })
+>>>>>>> origin/gh-pages
 
 	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/replicates_allmetabolites_abstime.pdf")
 	  heatscatter(repdata_abs$x.log2,repdata_abs$y.log2,main="Reproducibility,
@@ -446,6 +497,7 @@ if (.plot) {
 		ggplot(d, aes(x.log2, y.log2)) +
 			geom_point() +
 			facet_wrap(~ strain)
+<<<<<<< HEAD
 	dev.off()
 
 	######################
@@ -515,19 +567,30 @@ if (.plot) {
 	dev.off()
 
 
+=======
+
+
+	dev.off()
+
+>>>>>>> origin/gh-pages
 	# Plot overall data trends ---------------------------------------------------
 
 	pdf("/g/steinmetz/project/GenPhen/data/endometabolome/plots/metabolome_abstime.pdf", width=11.5,height=8)
 	ggplot(
 	  data = endometabolite %>%
 	    filter(! is.na(value.log2)) %>%
+<<<<<<< HEAD
 	    filter(time_format=="absolute") %>%
+=======
+	    filter(time_format=="relative") %>%
+>>>>>>> origin/gh-pages
 	    group_by(metabolite) %>%
 	    do({filter(.,abs(.$value.log2-mean(.$value.log2))<5*sd(.$value.log2))}),
 	  aes(x = time, y = value.log2)) +
 	    geom_point() +
 	  geom_smooth() +
 	  facet_wrap( ~ metabolite, scales="free_y") +
+<<<<<<< HEAD
 	  scale_x_continuous(name="Time (absolute)") +
 	    scale_y_continuous(name=expression(paste("Level log2(",mu,"M)"))) +
 	    ggtitle("Endo- Metabolome Levels Across All Strains All Metabolites")
@@ -551,6 +614,9 @@ if (.plot) {
 	  geom_smooth() +
 	  facet_wrap( ~ metabolite, scales="free_y") +
 	  scale_x_continuous(name="Time (relative)") +
+=======
+	  scale_x_discrete(name="Time (relative)") +
+>>>>>>> origin/gh-pages
 	    scale_y_continuous(name=expression(paste("Level log2(",mu,"M)"))) +
 	    ggtitle("Endo- Metabolome Levels Across All Strains All Metabolites")
 	dev.off()
@@ -642,11 +708,20 @@ if (F) {
 
 }
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/gh-pages
 #-------------------------------------------------------------------#
 # detect QTLs the traditional way, rQTL
 #
 #-------------------------------------------------------------------#
 
+<<<<<<< HEAD
+=======
+
+#
+>>>>>>> origin/gh-pages
 # Don't think this is necessary for rqtl package
 # in fact, I think it will cause imputaition of genotypes, which I would like to
 # avoid
@@ -840,6 +915,10 @@ if (FALSE) {
 #-------------------------------------------------------------------#
 f = "/g/steinmetz/brooks/genphen/metabolome/qtls/mQTLs_comball_funqtl_2014.rda"
 if (FALSE) {
+<<<<<<< HEAD
+=======
+#if (!file.exists(f)) {
+>>>>>>> origin/gh-pages
 	# group phenotype timepoints
 
 	rep2metabolites = sapply(rownames(pheno), function(i) {
@@ -1072,6 +1151,10 @@ if (!file.exists(f)) {
 	load(f)
 }
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/gh-pages
 if (F) {
 	# make it a network
 	v_meta = data.frame(vertex = c(levels(genphen_stitch$alias), genphen_stitch$protein), size = 3)
@@ -1135,6 +1218,7 @@ if (F) {
 	}))
 	mQTL_df[with(mQTL_df,order(stitch,decreasing=T)),]
 	mQTL_stitch = filter(mQTL_df,stitch>0)
+<<<<<<< HEAD
 }
 
 #-------------------------------------------------------------------#
@@ -1331,6 +1415,15 @@ if (F) {
 
 
 
+=======
+
+
+
+
+}
+
+
+>>>>>>> origin/gh-pages
 # Plot  ---------------------------------------------------
 if (.plot) {
 	# assses features of p2c

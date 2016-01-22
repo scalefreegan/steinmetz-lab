@@ -14,7 +14,11 @@
 .maintainer = "Aaron Brooks"
 .email = "aaron.brooks@embl.de"
 .status = "Development"
+<<<<<<< HEAD
 .write = FALSE
+=======
+.plot = FALSE
+>>>>>>> origin/gh-pages
 
 # Import packages ---------------------------------------------------
 library(plyr)
@@ -22,6 +26,7 @@ library(dplyr)
 library(reshape2)
 
 # Load files --------------------------------------------------------
+<<<<<<< HEAD
 GITHUBDIR = "http://scalefreegan.github.io/steinmetz-lab/yeast2_0/primers/"
 synIII = read.delim(url(paste(GITHUBDIR, "synIII.tsv", sep = "")),header=T,sep="\t",stringsAsFactors=F)
 synVI = read.delim(url(paste(GITHUBDIR, "synVI.tsv", sep = "")),header=T,sep="\t",stringsAsFactors=F)
@@ -65,3 +70,7 @@ colnames(to_write) = c("Primer_Name","Sequence")
 if (.write) {
   write.table(to_write,file="~/Documents/git/steinmetz-lab/yeast2_0/primers/ordered.txt",quote=F,sep="\t",row.names=F)
 }
+=======
+GITHUBDIR = "http://scalefreegan.github.io/steinmetz-lab/master/yeast2_0/primers/"
+synIII = read.tsv(url(paste(GITHUBDIR, "synIII.tsv", sep = "")))
+>>>>>>> origin/gh-pages

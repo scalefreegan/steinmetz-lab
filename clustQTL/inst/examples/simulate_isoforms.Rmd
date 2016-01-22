@@ -1,0 +1,24 @@
+---
+title: "Simulate transcript isoforms"
+author: "Aaron Brooks"
+date: "June 22, 2015"
+output: html_document
+---
+
+# Introduction
+
+The primary goal of clustQTL is to detect patterns, rather than perform QTL detection for a single (or even multiple) QTL measurements. For instance, we would like to detemine whether produce differental patterns of transcriptional isoforms.
+
+Here, I simulate these possibiilites to determine whether clustQTL is ca
+
+```{r, include=FALSE}
+data(cars)
+```
+
+You can also embed plots, for example:
+
+```{r, echo=FALSE}
+plot(cars)
+```
+
+

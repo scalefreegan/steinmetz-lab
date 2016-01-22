@@ -23,7 +23,7 @@ shinyUI(navbarPage("gQTL Explorer", selected = "Table Viewer",
             fluidRow(
               column(12,
                  fluidRow(
-                   column(12, imageOutput("image"))
+                   column(12, htmlOutput("image"))
                )
               )
             ),
