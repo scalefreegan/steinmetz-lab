@@ -99,6 +99,7 @@ shinyServer(function(input, output, session) {
         g2QTL = merge(g2QTL,dname_t_long,by="gene_id",sort=F,all.x=T)
         g2QTL = g2QTL[,c("gene_id","name","seqnames","start","end","strand","alias","desc")]
         colnames(g2QTL) = c("Sys.Name","Name","Chr","Start","End","Strand","Alias","Desc")
+        g2QTL = g2QTL[!duplicated(g2QTL),]
         return(g2QTL)
       } else {
         return(data.frame())
