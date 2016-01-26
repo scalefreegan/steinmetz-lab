@@ -1,5 +1,5 @@
 .local = FALSE
-if (system("hostname",intern=T) == "mac-steinmetz55.embl.de") {
+if (system("hostname",intern=T) == "mac-steinmetz55.embl.de" || system("hostname",intern=T) == "interzone.local") {
   print("yes")
   .local = TRUE
 } else {

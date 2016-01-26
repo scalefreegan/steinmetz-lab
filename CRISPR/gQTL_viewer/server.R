@@ -36,14 +36,83 @@ shinyServer(function(input, output, session) {
             val)
   }
 
-  df_full = reactive({
-    return(data.frame())
+  df_query = reactive({
+    nenv = apply(gQTL[,4:dim(gQTL)[2]],1,function(i){sum(i<=0.05)})
+    wenv = apply(gQTL[,4:dim(gQTL)[2]],1,function(i){paste(colnames(gQTL)[4:dim(gQTL)[2]][which(i<0.05)],collapse=", ")})
+    gQTL_df = cbind(gQTL[,1:3],N_env = nenv, env = wenv)
+    colnames(gQTL_df) = c("Chr","Start","Stop","N.Envs","Envs")
+    nn = sapply(gQTL_df[,"Chr"],function(i){
+      paste(substr(i,1,3),as.roman(substr(i,4,5)),sep="")
+    })
+    gQTL_df[,"Chr"] = nn
+    gQTL_df = gQTL_df[order(gQTL_df[,"N.Envs"],decreasing=T),]
+    gQTL_df = cbind(QTL = seq(1,dim(gQTL_df)[1]),gQTL_df)
+    return(data.frame(gQTL_df,stringsAsFactors = F))
   })
-
+  
+  df_full = reactive({
+    s = as.numeric(input$dt1_rows_selected[length(input$dt1_rows_selected)])
+    print(s)
+    print(values$old_selection)
+    #print(s)
+    if (length(s)) {
+      gQTL_df = df_query()
+      # print(gQTL_df[s,])
+      # map gQTL locs to genomic ranges with genes, etc
+      # check for update to input$cr
+      if (length(values$old_selection)==0) {
+        # update slider with default QTL coords
+        updateSliderInput(session, "cr",
+                          value = abs(diff(c(gQTL_df[s,"Start"],gQTL_df[s,"Stop"]))))
+      } else if (s != values$old_selection) {
+        updateSliderInput(session, "cr",
+                          value = abs(diff(c(gQTL_df[s,"Start"],gQTL_df[s,"Stop"]))))
+      }
+      mid = round(mean(gQTL_df[s,"Start"],gQTL_df[s,"Stop"]))
+      nStart =  round(mid - input$cr/2)
+      if (nStart < 1) {
+        nStart = 1
+      }
+      nStop = round(mid + input$cr/2)
+      QTL_range = IRanges::IRanges(start = nStart, end = nStop)
+      QTLgr = GenomicRanges::GRanges(seqnames = gQTL_df[s, "Chr"] , ranges = QTL_range)
+      g2QTL = as.data.frame(cdsByOverlaps(TxDb.Scerevisiae.UCSC.sacCer3.sgdGene, QTLgr, type = "any", columns = "gene_id"))
+      if (dim(g2QTL)[1]>0) {
+        # GENE INFOS
+        #qtl_df$gene_id = unlist(qtl_df$gene_id)
+        gname_t = unlist(gname[unlist(g2QTL$gene_id)])
+        gname_t = data.frame(gene_id = names(gname_t), name = gname_t)
+        dname_t = unlist(dname[unlist(g2QTL$gene_id)])
+        if (is.null(dname_t)) {
+          dname_t = data.frame(gene_id = names(dname)[1], alias = unlist(dname)[1])
+        } else {
+          dname_t = data.frame(gene_id = names(dname_t), alias = dname_t)
+        }
+        dname_t_long = unlist(dname_long[unlist(g2QTL$gene_id)])
+        if (is.null(dname_t)) {
+          dname_t = data.frame(gene_id = names(dname_long)[1], alias = unlist(dname_long)[1])
+        } else {
+          dname_t_long = data.frame(gene_id = names(dname_t_long), desc = dname_t_long)
+        }
+        g2QTL = merge(g2QTL,gname_t,by="gene_id",sort=F,all.x=T)
+        g2QTL = merge(g2QTL,dname_t,by="gene_id",sort=F,all.x=T)
+        g2QTL = merge(g2QTL,dname_t_long,by="gene_id",sort=F,all.x=T)
+        g2QTL = g2QTL[,c("gene_id","name","seqnames","start","end","strand","alias","desc")]
+        colnames(g2QTL) = c("Sys.Name","Name","Chr","Start","End","Strand","Alias","Desc")
+        return(g2QTL)
+      } else {
+        return(data.frame())
+      }
+    } else {
+      return(data.frame())
+    }
+  })
+  
   df_var = reactive({
-    qtl_df = df_full()
-    if (dim(qtl_df)[1]>0) {
-      var_df = filter(var_info, SNPEFF_TRANSCRIPT_ID%in%unlist(qtl_df$Sys.Name)) %>%
+    # VAR INFOS
+    g2QTL = df_full()
+    if (dim(g2QTL)[1]>0) {
+      var_df = filter(var_info, SNPEFF_TRANSCRIPT_ID%in%unlist(g2QTL$Sys.Name)) %>%
         group_by(.,SNPEFF_TRANSCRIPT_ID) %>%
         do({
           data.frame(
@@ -71,19 +140,19 @@ shinyServer(function(input, output, session) {
           )
         }) %>% ungroup(.)
       return(var_df)
-    } else {
+    } else (
       return(data.frame())
-    }
+    )
   })
-
-  df_dt = reactive({
-    # reorder
+  
+  df_combine = reactive({
     df_full = df_full()
     if (dim(df_full)[1]>0) {
-      qtl_df = merge(df_full,df_var(),by.x="Sys.Name",by.y="SNPEFF_TRANSCRIPT_ID",sort=F,all.x=T)
-      qtl_df = qtl_df[,c("Sys.Name","Name","STITCH","SNPS", "INDELS", "UPSTREAM",
+      tor_df = merge(df_full(),df_var(),by.x="Sys.Name",by.y="SNPEFF_TRANSCRIPT_ID",sort=F,all.x=T)
+      tor_df = tor_df[,c("Sys.Name","Name","SNPS", "INDELS", "UPSTREAM",
                          "DOWNSTREAM", "INTRONS", "CODING","HIGH","MODERATE","LOW",
                          "Chr","Start","End","Strand","Alias","Desc")]
+      return(tor_df)
     } else {
       return(data.frame())
     }
@@ -91,13 +160,13 @@ shinyServer(function(input, output, session) {
 
   output$snptype = renderPlot({
     # reorder
-    qtl_df = df_var()
-    if(dim(qtl_df)[1]>0) {
+    var_df = df_var()
+    if(dim(var_df)[1]>0) {
       high = c("START_LOST","STOP_GAINED","STOP_LOST","FRAME_SHIFT")
       moderate = c("NON_SYNONYMOUS_CODING", "CODON_DELETION","CODON_INSERTION",
                    "CODON_CHANGE_PLUS_CODON_DELETION", "CODON_CHANGE_PLUS_CODON_INSERTION")
       low = c("SYNONYMOUS_CODING","SYNONYMOUS_STOP","NON_SYNONYMOUS_START")
-      var_df_melt = melt(qtl_df,id.vars="SNPEFF_TRANSCRIPT_ID") %>% filter(.,value>0,variable%in%c(high,moderate,low))
+      var_df_melt = melt(var_df[,c("SNPEFF_TRANSCRIPT_ID",high,moderate,low)],id.vars="SNPEFF_TRANSCRIPT_ID") %>% filter(.,value>0,variable%in%c(high,moderate,low))
       var_df_melt$impact = sapply(var_df_melt$variable,function(i){
         if (i %in% high) {
           return("High Impact")
@@ -122,20 +191,25 @@ shinyServer(function(input, output, session) {
     }
   })
 
-  # DATA TABLE
-  output$dt = DT::renderDataTable(
-    df_dt(), server = TRUE, selection = "single",
+  # DATA TABLES
+  output$dt1 = DT::renderDataTable(
+    df_query(), server = TRUE, selection = "multiple",
+    rownames = FALSE, extensions = 'Responsive', escape = FALSE)
+  
+  output$dt2 = DT::renderDataTable(
+    df_combine(), server = TRUE, selection = "none",
     rownames = FALSE, extensions = 'Responsive', escape = FALSE)
 
   # REACTIVE VALUES
   values = reactiveValues(
-    old_selection = NULL,
+    old_selection = 0,
+    old_interval = NULL,
     link = NULL
   )
 
   # MONITOR OLD SELECTION
   session$onFlush(once=FALSE, function(){
-    isolate({ values$old_selection <- input$dt_rows_selected })
+    isolate({ values$old_selection <- as.numeric(input$dt1_rows_selected[length(input$dt1_rows_selected)]) })
   })
 
   output$image <- renderText({
@@ -144,16 +218,19 @@ shinyServer(function(input, output, session) {
     })
   
   output$link = renderText({
-    s = input$dt_rows_selected[length(input$dt_rows_selected)]
-    d = df_full()
-    s = which(d[,"Sys.Name"]==s)[1]
+    s = as.numeric(input$dt1_rows_selected[length(input$dt1_rows_selected)])
+    d = df_query()
     print(s)
     if (length(s)) {
-      chr = levels(d[s, "Chr"])[d[s, "Chr"]]
-      start = d[s, "Start"]-10000
-      end = d[s, "End"]+10000
-      val = paste(chr,"%3A",start,"..",end, sep = "")
-      val = paste('http://steinmetzlab.embl.de/mQTL/?loc=',val,"&tracks=",input$m,"%2C", d[s, "Sys.Name"], sep="")
+      chr = d[s, "Chr"]
+      start = d[s, "Start"]
+      end = d[s, "Stop"]
+      mid = round(mean(c(start,end)))
+      #a = curlEscape(paste0('[{ "seq_id":"chrII", "start": ', start, ', "end": ',end,', "name": "QTL"}]'))
+      a = paste0(chr,"%3A",start,"..",end)
+      val = paste(chr,"%3A",mid-input$cr,"..",mid+input$cr, sep = "")
+      val = paste('http://steinmetzlab.embl.de/mQTL/?loc=',val,"&highlight=", a, sep="")
+      # qtl segment to add
       print(val)
     } else {
       val = "http://steinmetzlab.embl.de/mQTL/"
