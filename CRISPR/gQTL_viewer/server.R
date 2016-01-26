@@ -39,8 +39,8 @@ shinyServer(function(input, output, session) {
   df_query = reactive({
     nenv = apply(gQTL[,4:dim(gQTL)[2]],1,function(i){sum(i<=0.05)})
     wenv = apply(gQTL[,4:dim(gQTL)[2]],1,function(i){paste(colnames(gQTL)[4:dim(gQTL)[2]][which(i<0.05)],collapse=", ")})
-    gQTL_df = cbind(gQTL[,1:3],N_env = nenv, env = wenv)
-    colnames(gQTL_df) = c("Chr","Start","Stop","N.Envs","Envs")
+    gQTL_df = cbind(gQTL[,1:3],l = abs(gQTL[,2]-gQTL[,3])+1, N_env = nenv, env = wenv)
+    colnames(gQTL_df) = c("Chr","Start","Stop","L.Interval","N.Envs","Envs")
     nn = sapply(gQTL_df[,"Chr"],function(i){
       paste(substr(i,1,3),as.roman(substr(i,4,5)),sep="")
     })
