@@ -37,11 +37,9 @@ shinyServer(function(input, output, session) {
   }
 
   df_full = reactive({
-
     # select chromosomes
     chrs = unique(data[[input$m]]$qtl[data[[input$m]]$qtl[,type]>=summary(data[[input$m]]$permout[,type],input$co/100)[1],"chr"])
     chrs = levels(chrs)[chrs]
-
     lodcolumn = if(type=="mlod"){ 2 } else { 1 }
     qtl_intervals = list()
     if (length(chrs)>0) {
@@ -85,17 +83,13 @@ shinyServer(function(input, output, session) {
       #
       # TODO: break out sub categrories as pie charts or something similar
       return(qtl_df)
-<<<<<<< HEAD
     } else {
       return(data.frame())
-=======
->>>>>>> origin/gh-pages
     }
   })
 
   df_var = reactive({
     qtl_df = df_full()
-<<<<<<< HEAD
     if (dim(qtl_df)[1]>0) {
       var_df = filter(var_info, SNPEFF_TRANSCRIPT_ID%in%unlist(qtl_df$Sys.Name)) %>%
         group_by(.,SNPEFF_TRANSCRIPT_ID) %>%
@@ -176,75 +170,22 @@ shinyServer(function(input, output, session) {
     }
   })
 
-=======
-    var_df = filter(var_info, SNPEFF_TRANSCRIPT_ID%in%unlist(qtl_df$Sys.Name)) %>%
-      group_by(.,SNPEFF_TRANSCRIPT_ID) %>%
-      do({
-        data.frame(
-          SNPS = sum(.$id=="snp"),
-          INDELS = sum(.$id=="indel"),
-          UPSTREAM = sum(.$SNPEFF_EFFECT=="UPSTREAM"),
-          DOWNSTREAM = sum(.$SNPEFF_EFFECT=="DOWNSTREAM"),
-          INTRONS = sum(.$SNPEFF_EFFECT=="INTRONS"),
-          CODING = sum(.$SNPEFF_EFFECT%in%c("UPSTREAM","DOWNSTREAM","INTRONS")==FALSE),
-          HIGH = sum(.$SNPEFF_IMPACT=="HIGH"),
-          START_LOST = sum(.$SNPEFF_EFFECT=="START_LOST"),
-          STOP_GAINED = sum(.$SNPEFF_EFFECT=="STOP_GAINED"),
-          STOP_LOST = sum(.$SNPEFF_EFFECT=="STOP_LOST"),
-          FRAME_SHIFT = sum(.$SNPEFF_EFFECT=="FRAME_SHIFT"),
-          MODERATE = sum(.$SNPEFF_IMPACT=="MODERATE"),
-          NON_SYNONYMOUS_CODING = sum(.$SNPEFF_EFFECT=="NON_SYNONYMOUS_CODING"),
-          CODON_DELETION = sum(.$SNPEFF_EFFECT=="CODON_DELETION"),
-          CODON_INSERTION = sum(.$SNPEFF_EFFECT=="CODON_INSERTION"),
-          CODON_CHANGE_PLUS_CODON_DELETION = sum(.$SNPEFF_EFFECT=="CODON_CHANGE_PLUS_CODON_DELETION"),
-          CODON_CHANGE_PLUS_CODON_INSERTION = sum(.$SNPEFF_EFFECT=="CODON_CHANGE_PLUS_CODON_INSERTION"),
-          LOW = sum(.$SNPEFF_IMPACT=="IMPACT_LOW"),
-          SYNONYMOUS_CODING = sum(.$SNPEFF_EFFECT=="SYNONYMOUS_CODING"),
-          SYNONYMOUS_STOP = sum(.$SNPEFF_EFFECT=="SYNONYMOUS_STOP"),
-          NON_SYNONYMOUS_START = sum(.$SNPEFF_EFFECT=="NON_SYNONYMOUS_START")
-        )
-      }) %>% ungroup(.)
-    return(var_df)
-  })
-
   df_dt = reactive({
     # reorder
-    qtl_df = merge(df_full(),df_var(),by.x="Sys.Name",by.y="SNPEFF_TRANSCRIPT_ID",sort=F,all.x=T)
-    qtl_df = qtl_df[,c("Sys.Name","Name","STITCH","SNPS", "INDELS", "UPSTREAM",
-                       "DOWNSTREAM", "INTRONS", "CODING","HIGH","MODERATE","LOW",
-                       "Chr","Start","End","Strand","Alias","Desc")]
+    df_full = df_full()
+    if (dim(df_full)[1]>0) {
+      qtl_df = merge(df_full,df_var(),by.x="Sys.Name",by.y="SNPEFF_TRANSCRIPT_ID",sort=F,all.x=T)
+      qtl_df = qtl_df[,c("Sys.Name","Name","STITCH","SNPS", "INDELS", "UPSTREAM",
+                         "DOWNSTREAM", "INTRONS", "CODING","HIGH","MODERATE","LOW",
+                         "Chr","Start","End","Strand","Alias","Desc")]
+    } else {
+      return(data.frame())
+    }
+   
   })
 
-  output$snptype = renderPlot({
-    # reorder
-    qtl_df = df_var()
-    high = c("START_LOST","STOP_GAINED","STOP_LOST","FRAME_SHIFT")
-    moderate = c("NON_SYNONYMOUS_CODING", "CODON_DELETION","CODON_INSERTION",
-                 "CODON_CHANGE_PLUS_CODON_DELETION", "CODON_CHANGE_PLUS_CODON_INSERTION")
-    low = c("SYNONYMOUS_CODING","SYNONYMOUS_STOP","NON_SYNONYMOUS_START")
-    var_df_melt = melt(qtl_df,id.vars="SNPEFF_TRANSCRIPT_ID") %>% filter(.,value>0,variable%in%c(high,moderate,low))
-    var_df_melt$impact = sapply(var_df_melt$variable,function(i){
-      if (i %in% high) {
-        return("High Impact")
-      } else if (i %in% moderate) {
-        return("Moderate Impact")
-      } else {
-        return ("Low Impact")
-      }
-    })
-    var_df_melt2 = do.call(rbind,lapply(seq(1,dim(var_df_melt)[1]),function(i){
-      do.call(rbind,lapply(seq(1,as.numeric(var_df_melt[i,"value"])),function(j){
-        var_df_melt[i,]
-      }))
-    }))
-    var_df_melt2$impact = factor(var_df_melt2$impact, levels = c("High Impact","Moderate Impact","Low Impact"))
-    var_df_melt2$SNPEFF_TRANSCRIPT_ID = factor(var_df_melt2$SNPEFF_TRANSCRIPT_ID, levels = sort(unique(var_df_melt2$SNPEFF_TRANSCRIPT_ID)))
-    ggplot(var_df_melt2, aes(x = factor(SNPEFF_TRANSCRIPT_ID), fill=variable)) + geom_bar(width=.8) +
-      coord_flip() + facet_wrap(~ impact) + scale_x_discrete(limits=rev(levels(var_df_melt2$SNPEFF_TRANSCRIPT_ID))) +
-      xlab("Gene") + ylab("# SNPs/Indels") + theme(legend.position="bottom")
-  })
+  
 
->>>>>>> origin/gh-pages
   # DATA TABLE
   output$dt = DT::renderDataTable(
     df_dt(), server = TRUE, selection = "single",
