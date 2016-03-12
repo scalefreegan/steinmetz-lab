@@ -1,0 +1,19 @@
+﻿Table 1.
+        Examples of yeast permeases undergoing Rsp5-dependent vacuolar targeting
+Permease (substrate),Conditions of vacuolar targeting,Adaptor(s),Refs
+Can1 (arginine),Cycloheximide,Art1a,[63]
+Ctr1 (copper),Substrate excess,Bul1a<comma> Bul2a,[101]
+Fur4 (uracil),Cycloheximide,Bul1a<comma> Bul2a<comma> Art1a<comma> Art2a<comma> Art8a<comma> Bsd2b<comma> Ear1b<comma> Ssh4b<comma>,27<comma> 64<comma> 70 and 102
+Substrate excess,Bul1a<comma> Bul2a<comma> Art1a<comma> Art2a<comma> Art8a<comma> Bsd2b
+Gap1 (amino acids),Ammonium or substrate excess,Bul1a<comma>b<comma> Bul2a<comma>b<comma> Ear1b<comma> Ssh4b,24<comma> 45<comma> 46 and 70
+Hxt6 (hexoses),Cycloheximide,Art8a,64 and 103
+Substrate excess,Art4a
+Itr1 (inositol),Substrate excess,Art5a<comma> Bsd2b,[64]
+Lyp1 (lysine),Cycloheximide,Art2a,63 and 64
+Substrate excess,Art1a
+Mup1 (methionine),Substrate excess,Art1a,[63]
+Sit1 (ferroxiamines),Absence of substrate,Ssh4b<comma> Ear1b<comma> Tre1b<comma> Tre2b,40 and 70
+Smf1 (manganese),Substrate excess,Bsd2b<comma> Tre1b<comma> Tre2b,64<comma> 66<comma> 67 and 86
+Stresses,Bsd2b Art2a<comma> Art8a<comma> Bsd2b<comma> Tre1b<comma> Tre2b Ear1b<comma> Ssh4b
+Tat2 (tryptophan),Cycloheximide,Bul1a<comma>b<comma> Bul2a<comma>b<comma> Art2a<comma> Art8a<comma> Bsd2b,44<comma> 47 and 64
+Substrate excess,Bul1a<comma>b<comma> Bul2a<comma>b<comma> Art1a<comma> Art2a<comma> Art8a<comma> Bsd2b
