@@ -169,9 +169,12 @@ pheno = acast(trx_df, formula =strain~name, fun.aggregate = mean, value.var = "v
 # only take strains in genotype matrix
 # take the shifted logarithm
 pheno = log2(pheno[intersect(rownames(pheno),colnames(geno)),]+1)
+# only keep the protein coding genes
+tokeep = grep("^Y",colnames(pheno))
+pheno = pheno[,tokeep]
 
-qtl_f = file.path(BASEDIR,"qtl","eQTL.rda")
-if (F) {
+qtl_f = file.path(BASEDIR,"qtl","eQTL_08032016.rda")
+if (!file.exists(qtl_f)) {
 	cross_f = file.path(BASEDIR,"data","trx_cross.rda")
 	if (!file.exists(cross_f)) {
 		cross =	runQTL(
@@ -199,7 +202,7 @@ if (F) {
 	pb = txtProgressBar(min = 0, max = dim(eQTL$qtls)[2], style = 3)
 	eQTL$resamples = lapply(seq(1,dim(eQTL$qtls)[2]), function(i) {
 		setTxtProgressBar(pb, i)
-		try(qtl::scanone( cross, pheno.col = phes[i], n.perm = 1000, n.cluster = 6))
+		try(qtl::scanone( cross, pheno.col = phes[i], n.perm = 100, n.cluster = 6))
 	})
 	close(pb)
 	save(eQTL, file = qtl_f)
