@@ -217,6 +217,7 @@ processData = function( f1, f2, f3, f4, f5, startRow = 2,... ) {
 		n2s = c("A","B","C","D"); names(n2s) = 1:4
 		s2n = 1:4; names(s2n) = c("A","B","C","D")
 		b2e = seq(start_n,end_n)
+		thisbatch = bi[1]
 		tor = do.call(c,lapply(seq(1,length(b2e)), function(x){
 			if (x == 1) {
 				ss = n2s[seq(s2n[start_s], 4)] # strains
@@ -229,11 +230,11 @@ processData = function( f1, f2, f3, f4, f5, startRow = 2,... ) {
 				o = paste0(b2e[x],ss)
 			}
 		}))
-		tor = cbind(strain = tor, batch = i)
+		tor = cbind(strain = tor, batch = thisbatch)
 		return(tor)
 	})))
 	b$strain = strainRename(levels(b$strain)[b$strain])
-	toadd = merge(toadd,b, by = "strain",all.x = T,all.y=T)
+	toadd = merge(toadd,b, by = "strain",all.x = T)
 	toadd$time = toadd$time + 15 # make time right scale to match other data
 	o = merge(o,toadd,by=c("strain","metabolite","replicate","time_format","time"),all.x=T)
 	# complete batch info
