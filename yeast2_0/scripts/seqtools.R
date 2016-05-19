@@ -24,6 +24,27 @@ library(Biostrings)
 library(seqinr)
 library(robustbase)
 
+makeHappyBam = function(bam) {
+    # alter bam data.frame from Rsamtools so that it can be combined with tRNA infos
+    happy_bam = do.call(rbind, lapply(bam, function(x){
+        x$seq = as.character(x$seq)
+        x$qual = as.character(x$qual)
+        o = data.frame(x)
+        return(o)
+    }))
+    happy_bam$Chr = sapply(rownames(happy_bam), function(x) strsplit(x, ":")[[1]][1])
+    happy_bam$Start = sapply(rownames(happy_bam), function(x) {
+        x = strsplit(x, ":")[[1]][2]
+        x = as.numeric(strsplit(x, "-")[[1]][1]) + window
+    })
+    happy_bam$End = sapply(rownames(happy_bam), function(x) {
+        x = strsplit(x, ":")[[1]][2]
+        x = strsplit(x, "-")[[1]][2]
+        x = as.numeric(strsplit(x, "\\.")[[1]][1]) - window
+    })
+    return(happy_bam)
+}
+
 remapRead = function(x) {
     #' Remap a read, trying to find the tRNA genomic
     #' location to which it maps best
