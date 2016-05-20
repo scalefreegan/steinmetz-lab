@@ -136,14 +136,18 @@ remapRead = function(x) {
     return(o)
 }
 
-filterReads = function(x) {
+filterReads = function(x, flip = FALSE) {
   #' Filters reads to ensure that at least one base from the read overlaps
   #' leader or trailer sequence
   #'
   #' @param x data.frame. Merged reads and tRNA info for anticodon
   #' @return data.frame with purely coding reads removed
   x$keep = apply(cbind(abs(x$Start - x$pos), abs(x$End - x$pos)), 1, min) < (nchar(as.character(x$seq)) - 1)
-  x = filter(x, keep == T)
+  if (flip) {
+    x = filter(x, keep == F)
+  } else {
+    x = filter(x, keep == T)
+  }
   x$keep = NULL
   return(x)
 }
@@ -182,7 +186,8 @@ scoreAllReads = function(x, filter = FALSE) {
     return(o)
 }
 
-assignReads = function(mapped_reads, tRNA_annotations, anticodon = "AGC", useBam = FALSE) {
+assignReads = function(mapped_reads, tRNA_annotations, anticodon = "AGC", useBam = FALSE,
+  returnCounts = FALSE) {
   #' Tries to assign reads that map to multiple tRNA locations to their best
   #' location using pariwise alignment of leader/trailer sequences
   #'
@@ -191,11 +196,31 @@ assignReads = function(mapped_reads, tRNA_annotations, anticodon = "AGC", useBam
   #' @param anticodon. 3-letter anticodon specification
   #' @param useBam. Boolean. Use alignment score directly from bam file rather than local alignment
   #' @return vector of scores
-
-  anticodon_tRNAs = filter(tRNA_annotations, Anticodon %in% anticodon)
-  tRNA_read = merge(anticodon_tRNAs, mapped_reads, by = c("Chr","Start","End"))
-  tRNA_read = filterReads(tRNA_read)
-  mapping_scores = scoreAllReads(tRNA_read)
+    anticodon_tRNAs = filter(tRNA_annotations, Anticodon %in% anticodon)
+    tRNA_read = merge(anticodon_tRNAs, mapped_reads, by = c("Chr","Start","End"))
+    tRNA_read = filterReads(tRNA_read)
+    if (useBam) {
+      mapping_scores = tRNA_read %>% group_by(qname) %>% do({
+        maxs = max(.$AS)
+        o = filter(., AS >= maxs)
+        return(o)
+      })
+      mapped = data.frame(score = mapping_scores$AS, read = mapping_scores$qname,
+        chr = unlist(mapping_scores$Chr), tRNA.start = unlist(mapping_scores$Start))
+    } else {
+      mapping_scores = scoreAllReads(tRNA_read)
+      mapped = mapping_scores %>% group_by(read) %>% do({
+        maxs = max(.$score)
+        o = filter(., score >= maxs)
+        return(o)
+      })
+    }
+  uniquemap = round(sum(table(mapped$read)==1)/length(unique(mapped$read)) * 100, 2)
+  cat(paste0(uniquemap, "% of reads mapped uniquely\n"))
+  if (returnCounts) {
+    mapped = mapped %>% group_by(chr, tRNA.start) %>% do({data.frame(counts = dim(.)[1])})
+  }
+  return(mapped)
 }
 
 detectOutliers = function(x, a = -4, b = 3, c = 1.5, index = T) {
