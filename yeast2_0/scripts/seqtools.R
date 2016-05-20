@@ -26,7 +26,7 @@ library(robustbase)
 
 makeHappyBam = function(bam, tRNA_annotations) {
     # alter bam data.frame from Rsamtools so that it can be combined with tRNA infos
-    happy_bam = do.call(rbind, lapply(seq(1,length(bam)), function(i){
+    happy_bam = do.call(rbind, mclapply(seq(1,length(bam)), function(i){
         x = bam[[i]]
         x$seq = as.character(x$seq)
         x$qual = as.character(x$qual)
@@ -194,6 +194,7 @@ assignReads = function(mapped_reads, tRNA_annotations, anticodon = "AGC", useBam
 
   anticodon_tRNAs = filter(tRNA_annotations, Anticodon %in% anticodon)
   tRNA_read = merge(anticodon_tRNAs, mapped_reads, by = c("Chr","Start","End"))
+  tRNA_read = filterReads(tRNA_read)
   mapping_scores = scoreAllReads(tRNA_read)
 }
 
