@@ -217,9 +217,9 @@ filterMature = function(x, flip = FALSE, clean = TRUE) {
   colnames(x) = cnames
 
   if (flip) {
-    x = filter(y, mature == T)
+    x = filter(x, mature == T)
   } else {
-    x = filter(y, mature == F)
+    x = filter(x, mature == F)
   }
   if (clean) {
     x$mature = NULL
