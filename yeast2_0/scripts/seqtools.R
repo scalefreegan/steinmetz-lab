@@ -165,7 +165,7 @@ filterMature = function(x, flip = FALSE, clean = TRUE) {
     substr(z, nchar(z)-n+1, nchar(z))
   }
 
-  y = do.call(rbind, lapply(seq(1,dim(x)[1]), function(i){
+  y = do.call(rbind, mclapply(seq(1,dim(x)[1]), function(i){
     i = x[i,]
     if (i$pos > i$Start) {
         d_name = "End"
