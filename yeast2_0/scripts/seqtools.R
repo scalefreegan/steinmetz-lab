@@ -165,7 +165,7 @@ filterMature = function(x, flip = FALSE, clean = TRUE) {
     substr(z, nchar(z)-n+1, nchar(z))
   }
 
-  y = do.call(rbind, mclapply(seq(1,dim(x)[1]), function(i){
+  y = mclapply(seq(1,dim(x)[1]), function(i){
     i = x[i,]
     if (i$pos > i$Start) {
         d_name = "End"
@@ -210,7 +210,11 @@ filterMature = function(x, flip = FALSE, clean = TRUE) {
     }
     #print(i)
     return(i)
-  }))
+  })
+
+  cnames = names(y[[1]])
+  x = data.frame(matrix(unlist(y), nrow = length(unlist(y[1]))), stringsAsFactors = F)
+  colnames(x) = cnames
 
   if (flip) {
     x = filter(y, mature == T)
