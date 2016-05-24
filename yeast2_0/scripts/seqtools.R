@@ -75,23 +75,30 @@ remapRead = function(x) {
                 } else {
                     d_name = "Start"
                 }
+                #print(d_name)
                 if (d_name == "End") {
                     # read should be aligned to downstream region
                     # take only end region of read for alignment
-                    read_subseq = subseq(seq, abs(x$pos - x$End) + 2,nchar(seq))
+                    read_subseq = DNAString(subseq(seq, abs(x$pos - x$End) + 2,nchar(seq)))
                     read_quality = subseq(quality, abs(x$pos - x$End) + 2,nchar(quality))
                     pattern = DNAString(downstream)
+                    pattern = pattern[1:length(read_subseq)]
+                    #print(x$Chr)
                     #print(seq)
                     #print(DNAString(read_subseq))
+                    #print(downstream)
                     #print(pattern)
                 } else if (d_name == "Start") {
                     # read should be aligned to upstream region
                     # take only start region of read for alignment
-                    read_subseq = subseq(seq, 1, abs(x$Start - x$pos))
+                    read_subseq = DNAString(subseq(seq, 1, abs(x$Start - x$pos)))
                     read_quality = subseq(quality, 1, abs(x$Start - x$pos))
                     pattern = DNAString(upstream)
+                    pattern = pattern[((length(pattern)-length(read_subseq))+1):length(pattern)]
+                    #print(x$Chr)
                     #print(seq)
                     #print(DNAString(read_subseq))
+                    #print(upstream)
                     #print(pattern)
                 }
             } else if ((tRNA_strand == "-") && (read_strand == "-")) {
@@ -106,21 +113,27 @@ remapRead = function(x) {
                     if (d_name == "End") {
                         # read should be aligned to downstream region
                         # take only end region of read for alignment
-                        read_subseq = as.character(reverseComplement(DNAString(subseq(seq, 1, abs(x$pos - x$Start)))))
+                        read_subseq = DNAString(as.character(reverseComplement(DNAString(subseq(seq, 1, abs(x$pos - x$Start))))))
                         read_quality = reverse(subseq(quality, 1, abs(x$pos - x$Start)))
                         pattern = DNAString(downstream)
+                        pattern = pattern[1:length(read_subseq)]
+                        #print(x$Chr)
                         #print(seq)
                         #print(DNAString(read_subseq))
+                        #print(downstream)
                         #print(pattern)
 
                     } else if (d_name == "Start") {
                         # read should be aligned to upstream region
                         # take only start region of read for alignment
-                        read_subseq = as.character(reverseComplement(DNAString(subseq(seq, abs(x$pos - x$End) + 2, nchar(seq)))))
+                        read_subseq = DNAString(as.character(reverseComplement(DNAString(subseq(seq, abs(x$pos - x$End) + 2, nchar(seq))))))
                         read_quality = reverse(subseq(quality, abs(x$pos - x$End) + 2, nchar(seq)))
                         pattern = DNAString(upstream)
+                        pattern = pattern[((length(pattern)-length(read_subseq))+1):length(pattern)]
+                        #print(x$Chr)
                         #print(seq)
                         #print(DNAString(read_subseq))
+                        #print(upstream)
                         #print(pattern)
                     }
             }
@@ -128,37 +141,96 @@ remapRead = function(x) {
     if (class(attempt) == "try-error") {
         return(0)
     } else {
-        o = pairwiseAlignment(pattern = pattern, subject = DNAString(read_subseq),
+        mat <- nucleotideSubstitutionMatrix(match = 1, mismatch = -3, baseOnly = TRUE)
+        o = pairwiseAlignment(pattern = pattern, subject = read_subseq,
                           subjectQuality = PhredQuality(read_quality),
-                          gapOpening = 0, gapExtension = -5, type = "overlap",
+                          #substitutionMatrix = mat,
+                          gapOpening = 0, gapExtension = -5, type = "local",
                           scoreOnly = T)
     }
     return(o)
 }
 
-filterReads = function(x, flip = FALSE) {
+filterMature = function(x, flip = FALSE, clean = TRUE) {
   #' Filters reads to ensure that at least one base from the read overlaps
-  #' leader or trailer sequence
+  #' leader or trailer sequence. Categorize those that do not as likely
+  #' mature. Additionaly, categorizes those that have a trailer sequence
+  #' C, CC, CCA, or - on the other strand - G, G, GGA only as likely
+  #' mature sequences
   #'
   #' @param x data.frame. Merged reads and tRNA info for anticodon
   #' @return data.frame with purely coding reads removed
-  x$keep = apply(cbind(abs(x$Start - x$pos), abs(x$End - x$pos)), 1, min) < (nchar(as.character(x$seq)) - 1)
-  if (flip) {
-    x = filter(x, keep == F)
-  } else {
-    x = filter(x, keep == T)
+
+  substrRight <- function(z, n) {
+    substr(z, nchar(z)-n+1, nchar(z))
   }
-  x$keep = NULL
+
+  y = do.call(rbind, lapply(seq(1,dim(x)[1]), function(i){
+    i = x[i,]
+    if (i$pos > i$Start) {
+        d_name = "End"
+    } else {
+        d_name = "Start"
+    }
+    #print(d_name)
+    if (i$strand == "+") {
+        if (d_name == "Start") {
+            i$toend = i$Start - i$pos
+            i$mature = i$toend <= 0
+        } else {
+            i$toend = i$pos + nchar(as.character(i$seq)) - 1 - i$End
+            # check for CCA
+            i$mature = i$toend <= 0
+            if (i$toend <= 3 & i$mature != TRUE) {
+                lastchar = substrRight(as.character(i$seq), i$toend)
+                if (lastchar %in% c("C","CC","CCA")) {
+                    i$mature = TRUE
+                } else {
+                    i$mature = FALSE
+                }
+            }
+        }
+    } else if (i$strand == "-"){
+        if (d_name == "Start") {
+            i$toend = i$Start - i$pos
+            i$mature = i$toend <= 0
+            if (i$toend <= 3 & i$mature != TRUE) {
+                # check for TGG
+                lastchar = substr(as.character(i$seq), 1, i$toend)
+                if (lastchar %in% c("T","TG","TGG")) {
+                    i$mature = TRUE
+                } else {
+                    i$mature = FALSE
+                }
+            }
+        } else {
+            i$toend = i$pos + nchar(as.character(i$seq)) - 1 - i$End
+            i$mature = i$toend <= 0
+        }
+    }
+    #print(i)
+    return(i)
+  }))
+
+  if (flip) {
+    x = filter(y, mature == T)
+  } else {
+    x = filter(y, mature == F)
+  }
+  if (clean) {
+    x$mature = NULL
+    x$toend = NULL
+  }
   return(x)
 }
 
-scoreAllReads = function(x, filter = FALSE) {
+scoreAllReads = function(x, filter = FALSE, ...) {
     #' Score all reads for anticodon set
     #'
     #' @param x data.frame. Merged reads and tRNA info for anticodon
     #' @return vector of scores
     if (filter) {
-      x = filterReads(x)
+      x = filterMature(x, ...)
     }
     reads = unique(levels(x$qname)[x$qname])
     o = mclapply(reads, function(read) {
@@ -187,7 +259,7 @@ scoreAllReads = function(x, filter = FALSE) {
 }
 
 assignReads = function(mapped_reads, tRNA_annotations, anticodon = "AGC", useBam = FALSE,
-  returnCounts = FALSE) {
+  returnCounts = FALSE, ...) {
   #' Tries to assign reads that map to multiple tRNA locations to their best
   #' location using pariwise alignment of leader/trailer sequences
   #'
@@ -198,7 +270,7 @@ assignReads = function(mapped_reads, tRNA_annotations, anticodon = "AGC", useBam
   #' @return vector of scores
     anticodon_tRNAs = filter(tRNA_annotations, Anticodon %in% anticodon)
     tRNA_read = merge(anticodon_tRNAs, mapped_reads, by = c("Chr","Start","End"))
-    tRNA_read = filterReads(tRNA_read)
+    tRNA_read = filterMature(tRNA_read, ...)
     if (useBam) {
       mapping_scores = tRNA_read %>% group_by(qname) %>% do({
         maxs = max(.$AS)
