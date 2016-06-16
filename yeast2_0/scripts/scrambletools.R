@@ -44,6 +44,9 @@ if (class(tryload2)=="try-error") {
   warning("Could not load scramble table. You will need to load it manually")
 }
 
+# clean up
+rm("tryload1","tryload2")
+
 seg2seq = function(segmentOrder = c(1,2,-3), segmentTable, file = NA, sname = "") {
     #' Assemble sequence from scramble segment order. Optionally save to file as fasta
     #'
