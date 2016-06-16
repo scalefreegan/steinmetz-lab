@@ -45,7 +45,7 @@ if (class(tryload2)=="try-error") {
 }
 
 # clean up
-rm("tryload1","tryload2")
+rm("tryload1","tryload2","f4")
 
 seg2seq = function(segmentOrder = c(1,2,-3), segmentTable, file = NA, sname = "") {
     #' Assemble sequence from scramble segment order. Optionally save to file as fasta
