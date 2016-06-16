@@ -23,6 +23,27 @@ library(stringr)
 library(parallel)
 options("mc.cores"= 20)
 
+tryload1 = try({
+  f4 = "/g/steinmetz/brooks/git/steinmetz-lab/yeast2_0/scramble/SynIXR_segmentTable.rda"
+  if (!file.exists(f4)) {
+      segmentTable = str_split(as.character(JS94_alt_synIXR_corrected), loxPseq)[[1]]
+      segmentTable = data.frame(number = seq(1:length(segmentTable)), seq = segmentTable)
+      save(segmentTable, file = f4)
+  } else {
+      load(f4)
+  }}
+)
+if (class(tryload1)=="try-error") {
+  warning("Could not load segment table. You will need to make one manually")
+}
+
+tryload2 = try({
+  scrambleTable = read.delim("/g/steinmetz/brooks/git/steinmetz-lab/yeast2_0/synIXR/scramble_wpacbio.txt", sep="\t")
+})
+if (class(tryload2)=="try-error") {
+  warning("Could not load scramble table. You will need to load it manually")
+}
+
 seg2seq = function(segmentOrder = c(1,2,-3), segmentTable, file = NA, sname = "") {
     #' Assemble sequence from scramble segment order. Optionally save to file as fasta
     #'
