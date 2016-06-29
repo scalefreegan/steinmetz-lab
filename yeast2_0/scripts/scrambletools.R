@@ -28,6 +28,9 @@ tryload1 = try({
   if (!file.exists(f4)) {
       segmentTable = str_split(as.character(JS94_alt_synIXR_corrected), loxPseq)[[1]]
       segmentTable = data.frame(number = seq(1:length(segmentTable)), seq = segmentTable)
+      segmentTable$essential = F
+      segmentTable$essential[c(7,9,10,12,20)] = T
+      segmentTable = select(segmentTable,number,essential,seq)
       save(segmentTable, file = f4)
   } else {
       load(f4)
@@ -135,4 +138,35 @@ seq2seg = function(seq, segmentTable) {
     return(segmentNumber)
     }))
 return(thissegments)
+}
+
+drawSegments = function(segments = c(1,2,3), thissegmentTable = segmentTable, plot = T, lwd = .5) {
+    segmentDF = data.frame(number = abs(segments), raw = segments, order = seq(1,length(segments)))
+    subTable = merge(segmentDF,thissegmentTable, by = "number")
+    plotDF = subTable %>% group_by(order) %>% do({
+        thisdf = .[1,]
+        i = as.numeric(thisdf$order)
+        if (thisdf$raw > 0) {
+            o = data.frame(number=rep(thisdf$number,3),raw=rep(thisdf$raw,3),
+                   polygon.x = c(i-1,i-1,i), polygon.y = c(0,2,1),
+                   essential=rep(thisdf$essential,3))
+        } else {
+            o = data.frame(number=rep(thisdf$number,3),raw=rep(thisdf$raw,3),
+                   polygon.x = c(i,i,i-1), polygon.y = c(0,2,1),
+                   essential=rep(thisdf$essential,3))
+        }
+        return(o)
+    })
+    p <- ggplot(data = plotDF)
+    p <- p + geom_polygon(aes(x=polygon.x,y=polygon.y,group=order,color=essential,fill=number),size=lwd) +
+    xlab("") + ylab("") +
+    theme(axis.text = element_text(size = 0),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_rect(fill = "white"),
+          legend.position = "none",
+          axis.ticks = element_blank()) +
+    scale_fill_gradientn(colours = rev(rainbow(44,start=6/6,end=5/6))) +
+    scale_colour_manual(values=c("white","red"))
+    p
 }
