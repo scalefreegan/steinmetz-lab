@@ -122,10 +122,15 @@ seq2seg = function(seq, segmentTable) {
     fORr = which(bestscores == max(bestscores))
     if (fORr == 1) {
         # best match is forward
-        segmentNumber = as.numeric(segmentTable$number[which(align_f == max(align_f))])
+        bmatch = which(align_f == max(align_f))
     } else {
         # best match is reverse
-        segmentNumber = -as.numeric(segmentTable$number[which(align_r == max(align_r))])
+        bamtch = which(align_r == max(align_r))
+    }
+    if (nchar(thisseq) <= (0.75 * nchar(as.character(segmentTable$seq[bmatch])))) {
+      segmentNumber = NULL
+    } else {
+      segmentNumber = as.numeric(segmentTable$number[bmatch])
     }
     return(segmentNumber)
     }))
