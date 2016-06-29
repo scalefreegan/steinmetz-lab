@@ -166,7 +166,7 @@ drawSegments = function(segments = c(1,2,3), thissegmentTable = segmentTable, pl
           panel.background = element_rect(fill = "white"),
           legend.position = "none",
           axis.ticks = element_blank()) +
-    scale_fill_gradientn(colours = rev(rainbow(44,start=6/6,end=5/6))) +
+    scale_fill_gradientn(colours = rev(rainbow(dim(thissegmentTable)[1],start=6/6,end=5/6)),limits=c(0,dim(thissegmentTable)[1])) +
     scale_colour_manual(values=c("white","red"))
     p
 }
