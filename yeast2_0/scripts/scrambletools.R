@@ -128,7 +128,7 @@ seq2seg = function(seq, segmentTable) {
             bmatch = which(align_f == max(align_f))
         } else {
             # best match is reverse
-            bmatch = which(align_r == max(align_r))
+            bmatch = -which(align_r == max(align_r))
         }
         if (nchar(thisseq) <= (0.75 * nchar(as.character(segmentTable$seq[bmatch])))) {
           segmentNumber = NULL
