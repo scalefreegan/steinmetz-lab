@@ -94,7 +94,7 @@ seg2seq = function(segmentOrder = c(1,2,-3), segmentTable, file = NA, sname = ""
     return(fseq)
 }
 
-seq2seg = function(seq, segmentTable) {
+seq2seg = function(seq, segmentTable, segThreshold = 0.33) {
     #' Assemble segment order from scramble sequence.
     #'
     #' @param seq Character. scramble sequence
@@ -130,7 +130,7 @@ seq2seg = function(seq, segmentTable) {
             # best match is reverse
             bmatch = which(align_r == max(align_r))
         }
-        if (nchar(thisseq) <= (0.75 * nchar(as.character(segmentTable$seq[bmatch])))) {
+        if (nchar(thisseq) <= (segThreshold * nchar(as.character(segmentTable$seq[bmatch])))) {
           segmentNumber = NULL
         } else {
           if (fORr == 1) {
