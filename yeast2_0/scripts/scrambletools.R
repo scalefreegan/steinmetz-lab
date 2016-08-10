@@ -94,7 +94,7 @@ seg2seq = function(segmentOrder = c(1,2,-3), segmentTable, file = NA, sname = ""
     return(fseq)
 }
 
-seq2seg = function(seq, segmentTable) {
+seq2seg = function(seq, segmentTable, segThreshold = 0.33) {
     #' Assemble segment order from scramble sequence.
     #'
     #' @param seq Character. scramble sequence
@@ -109,35 +109,39 @@ seq2seg = function(seq, segmentTable) {
     thissegments = do.call(rbind, mclapply(seq(1,length(lmatches)+1),function(i){
         if (i == 1) {
             # first segment
-            cat("first\n")
+            # cat("first\n")
             thisseq = substr(seq, 1, start(lmatches[1])-1)
         } else if (i > length(lmatches)){
             # last segment
-            cat("last\n")
+            # cat("last\n")
             thisseq = substr(seq, end(lmatches[i-1])+1, nchar(seq))
         } else {
             thisseq = substr(seq, end(lmatches[i-1])+1, start(lmatches[i])-1)
         }
-    align_f = pairwiseAlignment(DNAStringSet(segmentTable$seq), DNAString(thisseq), scoreOnly = T)
-    align_r = pairwiseAlignment(reverseComplement(DNAStringSet(segmentTable$seq)),
+        align_f = pairwiseAlignment(DNAStringSet(segmentTable$seq), DNAString(thisseq), scoreOnly = T)
+        align_r = pairwiseAlignment(reverseComplement(DNAStringSet(segmentTable$seq)),
                                 DNAString(thisseq), scoreOnly = T)
-    bestscores = c(max(align_f), max(align_r))
-    fORr = which(bestscores == max(bestscores))
-    if (fORr == 1) {
-        # best match is forward
-        bmatch = which(align_f == max(align_f))
-    } else {
-        # best match is reverse
-        bamtch = which(align_r == max(align_r))
-    }
-    if (nchar(thisseq) <= (0.75 * nchar(as.character(segmentTable$seq[bmatch])))) {
-      segmentNumber = NULL
-    } else {
-      segmentNumber = as.numeric(segmentTable$number[bmatch])
-    }
-    return(segmentNumber)
+        bestscores = c(max(align_f), max(align_r))
+        fORr = which(bestscores == max(bestscores))
+        if (fORr == 1) {
+            # best match is forward
+            bmatch = which(align_f == max(align_f))
+        } else {
+            # best match is reverse
+            bmatch = which(align_r == max(align_r))
+        }
+        if (nchar(thisseq) <= (segThreshold * nchar(as.character(segmentTable$seq[bmatch])))) {
+          segmentNumber = NULL
+        } else {
+          if (fORr == 1) {
+            segmentNumber = as.numeric(segmentTable$number[bmatch])
+          } else {
+            segmentNumber = -as.numeric(segmentTable$number[bmatch])
+          }
+        }
+        return(segmentNumber)
     }))
-return(thissegments)
+return(as.vector(thissegments))
 }
 
 drawSegments = function(segments = c(1,2,3), thissegmentTable = segmentTable, plot = T, lwd = .5) {
