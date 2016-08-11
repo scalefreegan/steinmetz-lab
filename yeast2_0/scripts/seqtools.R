@@ -15,14 +15,16 @@
 .status = "Development"
 
 # Import packages ---------------------------------------------------
-library(ggplot2)
-library(dplyr)
-library(reshape2)
-library(rtracklayer)
-library(Rsamtools)
-library(Biostrings)
-library(seqinr)
-library(robustbase)
+try({
+  library(ggplot2)
+  library(dplyr)
+  library(reshape2)
+  library(rtracklayer)
+  library(Rsamtools)
+  library(Biostrings)
+  library(seqinr)
+  library(robustbase)
+})
 
 makeHappyBam = function(bam, tRNA_annotations) {
     # alter bam data.frame from Rsamtools so that it can be combined with tRNA infos
