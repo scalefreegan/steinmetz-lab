@@ -367,7 +367,7 @@ processDAZZstats = function(dbstats) {
       #print(i)
       paste(basecomp_header[[2]][i[1]:i[2]], collapse="")
   })
-  basecomp = data.frame(dbstats[8:nrow(dbstats),1], stringsAsFactors = F)
+  basedist = data.frame(dbstats[8:nrow(dbstats),1], stringsAsFactors = F)
   colnames(basedist) = "start"
   basedist = basedist %>% rowwise() %>%
       do({
