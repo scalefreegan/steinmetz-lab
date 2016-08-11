@@ -328,3 +328,64 @@ detectOutliers = function(x, a = -4, b = 3, c = 1.5, index = T) {
     }
     return(o)
 }
+
+processDAZZstats = function(dbstats) {
+  # number of reads
+  nreads = trimws(as.character(dbstats[1,1]))
+  nreads = as.numeric(paste(strsplit(strsplit(nreads,split = " ")[[1]][1], split=",")[[1]], collapse=""))
+
+  # average length
+  avglength = strsplit(trimws(as.character(dbstats[3,1])), split = " ")[[1]][[1]]
+  avglength = as.numeric(paste(strsplit(avglength, split=",")[[1]], collapse = ""))
+
+  # sd length
+  sdlength = strsplit(trimws(as.character(dbstats[4,1])), split = " ")[[1]][[1]]
+  sdlength = as.numeric(paste(strsplit(sdlength, split=",")[[1]], collapse = ""))
+
+  # base composition
+  basecomp = trimws(strsplit(trimws(as.character(dbstats[5,1])), split = ":")[[1]][[2]])
+  basecomp = strsplit(basecomp, split = " ")[[1]]
+  basecomp = sapply(basecomp, function(i){
+      tor = strsplit(i, split = "\\(")[[1]]
+      tor[2] = sub(pattern = "\\)", replacement = "",  tor[2])
+      tor = rev(tor)
+      return(tor)
+  })
+  colnames(basecomp) = basecomp[1,]
+  tmpbasecomp = as.numeric(basecomp[2,])
+  names(tmpbasecomp) = colnames(basecomp)
+  basecomp = tmpbasecomp
+
+  # base distribution, histogram
+  basecomp_header = trimws(strsplit(trimws(as.character(dbstats[7,1])), split = ":")[[1]])
+  basecomp_header[2] = gsub("%","p",basecomp_header[2])
+  basecomp_header[2] = strsplit(basecomp_header[2], split = " ")
+  basecomp_header[[2]] = basecomp_header[[2]][basecomp_header[[2]] != ""]
+  basecomp_header[[2]] = sapply(list(c(1,1),c(2,3),c(4,5),c(6,6)), function(i){
+      #print(i)
+      paste(basecomp_header[[2]][i[1]:i[2]], collapse="")
+  })
+  basecomp = data.frame(dbstats[8:nrow(dbstats),1], stringsAsFactors = F)
+  colnames(basedist) = "start"
+  basedist = basedist %>% rowwise() %>%
+      do({
+          vals = gsub("\\s+", " ", str_trim(as.character(.$start)))
+          vals = sub(": ", ":", vals)
+          #print(levels(basedist$start)[.])
+          #print(as.character(.$start))
+          data.frame(start = vals, stringsAsFactors = F)
+      })
+  basedist = basedist %>% separate(col = start, into = c("length","rest"),sep = ":") %>%
+      separate(col = rest, into = c("a","b", "c", "d"),sep = " ")
+  colnames(basedist) = unlist(basecomp_header)
+  basedist$Bin = as.numeric(gsub(",","",basedist$Bin))
+  basedist$Count = as.numeric(gsub(",","",basedist$Count))
+  basedist = apply(basedist,2,as.numeric)
+  o = list()
+  o$nreads = nreads
+  o$avglength = avglength
+  o$sdlength = sdlength
+  o$basecomp = basecomp
+  o$basedist = basedist
+  return(o)
+}
