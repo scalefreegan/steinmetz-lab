@@ -438,5 +438,5 @@ blastFilter <- function(infile, outfile, query, eval = 10, minAlnLength = 300) {
     file.remove("tmpdb.nin")
     file.remove("tmpdb.nsq")
   }
-  cat("Done.\n")
+  cat(paste("Done. Blastn reduced fasta sequences written to:", outfile, "\n"))
 }
