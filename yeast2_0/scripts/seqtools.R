@@ -24,6 +24,7 @@ try({
   library(Biostrings)
   library(seqinr)
   library(robustbase)
+  library(tidyr)
 })
 
 makeHappyBam = function(bam, tRNA_annotations) {
@@ -390,4 +391,52 @@ processDAZZstats = function(dbstats) {
   o$basecomp = basecomp
   o$basedist = basedist
   return(o)
+}
+
+blastFilter <- function(infile, outfile, query, eval = 10, minAlnLength = 300) {
+  db = try(system(paste("/g/software/bin/makeblastdb -in", infile,
+          "-input_type fasta -dbtype nucl -out tmpdb"), intern=T))
+  if (class(db) == "try-error") {
+    cat("Current directory is not writable. Please run in directory with write permissions.\n")
+    return(NULL)
+  }
+  blast_out = try(system2("/g/software/bin/blastn",
+    c(
+        paste("-query", query),
+        paste("-db tmpdb"),
+        #paste("-out",out_file),
+        "-num_alignments 100000",
+        "-num_threads 20",
+        "-task blastn",
+        "-outfmt 6",
+        paste("-evalue", eval)
+    ),
+    stdout=TRUE))
+  if (class(db) == "try-error") {
+    cat("blast failed.\n")
+    return(NULL)
+  } else {
+    blast_table = data.frame(blast_out)
+    blast_cols = c("queryId", "subjectId", "percIdentity", "alnLength",
+                        "mismatchCount", "gapOpenCount", "queryStart", "queryEnd",
+                        "subjectStart", "subjectEnd", "eVal", "bitScore")
+    blast_table = blast_table %>% separate(col = blast_out, into = blast_cols, sep = "\t")
+    blast_table$eVal = as.numeric(blast_table$eVal)
+    blast_table$alnLength = as.numeric(blast_table$alnLength)
+    blast_table = blast_table %>% filter(eVal < eval & alnLength >= minAlnLength)
+    towrite = paste(unique(blast_table$subjectId),collapse="\n")
+    f = tempfile()
+    write(towrite,file = f)
+    system(paste("/usr/local/bin/seqtk/seqtk subseq",
+                 infile,
+                 f,
+                 ">",
+                 outfile))
+    # clean up
+    unlink(f)
+    file.remove("tmpdb.nhr")
+    file.remove("tmpdb.nin")
+    file.remove("tmpdb.nsq")
+  }
+  cat("Done.\n")
 }
