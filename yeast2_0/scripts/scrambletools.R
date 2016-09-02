@@ -145,7 +145,7 @@ return(as.vector(thissegments))
 }
 
 drawSegments = function(segments = c(1,2,3), thissegmentTable = segmentTable, plot = T, lwd = .5,
-  width = 5, height = 2, label = TRUE, label.size = 5, label.y = 0) {
+  width = 5, height = 2, label = TRUE, dev.control = FALSE, label.size = 5, label.y = 0) {
     segmentDF = data.frame(number = abs(segments), raw = segments, order = seq(1,length(segments)))
     subTable = merge(segmentDF,thissegmentTable, by = "number")
     plotDF = subTable %>% group_by(order) %>% do({
@@ -179,6 +179,8 @@ drawSegments = function(segments = c(1,2,3), thissegmentTable = segmentTable, pl
     if (label) {
       p <- p + annotate("text", x = xpos$x, y = ypos$y, label = thislabel$label, size = label.size)
     }
-    dev.new(width=width, height=height)
+    if (dev.control) {
+      dev.new(width=width, height=height)
+    }
     p
 }
