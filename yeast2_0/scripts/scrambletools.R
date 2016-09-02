@@ -144,7 +144,8 @@ seq2seg = function(seq, segmentTable, segThreshold = 0.33) {
 return(as.vector(thissegments))
 }
 
-drawSegments = function(segments = c(1,2,3), thissegmentTable = segmentTable, plot = T, lwd = .5) {
+drawSegments = function(segments = c(1,2,3), thissegmentTable = segmentTable, plot = T, lwd = .5,
+  width = 5, height = 2, label = TRUE, label.size = 5, label.y = 0) {
     segmentDF = data.frame(number = abs(segments), raw = segments, order = seq(1,length(segments)))
     subTable = merge(segmentDF,thissegmentTable, by = "number")
     plotDF = subTable %>% group_by(order) %>% do({
@@ -162,15 +163,22 @@ drawSegments = function(segments = c(1,2,3), thissegmentTable = segmentTable, pl
         return(o)
     })
     p <- ggplot(data = plotDF)
+    xpos = plotDF %>% group_by(order) %>% summarise(x = mean(polygon.x))
+    ypos = plotDF %>% group_by(order) %>% summarise(y = label.y)
+    thislabel = plotDF %>% group_by(order) %>% summarise(label = unique(number))
     p <- p + geom_polygon(aes(x=polygon.x,y=polygon.y,group=order,color=essential,fill=number),size=lwd) +
-    xlab("") + ylab("") +
-    theme(axis.text = element_text(size = 0),
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          panel.background = element_rect(fill = "white"),
-          legend.position = "none",
-          axis.ticks = element_blank()) +
-    scale_fill_gradientn(colours = rev(rainbow(dim(thissegmentTable)[1],start=6/6,end=5/6)),limits=c(0,dim(thissegmentTable)[1])) +
-    scale_colour_manual(values=c("white","red"))
+      xlab("") + ylab("") +
+      theme(axis.text = element_text(size = 0),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.background = element_rect(fill = "white"),
+            legend.position = "none",
+            axis.ticks = element_blank()) +
+      scale_fill_gradientn(colours = rev(rainbow(dim(thissegmentTable)[1],start=6/6,end=5/6)),limits=c(0,dim(thissegmentTable)[1])) +
+      scale_colour_manual(values=c("white","red"))
+    if (label) {
+      p <- p + annotate("text", x = xpos$x, y = ypos$y, label = thislabel$label, size = label.size)
+    }
+    dev.new(width=width, height=height)
     p
 }

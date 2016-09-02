@@ -18,15 +18,17 @@
 
 # Import packages ---------------------------------------------------
 if (system('hostname',intern=T) == "taiji.embl.de") {
-    .libPaths("~/R/x86_64-redhat-linux-gnu-library/3.2/")
+  .libPaths("~/R/x86_64-redhat-linux-gnu-library/3.2/")
+} else if (system('hostname',intern=T) == "bazinga.embl.de") {
+  .libPaths("~/R/x86_64-redhat-linux-gnu-library/3.2/")
 }
 
-# load  packages
-library(ggplot2);
-library(tidyr);
-library(Biostrings);
-library(seqinr);
-library(optparse);
+library(ggplot2)
+library(tidyr)
+library(Biostrings)
+library(reshape)
+library(seqinr)
+library(optparse)
 
 option_list = list(
   make_option(c("-r", "--ref"), type="character", default=NULL,
@@ -50,8 +52,6 @@ option_list = list(
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
 
-
-
 if (is.null(opt$ref)) {
   print_help(opt_parser)
   stop("Reference sequence in fasta format required.n", call.=FALSE)
@@ -60,45 +60,40 @@ if (is.null(opt$ref)) {
   stop("Query sequence in fasta format required.n", call.=FALSE)
 }
 
-# Import packages ---------------------------------------------------
-if (system('hostname',intern=T) == "taiji.embl.de") {
-    .libPaths("~/R/x86_64-redhat-linux-gnu-library/3.2/")
+# read in mummer table
+readMummer <- function(f) {
+  # returns string w/o leading or trailing whitespace
+  trim <- function (x) {
+    x = gsub("^\\s+|\\s+$", "", x)
+    x = gsub("\\s+", "|", x)
+    return(x)
+  }
+  thistable = read.delim(f,
+    skip = 5, sep = "|", header = F, stringsAsFactors = F)
+  if (dim(thistable)[1]==1) {
+    thistable = t(sapply(thistable, trim))
+  } else {
+    thistable = sapply(thistable, trim)
+  }
+  thistable = data.frame(thistable, stringsAsFactors = F)
+  thistable = thistable %>% separate(.,V1, c("S1","E1"), sep = "\\|") %>%
+    separate(V2, c("S2","E2"), sep = "\\|") %>%
+    separate(V3, c("LEN1","LEN2"), sep = "\\|") %>%
+    separate(V5, c("REF","QUERY"), sep = "\\|")
+  # order table by ref start site
+  thistable = thistable[order(as.numeric(thistable[,"LEN1"]), decreasing=T),]
+  thistable$S1 = as.numeric(thistable$S1)
+  thistable$E1 = as.numeric(thistable$E1)
+  thistable$S2 = as.numeric(thistable$S2)
+  thistable$E2 = as.numeric(thistable$E2)
+  return(thistable)
 }
-
-library(ggplot2)
-library(tidyr)
-library(Biostrings)
-library(optparse)
-
 
 # run mummer
-mummer_command = paste(paste("nucmer --prefix=", opt$mummerprefix, sep=""), "--coords", opt$ref, opt$query, sep = " ")
+mummer_command = paste(paste("nucmer --prefix=", opt$mummerprefix, sep=""),
+  "--coords", opt$ref, opt$query, sep = " ")
 system(mummer_command, wait = TRUE)
-
-# returns string w/o leading or trailing whitespace
-trim <- function (x) {
-  x = gsub("^\\s+|\\s+$", "", x)
-  x = gsub("\\s+", "|", x)
-  return(x)
-}
-
-# read in mummer table
-mtable = read.delim(paste(opt$mummerprefix, ".coords", sep = ""),
-  skip = 5, sep = "|", header = F, stringsAsFactors = F)
-mtable = sapply(mtable, trim)
-mtable = data.frame(mtable, stringsAsFactors = F)
-mtable = mtable %>% separate(.,V1, c("S1","E1"), sep = "\\|") %>%
-  separate(V2, c("S2","E2"), sep = "\\|") %>%
-  separate(V3, c("LEN1","LEN2"), sep = "\\|") %>%
-  separate(V5, c("REF","QUERY"), sep = "\\|")
-# order table by ref start site
-#mtable = mtable[order(as.numeric(mtable[,"S1"]), decreasing=F),]
-mtable = mtable[order(as.numeric(mtable[,"LEN1"]), decreasing=T),]
-mtable$S1 = as.numeric(mtable$S1)
-mtable$E1 = as.numeric(mtable$E1)
-mtable$S2 = as.numeric(mtable$S2)
-mtable$E2 = as.numeric(mtable$E2)
-
+mtable = readMummer(paste(opt$mummerprefix, ".coords", sep = ""))
 
 # move query origin to match
 qfa = readDNAStringSet(opt$query,"fasta")
@@ -138,18 +133,30 @@ if (is.null(opt$out)) {
   opt$out = paste(strsplit(opt$query, split = "\\.fasta")[[1]],
     "_",qname,"_",rname,"originAlign",".fasta",sep="")
 }
-write.fasta(qfa_alt, names = paste(qname, "_origin_fix", sep = ""),
+write.fasta(qfa_alt, names = paste(qname, "_originFix", sep = ""),
   file.out = opt$out)
 
+# rerun mummer with aligned sequence
+mummer_command = paste(paste("nucmer --prefix=", opt$mummerprefix, ".originFix", sep=""),
+  "--coords", opt$ref, opt$out, sep = " ")
+system(mummer_command, wait = TRUE)
+mtable2 = readMummer(paste(opt$mummerprefix, ".originFix", ".coords", sep = ""))
+sample = strsplit(strsplit(opt$mummerprefix, split = "-")[[1]][1], split = "/")[[1]][3]
+mtable2$SAMPLE = sample
+# write r readable table
+write.table(mtable2, paste(opt$mummerprefix, ".originFix", ".txt", sep = ""),
+  quote = F, sep = "\t", row.names = FALSE, col.names = FALSE)
+
+cat(opt$plot,"\n")
 if (opt$plot) {
   # realign and plot
   ref = paste("REF=", opt$ref, sep="")
   query = paste("QUERY=", opt$out, sep="")
-  prefix = paste("PREFIX=", opt$mummerprefix, "_originFix",sep="")
+  prefix = paste("PREFIX=", opt$mummerprefix, ".originFix",sep="")
   mummer_command2 = paste(ref, query, prefix,
-  "/usr/local/bin/MUMmer3.23/nucmer --maxmatch -c 100 -p $PREFIX $REF $QUERY",
-  "/usr/local/bin/MUMmer3.23/mummerplot --postscript -p $PREFIX ${PREFIX}.delta -R $REF -Q $QUERY",
-  "/usr/local/bin/MUMmer3.23/mummerplot --png -p $PREFIX ${PREFIX}.delta -R $REF -Q $QUERY",
+  "nucmer --maxmatch -c 100 -p $PREFIX $REF $QUERY",
+  "mummerplot --postscript -p $PREFIX ${PREFIX}.delta -R $REF -Q $QUERY",
+  "mummerplot --png -p $PREFIX ${PREFIX}.delta -R $REF -Q $QUERY",
   "ps2pdf ${PREFIX}.ps ${PREFIX}.pdf",
   sep=" && ")
   system(mummer_command2, wait = TRUE)
