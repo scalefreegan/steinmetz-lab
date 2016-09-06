@@ -57,6 +57,7 @@ arabic2roman <- function(x, Mitochondrial = "17") {
   # Mitochondrial chr
   x.copy[x.copy=="Mito"] = Mitochondrial
   x.copy[x.copy=="M"] = Mitochondrial
+  x.copy[x.copy=="mt"] = Mitochondrial
   x.copy = as.roman(as.integer(x.copy))
   if (sum(is.na(x.copy))>0) {
     cat("Substituting chr names that were not converted to Roman numerals to original names")
