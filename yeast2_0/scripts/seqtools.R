@@ -28,20 +28,45 @@ try({
 })
 
 roman2arabic <- function(x, Mitochondrial = "XVII") {
+  if (class(x)=="factor") {
+    x = as.character(levels(x)[x])
+  }
   # x is a vector
-  x = gsub("chr", "", x)
+  x.copy = gsub("chr", "", x)
   # Mitochondrial chr
-  x[x=="Mito"] = Mitochondrial
-  x = paste("chr", str_pad(as.integer(as.roman(x)), 2, pad = "0"), sep="")
-  return(x)
+  x.copy[x.copy=="Mito"] = Mitochondrial
+  x.copy[x.copy=="M"] = Mitochondrial
+  x.copy = str_pad(as.integer(as.roman(x.copy)), 2, pad = "0")
+  if (sum(is.na(x.copy))>0) {
+    cat("Substituting chr names that were not Roman numerals to original names")
+    toreplace = which(is.na(x.copy))
+  } else {
+    toreplace = F
+  }
+  x.copy = paste("chr", x.copy, sep="")
+  x.copy[toreplace] = x[toreplace]
+  return(x.copy)
 }
 
 arabic2roman <- function(x, Mitochondrial = "17") {
-  x = gsub("chr", "", x)
+  if (class(x)=="factor") {
+    x = as.character(levels(x)[x])
+  }
+  # x is a vector
+  x.copy = gsub("chr", "", x)
   # Mitochondrial chr
-  x[x=="Mito"] = Mitochondrial
-  x = paste("chr", as.roman(x), sep="")
-  return(x)
+  x.copy[x.copy=="Mito"] = Mitochondrial
+  x.copy[x.copy=="M"] = Mitochondrial
+  x.copy = as.roman(as.integer(x.copy))
+  if (sum(is.na(x.copy))>0) {
+    cat("Substituting chr names that were not converted to Roman numerals to original names")
+    toreplace = which(is.na(x.copy))
+  } else {
+    toreplace = F
+  }
+  x.copy = paste("chr", x.copy, sep="")
+  x.copy[toreplace] = x[toreplace]
+  return(x.copy)
 }
 
 makeHappyBam = function(bam, tRNA_annotations) {
