@@ -27,6 +27,19 @@ try({
   library(tidyr)
 })
 
+roman2arabic <- function(x) {
+  # x is a vector
+  x = gsub("chr", "", x)
+  x = paste("chr", str_pad(as.integer(as.roman(x)), 2, pad = "0"), sep="")
+  return(x)
+}
+
+arabic2roman <- function(x) {
+  x = gsub("chr", "", x)
+  x = paste("chr", as.roman(x), sep="")
+  return(x)
+}
+
 makeHappyBam = function(bam, tRNA_annotations) {
     # alter bam data.frame from Rsamtools so that it can be combined with tRNA infos
     happy_bam = do.call(rbind, mclapply(seq(1,length(bam)), function(i){
