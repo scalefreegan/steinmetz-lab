@@ -27,15 +27,19 @@ try({
   library(tidyr)
 })
 
-roman2arabic <- function(x) {
+roman2arabic <- function(x, Mitochondrial = "XVII") {
   # x is a vector
   x = gsub("chr", "", x)
+  # Mitochondrial chr
+  x[x=="Mito"] = Mitochondrial
   x = paste("chr", str_pad(as.integer(as.roman(x)), 2, pad = "0"), sep="")
   return(x)
 }
 
-arabic2roman <- function(x) {
+arabic2roman <- function(x, Mitochondrial = "17") {
   x = gsub("chr", "", x)
+  # Mitochondrial chr
+  x[x=="Mito"] = Mitochondrial
   x = paste("chr", as.roman(x), sep="")
   return(x)
 }
