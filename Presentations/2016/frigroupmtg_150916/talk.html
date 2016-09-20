@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>Friday 16.09.2016</title>
+
+		<meta name="description" content="Sc2.0 tRNA quant">
+		<meta name="author" content="Aaron Brooks">
+
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<meta name="viewport"
+			content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+		<link rel="stylesheet" href="reveal/css/reveal.css">
+		<link rel="stylesheet" href="reveal/css/theme/night.css" id="theme">
+
+		<!-- Code syntax highlighting -->
+		<link rel="stylesheet" href="reveal/lib/css/zenburn.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'reveal/css/print/pdf.css' : 'reveal/css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+	</head>
+
+	<body>
+		<!-- #45462A #4A4E69 #5E4955-->
+		<div class="reveal">
+			<!-- Any section element inside of this container is displayed as a slide -->
+			<div class="slides">
+				<section>
+					<h3>Sc2.0 genomiXploration</h3>
+					<p>
+ 						<a href="http://aaronbrooks.info">Aaron Brooks</a> /
+						<img height=40 align="middle"
+							style="background:0px;margin:0px 5px 5px 5px;border:0;box-shadow:0;vertical-align:middle"
+							data-src="src/TwitterLogo_white.png"><a href="http://twitter.com/scalefreegan">@scalefreegan</a>
+					</p>
+					<p>
+ 						<a href="http://www.embl.de/research/units/genome_biology/steinmetz/members/index.php?s_personId=CP-60023563">Daniel Schraivogel</a> /
+						<img height=40 align="middle"
+							style="background:0px;margin:0px 5px 5px 5px;border:0;box-shadow:0;vertical-align:middle"
+							data-src="src/TwitterLogo_white.png"><a href="http://twitter.com/@SchraivogelS">@SchraivogelS</a>
+					</p>
+					<br>
+				</section>
+				<section
+						data-background="src/synyeast_twopanel-01.png"
+						data-background-size="contain"
+						data-background-color="#FFFFFF">
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<img width="65%" src="src/F3.large-01.jpg" style="border:0px;box-shadow:0 0 0;margin:0 0">
+						<p><small>
+							<a href="http://science.sciencemag.org/content/343/6178/1426.full">Pennisi et al 2014</a>
+						</small></p>
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<img width="100%" src="src/syn_progress.png" style="border:0px;box-shadow:0 0 0;margin:0 0">
+						<p><small>
+							<a>Richardson et al Submitted</a>
+						</small></p>
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<img width="100%" src="src/roy1.png" style="border:0px;box-shadow:0 0 0;margin:0 0">
+						<p><small>
+							<a>Lifted from Roy Walker</a>
+						</small></p>
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<img width="100%" src="src/roy2.png" style="border:0px;box-shadow:0 0 0;margin:0 0">
+						<p><small>
+							<a>Lifted from Roy Walker</a>
+						</small></p>
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<img width="100%" src="src/roy3.png" style="border:0px;box-shadow:0 0 0;margin:0 0">
+						<p><small>
+							<a>Lifted from Roy Walker</a>
+						</small></p>
+				</section>
+				<section
+					data-background="src/Yeast-Cell.jpg"
+					data-background-size="contain">
+					<h3 style="color:#EEE;background-color:#4A4E69;border-radius: 15px;"> &nbsp;How is tRNA expression affected by relocation to neochromosome?&nbsp; </h3>
+				</section>
+				<section id="into" data-background-color="white">
+					<h3 style="color:black">Two challenges for quantifying tRNAs</h3>
+					<br>
+					<ul>
+						<li class="fragment" style="color:black">
+							tRNAs are heavily modified&nbsp;&nbsp;
+							<span style="color:#EEE;background-color:#45462A;float:right;border-radius: 15px;"> &nbsp;ARMseq&nbsp; </span></li>
+						<br>
+						<li class="fragment" style="color:black">
+							tRNAs have multiple genomic origins&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+							<span style="color:#EEE;background-color:#4A4E69;float:right;border-radius: 15px;"> &nbsp;pre vs mature tRNAs&nbsp; </span> </li>
+					</ul>
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<img width="100%" src="src/F4.large.jpg" style="border:0px;box-shadow:0 0 0;margin:0 0">
+						<p><small>
+							<a href="http://www.genetics.org/content/194/1/43">Hopper 2013</a>
+						</small></p>
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<iframe data-src="http://www.yeastgenome.org/genomesnapshot" width="1200px" height="800px" frameborder="0" marginwidth="0" marginheight="0" scrolling="yes" style="border:0px solid #666; margin-bottom:5px; max-width: 100%;" allowfullscreen> </iframe>
+				</section>
+				<section
+					data-background-color="#FFFFFF"
+					data-background="src/tRNA_slide-01.jpg"
+					data-background-size="contain">
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<h3 style="color:black">Quantification of tRNA sequence divergence</h3>
+						<img width="80%" src="src/ser.png" style="border:0px;box-shadow:0 0 0;margin:0 0">
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<h3 style="color:black">Problem 1 &rarr; ARMseq</h3>
+						<img width="45%" src="src/nmeth.3516-F1.jpg" style="border:0px;box-shadow:0 0 0;margin:0 0">
+						<p><small>
+							<a href="http://www.nature.com/nmeth/journal/v12/n9/full/nmeth.3508.html">Cozen 2015</a>
+						</small></p>
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<h3 style="color:black">Problem 2 &rarr; Clever quantification</h3>
+						<p style="color:black">ARMseq data analysis pipeline can do this, but can't directly compare multiple genomes</p>
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<img width="90%" src="src/traditional_workflow.png" style="border:0px;box-shadow:0 0 0;margin:0 0">
+						<p><small>
+							<a href="https://www.bioconductor.org/help/course-materials/2016/CSAMA/lect-07-modern-rnaseq/ModernRNAseqAnalysis.pdf">Charlotte Soneson - University of Zurich </a>
+						</small></p>
+				</section>
+				<section
+					data-background-image="src/taco.gif"
+					data-background-size="contain">
+				</section>
+				<section
+					data-background-image="src/taco2.gif"
+					data-background-size="contain">
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<img width="90%" src="src/traditional_workflow_2.png" style="border:0px;box-shadow:0 0 0;margin:0 0">
+						<p><small>
+							<a href="https://www.bioconductor.org/help/course-materials/2016/CSAMA/lect-07-modern-rnaseq/ModernRNAseqAnalysis.pdf">Charlotte Soneson - University of Zurich </a>
+						</small></p>
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<img width="90%" src="src/modern_workflow.png" style="border:0px;box-shadow:0 0 0;margin:0 0">
+						<p><small>
+							<a href="https://www.bioconductor.org/help/course-materials/2016/CSAMA/lect-07-modern-rnaseq/ModernRNAseqAnalysis.pdf">Charlotte Soneson - University of Zurich </a>
+						</small></p>
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<img width="100%" src="src/mapping.png" style="border:0px;box-shadow:0 0 0;margin:0 0">
+						<p><small>
+							<a href="https://www.bioconductor.org/help/course-materials/2016/CSAMA/lect-07-modern-rnaseq/ModernRNAseqAnalysis.pdf">Charlotte Soneson - University of Zurich </a>
+						</small></p>
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<img width="100%" src="src/estimation.png" style="border:0px;box-shadow:0 0 0;margin:0 0">
+						<p><small>
+							<a href="https://www.bioconductor.org/help/course-materials/2016/CSAMA/lect-07-modern-rnaseq/ModernRNAseqAnalysis.pdf">Charlotte Soneson - University of Zurich </a>
+						</small></p>
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<h3 style="color:black">Problem 2 &rarr; Clever quantification</h3>
+						<span style="color:#EEE;background-color:#45462A;float:center;border-radius: 15px;"> &nbsp;ARMseq + Salmon&nbsp; </span>
+				</section>
+				<section
+					data-background-image="src/salmonarms-header.png"
+					data-background-size="contain"
+					data-background-color="#FFFFFF">
+				</section>
+				<section
+					data-background-image="src/header.jpg"
+					data-background-size="contain"
+					data-background-color="#FFFFFF">
+				</section>
+				<section
+					data-background-image="src/12971009_1158701684151776_8858579995732539584_o.jpg"
+					data-background-size="contain"
+					data-background-color="#FFFFFF">
+				</section>
+				<section data-background-color="white">
+					<h3 style="color:black">Does it work?</h3>
+					<span style="color:#EEE;background-color:#45462A;float:center;border-radius: 15px;"> &nbsp;Direct comparison to ARMseq&nbsp; </span>
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<img width="100%" src="src/salmon_trad.png" style="border:0px;box-shadow:0 0 0;margin:0 0">
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<img width="100%" src="src/armseq_salmon.png" style="border:0px;box-shadow:0 0 0;margin:0 0">
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<h4 style="color:black">Experimental Set up</h4>
+						<img width="100%" src="src/expsetup.png" style="border:0px;box-shadow:0 0 0;margin:0 0">
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<h4 style="color:black">We get more than just tRNAs</h4>
+						<img width="100%" src="src/countsbytype.png" style="border:0px;box-shadow:0 0 0;margin:0 0">
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<h4 style="color:black">tRNA levels largely reproducible across strains</h4>
+						<img width="100%" src="src/rep_samples.png" style="border:0px;box-shadow:0 0 0;margin:0 0">
+				</section>
+				<section
+						data-background-image="src/tpm_perchr.png"
+						data-background-size="contain"
+						data-background-color="#FFFFFF">
+				</section>
+				<section
+						data-background-image="src/mtrna_byaa.png"
+						data-background-size="contain"
+						data-background-color="#FFFFFF">
+				</section>
+				<section
+						data-background-image="src/pro_agg.png"
+						data-background-size="contain"
+						data-background-color="#FFFFFF">
+				</section>
+				<section
+						data-background-image="src/sup61.png"
+						data-background-size="contain"
+						data-background-color="#FFFFFF">
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<h4 style="color:black">Multiple responses of tRNAs on neochr</h4>
+						<img width="65%" src="src/chr18_tpm.png" style="border:0px;box-shadow:0 0 0;margin:0 0">
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<h4 style="color:black">As expected</h4>
+						<img width="65%" src="src/chr18_tpm_2.png" style="border:0px;box-shadow:0 0 0;margin:0 0">
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<h4 style="color:black">Slightly surprising</h4>
+						<img width="65%" src="src/chr18_tpm_3.png" style="border:0px;box-shadow:0 0 0;margin:0 0">
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<h4 style="color:black">Weird</h4>
+						<img width="65%" src="src/chr18_tpm_4.png" style="border:0px;box-shadow:0 0 0;margin:0 0">
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<h4 style="color:black">21 differentially expressed tRNAs</h4>
+						<img width="100%" src="src/de_tRNAs.png" style="border:0px;box-shadow:0 0 0;margin:0 0">
+				</section>
+				<section
+						data-background-color="#FFFFFF">
+						<img width="80%" src="src/workflow.png" style="border:0px;box-shadow:0 0 0;margin:0 0">
+						<p><small>
+							<a href="http://combine-lab.github.io/">Salmon and Wasabi: Rob Patro, COMBINE-Lab</a>
+						</small><br>
+						<small>
+							<a href="http://pachterlab.github.io/sleuth/">Sleuth: Pachter lab</a>
+						</small></p>
+				</section>
+				<section id="thanks"
+					data-background="src/thankyou.png"
+					data-background-size="contain"
+					data-background-color="#FFFFFF">
+				</section>
+
+			</div>
+		</div>
+
+		<script src="reveal/lib/js/head.min.js"></script>
+		<script src="reveal/js/reveal.js"></script>
+
+		<script>
+
+			// Full list of configuration options available at:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+				// transitionSpeed: 'slow',
+
+				transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+				// Optional reveal.js plugins
+				dependencies: [
+					{ src: 'reveal/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'reveal/plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'reveal/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'reveal/plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: 'reveal/plugin/zoom-js/zoom.js', async: true },
+					{ src: 'reveal/plugin/notes/notes.js', async: true }
+				]
+			});
+
+		</script>
+
+	</body>
+</html>
