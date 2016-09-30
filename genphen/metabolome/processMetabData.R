@@ -2,8 +2,8 @@
 
 #-------------------------------------------------------------------#
 # Process Metabolome Data Nicole
-# ! Transform into a computable format ! 
-#-------------------------------------------------------------------# 
+# ! Transform into a computable format !
+#-------------------------------------------------------------------#
 
 .author = "Aaron Brooks"
 .copyright = "Copyright 2015"
@@ -21,11 +21,10 @@ library( dplyr )
 library( reshape2 )
 
 # Import functions ---------------------------------------------------
-source( "/g/steinmetz/brooks/git/steinmetz-lab/genphen/metabnorm/normfunctions.R" )
-
+source( "/g/steinmetz/brooks/git/steinmetz-lab/genphen/othertools/metabnorm/normfunctions.R" )
 
 # NOTE: this function is specific to data format supplied by Nicole, which looks like this:
-# Intracellulare concentration [µM]												
+# Intracellulare concentration [µM]
 # 	ISOCIT											AKG
 # 	S1	S2	S3	S4	S5	S6	S7	Y1	Y2	Y3	Y4	S1
 # 1	3844.50	3584.21	3947.04	4127.05	4275.45	4423.63	3901.31	2153.74	1961.84	2237.32	2114.77	34.1
@@ -80,7 +79,7 @@ processData = function( f, metaboliteRow = 1, strainRow = 2, dataRows = NULL, da
 			} else {
 				parent = "YJM789"
 			}
-			out = rbind( out, data.frame( 
+			out = rbind( out, data.frame(
 				metabolite = as.character( data[ metaboliteRow,i ] ),
 				strain =  as.character( data[ strainRow,i ] ),
 				parent = parent,
@@ -90,7 +89,7 @@ processData = function( f, metaboliteRow = 1, strainRow = 2, dataRows = NULL, da
 		}
 	}
 	# clean up
-	out = out[ rowSums(is.na(out)) == 0, ] 
+	out = out[ rowSums(is.na(out)) == 0, ]
 	return(out)
 }
 
@@ -100,7 +99,7 @@ calc_deriv = function(df) {
 	df = arrange( df,time )
 	endo_rate = diff( df$endo_quant_log_normalized )
 	exo_rate = diff( df$exo_quant_log_normalized )
-	time = sapply( seq( 2, length( df$time ) ), function(i) { 
+	time = sapply( seq( 2, length( df$time ) ), function(i) {
 		# change to ceil to keep time labeling consistent
 		ceiling( mean( as.numeric( levels( df$time )[ df$time[ c( i-1,i ) ] ] ) ) )
 		} )
@@ -246,43 +245,43 @@ save( data, data_complete, data_complete_long, file="./dynamic_metabolome_080520
 
 pdf("./dynamic_metabolome_08052014/metabolome.pdf", width=11.5,height=8)
 # box plot of each metabolite
-# endoboxplot <- ggplot(data = endodata, aes(x = metabolite, y = log(data))) + 
+# endoboxplot <- ggplot(data = endodata, aes(x = metabolite, y = log(data))) +
 # 	geom_violin(scale="width",fill="gray") +
 # 	scale_x_discrete(name="") +
 # 	scale_y_continuous(name=expression(paste("Level [ log10(",mu,"M) ]"))) +
 # 	theme(axis.text.x=element_text(angle = -45, hjust = 0))
 
 # Log2 metaboblites, Endo and Exo
-ggplot(data = filter( data_complete_long, variable == "endo_quant_log_normalized")%>%filter(! is.na(value)), aes(x = time, y = value, group = parent,colour=parent, fill=parent)) + 
+ggplot(data = filter( data_complete_long, variable == "endo_quant_log_normalized")%>%filter(! is.na(value)), aes(x = time, y = value, group = parent,colour=parent, fill=parent)) +
   	geom_point() +
-	geom_smooth() + 
-	facet_wrap( ~ metabolite, scales="free_y") + 
+	geom_smooth() +
+	facet_wrap( ~ metabolite, scales="free_y") +
 	scale_x_discrete(name="Time (hr)") +
     scale_y_continuous(name=expression(paste("Level log2(",mu,"M)"))) +
     ggtitle("Endo- Metabolome Levels Across Strains") +
-    scale_alpha_manual(values=c(.5,.25))   
+    scale_alpha_manual(values=c(.5,.25))
 # Log2 metaboblites, Exo
-ggplot(data = filter( data_complete_long, variable == "exo_quant_log_normalized" )%>%filter(! is.na(value)), aes(x = time, y = value, group = parent,colour=parent, fill=parent)) + 
+ggplot(data = filter( data_complete_long, variable == "exo_quant_log_normalized" )%>%filter(! is.na(value)), aes(x = time, y = value, group = parent,colour=parent, fill=parent)) +
   	geom_point() +
-	geom_smooth() + 
-	facet_wrap( ~ metabolite, scales="free_y") + 
+	geom_smooth() +
+	facet_wrap( ~ metabolite, scales="free_y") +
 	scale_x_discrete(name="Time (hr)") +
     scale_y_continuous(name=expression(paste("Level log2(",mu,"M)"))) +
     ggtitle("Exo- Metabolome Levels Across Strains") +
-    scale_alpha_manual(values=c(.5,.25)) 
-# Rel t0 metaboblites, Endo 
-ggplot(data = filter( data_complete_long, variable == "endo_quant_rel" )%>%filter(! is.na(value)), aes(x = time, y = value, group = parent,colour=parent, fill=parent)) +  
-	geom_point() + 
-	geom_smooth() + 
-	facet_wrap( ~ metabolite, scales="free_y") + 
+    scale_alpha_manual(values=c(.5,.25))
+# Rel t0 metaboblites, Endo
+ggplot(data = filter( data_complete_long, variable == "endo_quant_rel" )%>%filter(! is.na(value)), aes(x = time, y = value, group = parent,colour=parent, fill=parent)) +
+	geom_point() +
+	geom_smooth() +
+	facet_wrap( ~ metabolite, scales="free_y") +
 	scale_x_discrete(name="Time (hr)") +
     scale_y_continuous(name="Relative Level") +
-    ggtitle("Endo- Metabolome Levels Across Strains") 
+    ggtitle("Endo- Metabolome Levels Across Strains")
 # Rel t0 metaboblites, Exo
 ggplot(data = filter( data_complete_long, variable == "exo_quant_rel" )%>%filter(! is.na(value)), aes(x = time, y = value, group = parent,colour=parent, fill=parent)) +
-	geom_point() + 
-	geom_smooth() + 
-	facet_wrap( ~ metabolite, scales="free_y") + 
+	geom_point() +
+	geom_smooth() +
+	facet_wrap( ~ metabolite, scales="free_y") +
 	scale_x_discrete(name="Time (hr)") +
     scale_y_continuous(name="Relative Level") +
     ggtitle("Exo- Metabolome Levels Across Strains")
@@ -290,29 +289,29 @@ ggplot(data = filter( data_complete_long, variable == "exo_quant_rel" )%>%filter
 d = filter( data_complete_long, variable == "endo_rate" )
 d = d[ complete.cases(d), ]
 ggplot(data = d, aes(x = time, y = value, group = parent,colour=parent, fill=parent)) +
-	geom_point() + 
-	geom_smooth() + 
-	facet_wrap( ~ metabolite, scales="free_y") + 
+	geom_point() +
+	geom_smooth() +
+	facet_wrap( ~ metabolite, scales="free_y") +
 	scale_x_discrete(name="Time (hr)") +
     scale_y_continuous(name="Rate of Change (d[uM]/dt)") +
     ggtitle("Endo- Metabolome Rate of Change Across Strains")
-# Rates metaboblites, Exo 
+# Rates metaboblites, Exo
 d = filter( data_complete_long, variable == "exo_rate" )
 d = d[ complete.cases(d), ]
 ggplot(data = d, aes(x = time, y = value, group = parent,colour=parent, fill=parent)) +
-	geom_point() + 
-	geom_smooth() + 
-	facet_wrap( ~ metabolite, scales="free_y") + 
+	geom_point() +
+	geom_smooth() +
+	facet_wrap( ~ metabolite, scales="free_y") +
 	scale_x_discrete(name="Time (hr)") +
     scale_y_continuous(name="Rate of Change (d[uM[/dt)") +
     ggtitle("Exo- Metabolome Rate of Change Across Strains")
-# Rates metaboblites, Exo 
-ggplot(data = filter( data_complete_long, variable == "cellconc_1.ml" | variable == "biovolume_ul.ml" | variable == "singlecellvol_fl" ) %>% distinct(strain,time,variable), aes(x = time, y = value, group = parent, colour=parent)) + 
-	geom_point() + 
-	geom_smooth() + 
+# Rates metaboblites, Exo
+ggplot(data = filter( data_complete_long, variable == "cellconc_1.ml" | variable == "biovolume_ul.ml" | variable == "singlecellvol_fl" ) %>% distinct(strain,time,variable), aes(x = time, y = value, group = parent, colour=parent)) +
+	geom_point() +
+	geom_smooth() +
 	facet_wrap( ~ variable, scales="free_y") +
 	scale_x_discrete(name="Time (hr)") +
-    scale_y_continuous(name="Relative measurement") 
+    scale_y_continuous(name="Relative measurement")
 dev.off()
 
 # Plot data reproducibility ---------------------------------------------------
@@ -320,7 +319,7 @@ dev.off()
 
 
 # everything expect s1/y1 data, make ref to s1 data for each column to plot reproducibility
-rel21_data = filter( data, !strain=="S1" & !strain=="Y1" ) %>% 
+rel21_data = filter( data, !strain=="S1" & !strain=="Y1" ) %>%
 	rowwise() %>%
 	do({
 		parent = .$parent
@@ -339,33 +338,33 @@ rel21_data = filter( data, !strain=="S1" & !strain=="Y1" ) %>%
 		return(df)
 		})
 
-var_data = data %>% 
+var_data = data %>%
 	group_by(metabolite,parent,time) %>%
 	summarise(
 		endo_mean=mean(endo_quant_log_normalized,na.rm=TRUE),
 		endo_variance=var(endo_quant_log_normalized,na.rm=TRUE),
 		exo_mean=mean(exo_quant_log_normalized,na.rm=TRUE),
-		exo_variance=var(exo_quant_log_normalized,na.rm=TRUE)		
+		exo_variance=var(exo_quant_log_normalized,na.rm=TRUE)
 	)
 
 pdf("./dynamic_metabolome_08052014/data_qc.pdf", width=11.5,height=8)
 # endo
 ggplot( rel21_data, aes( x = endo_ref, y = endo_quant, group = parent, colour = parent ) ) +
-	geom_point() + 
+	geom_point() +
 	geom_abline() +
     scale_y_continuous(name="Replicates, Metabolite Levels (uM)") +
     scale_x_continuous(name="S1, Metabolite Levels (uM)") +
     ggtitle("Endo-Metabolite Reproducibility")
-  
+
 ggplot( rel21_data, aes( x = log2( endo_ref ), y = log2( endo_quant ), group = parent, colour = parent ) ) +
-	geom_point() + 
+	geom_point() +
 	geom_abline() +
     scale_y_continuous(name="Replicates, Metabolite Levels log2(uM)") +
     scale_x_continuous(name="S1, Metabolite Levels log2(uM)")  +
     ggtitle("Endo-Metabolite Reproducibility, Log Scale")
 
 ggplot( rel21_data, aes( x = endo_ref_norm, y = endo_quant_log_normalized, group = parent, colour = parent ) ) +
-	geom_point() + 
+	geom_point() +
 	geom_abline() +
     scale_y_continuous(name="Replicates, Metabolite Levels log2(uM)") +
     scale_x_continuous(name="S1, Metabolite Levels log2(uM)")  +
@@ -378,21 +377,21 @@ ggplot( var_data, aes( x = endo_mean, y = endo_variance, group = parent, colour 
     ggtitle("Endo-Metabolite Mean Dependent Variance, Log Scale, Normalized")
 # exo
 ggplot( rel21_data, aes( x = exo_ref, y = exo_quant, group = parent, colour = parent ) ) +
-	geom_point() + 
+	geom_point() +
 	geom_abline() +
     scale_y_continuous(name="Replicates, Metabolite Levels (uM)") +
     scale_x_continuous(name="S1, Metabolite Levels (uM)") +
     ggtitle("Exo-Metabolite Reproducibility")
-  
+
 ggplot( rel21_data, aes( x = log2( exo_ref ), y = log2( exo_quant ), group = parent, colour = parent ) ) +
-	geom_point() + 
+	geom_point() +
 	geom_abline() +
     scale_y_continuous(name="Replicates, Metabolite Levels log2(uM)") +
     scale_x_continuous(name="S1, Metabolite Levels log2(uM)")  +
     ggtitle("Exo-Metabolite Reproducibility, Log Scale")
 
 ggplot( rel21_data, aes( x = exo_ref_norm, y = exo_quant_log_normalized, group = parent, colour = parent ) ) +
-	geom_point() + 
+	geom_point() +
 	geom_abline() +
     scale_y_continuous(name="Replicates, Metabolite Levels log2(uM)") +
     scale_x_continuous(name="S1, Metabolite Levels log2(uM)")  +
@@ -405,6 +404,3 @@ ggplot( var_data, aes( x = exo_mean, y = exo_variance, group = parent, colour = 
     scale_x_continuous(name="Mean Metabolite Levels log2(uM), normalized")  +
     ggtitle("Exo-Metabolite Mean Dependent Variance, Log Scale, Normalized")
 dev.off()
-
-
-

@@ -15,26 +15,41 @@ shinyUI(navbarPage("gQTL Explorer", selected = "Table Viewer",
             fluidRow(
               column(12,
                  fluidRow(
-                   column(4,sliderInput("co", " Custom FDR (%):,", max = 50, min = 0, value = 5)),
-                   column(4,sliderInput("bci", " Bayesian Confidence Interval (%):,", max = 100, min = 0, value = 95))
-                 )
-                )
-              ),
-            fluidRow(
-              column(12,
+                   column(12, h2("gQTLs From Gagneur et al 2013",align = "center"))
+                   ),
                  fluidRow(
-                   column(12, htmlOutput("image"))
+                   column(12, htmlOutput("image")),
+                   column(12, br())
                )
               )
             ),
             fluidRow(
+              column(12, h3("Select a QTL...",align = "center")),
+              column(12, h3(""))
+            ),
+            fluidRow(
               column(1),
-              column(10,align="center",DT::dataTableOutput('dt')),
+              column(10,align="center",DT::dataTableOutput('dt1')),
+              column(1)
+            ),
+            fluidRow(
+              column(12,
+                     fluidRow(
+                       column(12,sliderInput("cr", "Adjust Interval (bp)", max = 100000, min = 0, value = 5, step = 100, width = "100%"))
+                     )
+              )
+            ),
+            fluidRow(
+              column(12, h3("Genes in region",align = "center"))
+            ),
+            fluidRow(
+              column(1),
+              column(10,align="center",DT::dataTableOutput('dt2')),
               column(1)
             ),
             fluidRow(
               h3("SNPs and Indels",align = "center"),
-              column(12,align="center",plotOutput('snptype', height = "600px"))
+              column(12,align="center",plotOutput('snptype', height = "300px"))
             )
           )
          ),

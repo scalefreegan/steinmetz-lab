@@ -1,0 +1,48 @@
+#!/bin/bash
+#
+# system commands to process ARMseq data
+#
+
+# Download files
+
+# Yeast, untreated
+fastq-dump --gzip --split-files SRR1874045
+fastq-dump --gzip --split-files SRR1874048
+fastq-dump --gzip --split-files SRR1875056
+
+# Yeast, AlkB treated
+fastq-dump --gzip --split-files SRR1874029
+fastq-dump --gzip --split-files SRR1874032
+fastq-dump --gzip --split-files SRR1874034
+#
+# Trim adapter sequences
+
+# untreated
+cutadapt -a AGATCGGAAGAGCACACG -m 15 --discard-untrimmed -o ../data/yeast_untreated/SRR1874045_trimmed.fastq.gz ../data/yeast_untreated/SRR1874045_1.fastq.gz
+cutadapt -a AGATCGGAAGAGCACACG -m 15 --discard-untrimmed -o ../data/yeast_untreated/SRR1874048_trimmed.fastq.gz ../data/yeast_untreated/SRR1874048_1.fastq.gz
+cutadapt -a AGATCGGAAGAGCACACG -m 15 --discard-untrimmed -o ../data/yeast_untreated/SRR1875056_trimmed.fastq.gz ../data/yeast_untreated/SRR1875056_1.fastq.gz
+
+# alkB treated
+cutadapt -a AGATCGGAAGAGCACACG -m 15 --discard-untrimmed -o ../data/yeast_AlkB/SRR1874029_trimmed.fastq.gz ../data/yeast_AlkB/SRR1874029_1.fastq.gz
+cutadapt -a AGATCGGAAGAGCACACG -m 15 --discard-untrimmed -o ../data/yeast_AlkB/SRR1874032_trimmed.fastq.gz ../data/yeast_AlkB/SRR1874032_1.fastq.gz
+cutadapt -a AGATCGGAAGAGCACACG -m 15 --discard-untrimmed -o ../data/yeast_AlkB/SRR1874034_trimmed.fastq.gz ../data/yeast_AlkB/SRR1874034_1.fastq.gz
+
+# align untreated
+untreated=("../data/yeast_untreated/SRR1874045_trimmed.fastq.gz", "../data/yeast_untreated/SRR1874048_trimmed.fastq.gz", "../data/yeast_untreated/SRR1875056_trimmed.fastq.gz")
+bowtie2 -x /g/steinmetz/genome/Saccharomyces_cerevisiae/S288c_ERCC/ver_20150412/indexes/bowtie2/S288c_complete_wERCC -k 100 -U $untreated -p 10 | samtools view -bS | samtools sort -o untreated.bam
+samtools index untreated.bam
+
+# align untreated - very-sensitive, end-to-end
+untreated=("../data/yeast_untreated/SRR1874045_trimmed.fastq.gz", "../data/yeast_untreated/SRR1874048_trimmed.fastq.gz", "../data/yeast_untreated/SRR1875056_trimmed.fastq.gz")
+bowtie2 -x /g/steinmetz/genome/Saccharomyces_cerevisiae/S288c_ERCC/ver_20150412/indexes/bowtie2/S288c_complete_wERCC -k 100 -U $untreated -p 10 --very-sensitive | samtools view -bS | samtools sort -o untreated_vse2e.bam
+samtools index untreated_vse2e.bam
+
+# align treated
+treated=("../data/yeast_AlkB/SRR1874029_trimmed.fastq.gz", "../data/yeast_AlkB/SRR1874032_trimmed.fastq.gz", "../data/yeast_AlkB/SRR1874034_trimmed.fastq.gz")
+bowtie2 -x /g/steinmetz/genome/Saccharomyces_cerevisiae/S288c_ERCC/ver_20150412/indexes/bowtie2/S288c_complete_wERCC -k 100 -U $treated -p 10  | samtools view -bS | samtools sort -o treated.bam
+samtools index treated.bam
+
+# align untreated - very-sensitive, end-to-end
+treated=("../data/yeast_AlkB/SRR1874029_trimmed.fastq.gz", "../data/yeast_AlkB/SRR1874032_trimmed.fastq.gz", "../data/yeast_AlkB/SRR1874034_trimmed.fastq.gz")
+bowtie2 -x /g/steinmetz/genome/Saccharomyces_cerevisiae/S288c_ERCC/ver_20150412/indexes/bowtie2/S288c_complete_wERCC -k 100 -U $treated -p 10 --very-sensitive | samtools view -bS | samtools sort -o treated_vse2e.bam
+samtools index treated_vse2e.bam
