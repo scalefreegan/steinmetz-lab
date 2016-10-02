@@ -2,3 +2,11 @@
 .Rhistory
 .RData
 clustQTL/clust_qtl.rda
+
+.DS_Store
+
+*.history
+
+.DS_Store
+
+.DS_Store
