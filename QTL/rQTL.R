@@ -173,6 +173,99 @@ runQTL <- function(
   return(to_r)
 }
 
+plotlod_wlabs <- function(output, effects, y, y.text, ylab="Time", gap=25,
+                    ncolors=251, horizontal=FALSE, ...)
+{
+
+    if(missing(y)) {
+        y <- 1:(ncol(output)-2)
+    }
+
+    if(missing(y.text)) {
+        y.text <- y
+    }
+
+    templod <- as.matrix(output[,-(1:2)])
+    maxlod <- max(templod, na.rm=TRUE)
+    zlim <- c(0, maxlod)
+    val <- sqrt(seq(0, 1, len=ncolors))
+    col <- rgb(1, rev(val), rev(val))
+    if(!missing(effects)) {
+        if(!all(dim(effects) == dim(templod)))
+            stop("dim(effects) doesn't conform to dim(output)")
+        templod[effects < 0] <- templod[effects<0] * -1
+        zlim <- c(-maxlod, maxlod)
+        ncolors=(ncolors-1)/2+1
+        val <- sqrt(seq(0, 1, len=ncolors))
+        col <- c(rgb(val, val, 1), rgb(1, rev(val), rev(val))[-1])
+    }
+
+    uchr <- unique(output[,1])
+    pos <- NULL
+    lod <- NULL
+    chr <- vector("list", length(uchr))
+    names(chr) <- uchr
+    off.end <- 0.5 # spacing off the ends of the chromosomes
+    for(i in uchr) {
+        temppos <- output[output[,1]==i,2]
+        temppos <- temppos - min(temppos)
+        temppos <- rowMeans(cbind(c(temppos[1]-off.end, temppos),
+                                  c(temppos, max(temppos)+off.end)))
+        if(is.null(pos)) {
+            pos <- temppos
+            lod <- templod[output[,1]==i,]
+        }
+        else {
+            temppos <- max(pos)+gap + temppos
+            pos <- c(pos, temppos)
+            lod <- rbind(lod, rep(0, ncol(lod)), templod[output[,1]==i,])
+        }
+        chr[[i]] <- c(min(temppos), max(temppos))
+        chr[[i]] <- c(chr[[i]], mean(chr[[i]]))
+    }
+
+
+
+
+    if(horizontal == FALSE) {
+
+        ## add more space between regend and plot
+        pos <- c(pos, max(pos) + gap)
+        lod <- rbind(lod, rep(0, ncol(lod)))
+
+        ## plot
+        image.plot(pos, y, lod, xaxt="n", ylab=ylab, xlab="",
+              zlim=zlim, col=col, mgp=c(2.6, 1, 0), bty="n", axes=F)
+        image(pos, y, lod, axes=FALSE, add=TRUE, pos, y, lod, xaxt="n", ylab=ylab, xlab="",
+              zlim=zlim, col=col, mgp=c(2.6, 1, 0), bty="n", axes=F)
+        mtext(text=y.text, side=2, line=0.3, at=y, las=1, cex=0.8)
+        title(xlab="Chromosome", mgp=c(2, 0, 0))
+        u <- par("usr")
+        yd <- 0.04
+        for(i in seq(along=chr)) {
+            rect(chr[[i]][1]-.5, u[3], chr[[i]][2]+.5, u[3]-diff(u[3:4])*yd, col="gray40", xpd=TRUE)
+            text(chr[[i]][3], u[3]-diff(u[3:4])*yd/2, uchr[i], col="white", xpd=TRUE)
+            rect(chr[[i]][1]-.5, u[3], chr[[i]][2]+.5, u[4], xpd=TRUE)
+        }
+
+    } else {
+
+        image.plot(y, pos, t(lod), yaxt="n", xlab=ylab, ylab="",
+              zlim=zlim, col=col, mgp=c(2.6, 1, 0), bty="n", axes=F)
+        image(y, pos, t(lod), axes=FALSE, add=TRUE, pos, y, lod, xaxt="n", ylab=ylab, xlab="",
+              zlim=zlim, col=col, mgp=c(2.6, 1, 0), bty="n", axes=F)
+        mtext(text=y.text, side=1, line=0.3, at=y, las=1, cex=0.8)
+        title(ylab="Chromosome", mgp=c(2, 0, 0))
+        u <- par("usr")
+        xd <- 0.04
+        for(i in seq(along=chr)) {
+            rect(u[1] - diff(u[1:2])*xd, chr[[i]][1]-.5 , u[1], chr[[i]][2]+.5, col="gray40", xpd=TRUE)
+            text(u[1]-diff(u[1:2])*xd/2, chr[[i]][3], uchr[i], col="white", xpd=TRUE)
+            rect(u[1], chr[[i]][1]-.5 , u[2], chr[[i]][2]+.5, xpd=TRUE)
+        }
+    }
+}
+
 #-------------------------------------------------------------------#
 # Example, i.e. your data goes here!
 #-------------------------------------------------------------------#
