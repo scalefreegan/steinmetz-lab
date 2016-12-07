@@ -184,3 +184,84 @@ drawSegments = function(segments = c(1,2,3), thissegmentTable = segmentTable, pl
     }
     p
 }
+
+loc2seg = function(start, end = NA, segment_order = NA, sequence = NA,
+  thissegmentTable = segmentTable, concise = F, force_forward = F, ...) {
+  if (is.na(segment_order) && is.na(sequence)) {
+    cat("ERROR: Must supply either segment_order or sequence")
+    return(NULL)
+  }
+  if (!is.na(sequence)) {
+    # convert sequence to segment order
+    segment_order = seq2seg(sequence, thissegmentTable, ...)
+  }
+  df = data.frame(number = segment_order, order = seq(1,length(segment_order)))
+  df = merge(df, thissegmentTable, by = "number", keep.x = T) %>% arrange(order)
+  # make sure it's a character. should make this a global fix
+  df$seq = as.character(df$seq)
+  if (!is.na(end)) {
+  # always work with coordinates on Watson (+) strand
+    if (!force_forward) {
+      if (start > end) {
+        internal.start = end
+        internal.end = start
+      } else {
+        internal.start = start
+        internal.end = end
+      }
+    }
+  } else {
+    internal.start = start
+    internal.end = start
+  }
+  # set up vectors for addtions
+  order.v = df$order
+  start.v = rep(0,length.out = length(order.v))
+  end.v = rep(0,length.out = length(order.v))
+  width.v = rep(0,length.out = length(order.v))
+  for (i in 1:length(df$order)) {
+      #print(i)
+      order.v[i] = df$order[i]
+      thisrow = df %>% filter(order==df$order[i])
+      if (order.v[i] == 1) {
+        start.v[i] = 1
+        width.v[i] = as.numeric(nchar(thisrow$seq))
+        end.v[i] = width.v[i]
+
+      } else {
+        start.v[i] = end.v[i-1] + 1
+        width.v[i] = as.numeric(nchar(thisrow$seq))
+        end.v[i] = start.v[i] + (width.v[i] - 1)
+      }
+  }
+  df = data.frame(df,start = start.v,end = end.v,width = width.v) %>%
+    select(order, number, essential, start, end, width, seq)
+  tor.s = df %>% filter(internal.start >= start, internal.start <=  end)
+  tor.e = df %>% filter(internal.end >= start, internal.end <= end)
+  if (!force_forward) {
+    s.e = sort(c(min(tor.s$order), max(tor.e$order)))
+    tor.o = seq(s.e[1], s.e[2])
+    tor = df %>% filter(order %in% tor.o)
+  } else {
+    tor.s = arrange(tor.s, start)
+    tor.s = data.frame(force.order = seq(1,length.out = dim(tor.s)[1]),tor.s)
+    tor.e = arrange(tor.e, start)
+    tor.e = data.frame(force.order = seq((max(tor.s$force.order)+1),length.out = dim(tor.e)[1]),tor.e)
+    tor = bind_rows(tor.s, tor.e) %>% arrange(abs(start-internal.start))
+  }
+  if (concise) {
+    if (force_forward) {
+      return(paste(tor$number,collapse="-"))
+    }
+    else if (start > end) {
+      tor = arrange(tor,-order)
+      return(paste(tor$number,collapse="-"))
+    } else {
+      tor = arrange(tor,order)
+      return(paste(tor$number,collapse="-"))
+    }
+  } else {
+    tor = data.frame(query.start = start, query.end = end, tor)
+    return(tor)
+  }
+}
