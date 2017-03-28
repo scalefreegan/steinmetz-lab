@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-<<<<<<< HEAD
 import os
 import pandas as pd
 import numpy as np
@@ -26,6 +25,34 @@ def calcDateCumSum(df, startDate = "min", endMax = 3650, rangeFreq = "30D", corr
     rng = pd.date_range(start, end, freq = rangeFreq)
     csum = [df.loc[df.loc[:,"date"] <= j,"size"].sum()/corrF for j in rng] # output in corrF units, eg GB
     return pd.DataFrame({"date" : rng, "usage" : csum})
+
+def du(path):
+  """disk usage in human readable format (e.g. '2,1GB')"""
+  import subprocess
+  return float(subprocess.check_output(['du','-s', path]).split()[0].decode('utf-8'))
+
+def sizeof_fmt(num, suffix='B'):
+    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+        if abs(num) < 1024.0:
+            return "%3.1f%s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f%s%s" % (num, 'Yi', suffix)
+
+def subdirQuant(path):
+    import os
+    import pandas as pd
+    ftype2compress = ["fa","txt","sam"]
+    d = {}
+    for root, dirs, files in os.walk(path, topdown=True):
+        for name in files:
+            thispath = os.path.join(root, name)
+            thissize = du(thispath)
+            thistype = name.split(".")[1] in ftype2compress
+            d[thispath] = [thispath,thissize]
+    df =  pd.DataFrame.from_dict(d, orient = "index")
+    df.columns = ["size","compressable"]
+    df = df.sort("size",ascending = False)
+    return df
 
 if __name__ == "__main__":
 
@@ -90,7 +117,7 @@ if __name__ == "__main__":
             proc = subprocess.Popen(["df -h /g/steinmetz/"], stdout=subprocess.PIPE, shell=True)
             (out, err) = proc.communicate()
             usage = out.splitlines()[2].split()
-            statement = 'Dear %s,\n\nHello from the Steinmetz Tier-1 Storage Robowizard!\n\nMy job is to alert you about data usage on the Steinmetz Tier-1 storage drive. Space on this centrally managed service is expensive and limited. Currently our Tier-1 storage drive is %s full! We are using %s of %s of purchased space.\n\nPlease carefully evaluate your usage. Delete unnessary files and archive old projects and files to Tier-2 at /g/tier2/steinmetz/\n\nSave space for others!!\n\nIf you need any assistance, you can send a mail to Aaron Brooks (aaron.brooks@embl.de)\n\nThanks for your help! You will recieve a biannual update about your usage.\n\nYour stats:\n\nA plot with your usage statistics over time is attached\n\nYou are using: %s GBs. The median usage for all other users is %s GBs.\n\nYou have %s files larger than 1 GB. Other users have %s on average.\n\nYour large files (>= 1GB) include: \n\nSize(GB) File\n%s'
+            statement = 'Dear %s,\n\nHello from the Steinmetz Tier-1 Storage Robowizard!\n\nMy job is to alert you about data usage on the Steinmetz Tier-1 storage drive. Space on this centrally managed service is expensive and limited. Currently our Tier-1 storage drive is %s full! We are using %s of %s of purchased space.\n\nPlease carefully evaluate your usage. Delete unnessary files and archive old projects and files to Tier-2 at /g/tier2/steinmetz/\n\nSave space for others!!\n\nIf you need any assistance, you can send a mail to Aaron Brooks (aaron.brooks@embl.de)\n\nThanks for your help! You will recieve a monthly update about your usage.\n\nYour stats:\n\nA plot with your usage statistics over time is attached\n\nYou are using: %s GBs. The median usage for all other users is %s GBs.\n\nYou have %s files larger than 1 GB. Other users have %s on average.\n\nYour large files (>= 1GB) include: \n\nSize(GB) File\n%s'
 
             # send mail
             msend3 = 'echo "%s" | mailx -v -s "Tier-1 Usage Report" -a "/g/steinmetz/brooks/tier1-usage.png" %s'
@@ -99,34 +126,3 @@ if __name__ == "__main__":
             (out, err) = proc.communicate()
         except:
             pass
-=======
-def du(path):
-  """disk usage in human readable format (e.g. '2,1GB')"""
-  import subprocess
-  return float(subprocess.check_output(['du','-s', path]).split()[0].decode('utf-8'))
-
-def sizeof_fmt(num, suffix='B'):
-    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
-        if abs(num) < 1024.0:
-            return "%3.1f%s%s" % (num, unit, suffix)
-        num /= 1024.0
-    return "%.1f%s%s" % (num, 'Yi', suffix)
-
-def subdirQuant(path):
-    import os
-    import pandas as pd
-    ftype2compress = ["fa","txt","sam"]
-    d = {}
-    for root, dirs, files in os.walk(path, topdown=True):
-        for name in files:
-            thispath = os.path.join(root, name)
-            thissize = du(thispath)
-            thistype = name.split(".")[1] in ftype2compress
-            d[thispath] = [thispath,thissize]
-    df =  pd.DataFrame.from_dict(d, orient = "index")
-    df.columns = ["size","compressable"]
-    df = df.sort("size",ascending = False)
-    return df
-
-if __name__ == "__main__":
->>>>>>> origin/gh-pages
