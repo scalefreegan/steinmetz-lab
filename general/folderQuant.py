@@ -60,7 +60,7 @@ if __name__ == "__main__":
     with open("/g/steinmetz/brooks/steinmetzUsers.csv") as f:
         next(f)
         reader = csv.reader(f,delimiter=",")
-        print reader
+        #print(reader)
         for x,y in reader:
             name2email[x] = y
 
