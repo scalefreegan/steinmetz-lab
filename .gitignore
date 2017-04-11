@@ -1,16 +1,56 @@
-.Rproj.user
-.Rhistory
-.RData
-clustQTL/clust_qtl.rda
+# Compiled source #
+###################
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
 
+# Packages #
+############
+# it's better to unpack these files and commit the raw source
+# git has its own built in compression methods
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Logs and databases #
+######################
+*.log
+*.sql
+*.sqlite
+
+# OS generated files #
+######################
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-*.history
+# Rdata #
+######################
+*.rda
+*.RData
+*.rds
 
-.DS_Store
+*.bam
+*.bai
+*.fasta
 
-.DS_Store
+# exclude ipynbs!!
+!*.ipynb
 
-yeast2_0/.DS_Store
+.snakemake/
 
-yeast2_0/scramble/.DS_Store
+.git/objects/pack/pack-0f9a5ca37f0b6796c81757b7cac861acda5edf49.pack
+Presentations/2016/frigroupmtg_150916/src/workflow.ai
+yeast2_0/scramble/allScrambles.fasta
