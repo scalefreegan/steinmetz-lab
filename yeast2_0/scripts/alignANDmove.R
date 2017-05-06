@@ -29,6 +29,7 @@ library(Biostrings)
 library(reshape)
 library(seqinr)
 library(optparse)
+library(dplyr)
 
 option_list = list(
   make_option(c("-r", "--ref"), type="character", default=NULL,
@@ -60,6 +61,19 @@ if (is.null(opt$ref)) {
   stop("Query sequence in fasta format required.n", call.=FALSE)
 }
 
+outdir = opt$m
+outdir = strsplit(outdir,split="/")[[1]]
+if (length(outdir) > 1) {
+  outdir = outdir[1:(length(outdir)-1)]
+  outdir = paste(outdir, collapse="/")
+} else {
+  outdir = ""
+}
+if (is.null(opt$out)) {
+  opt$out = paste(strsplit(opt$query, split = "\\.fasta")[[1]],".originAlign",".fasta",sep="")
+  #opt$out = paste(outdir, opt$out, sep="/")
+}
+
 # read in mummer table
 readMummer <- function(f) {
   # returns string w/o leading or trailing whitespace
@@ -86,81 +100,118 @@ readMummer <- function(f) {
   thistable$E1 = as.numeric(thistable$E1)
   thistable$S2 = as.numeric(thistable$S2)
   thistable$E2 = as.numeric(thistable$E2)
-  return(thistable)
+  return(data.frame(thistable))
 }
 
-# run mummer
-mummer_command = paste(paste("nucmer --prefix=", opt$mummerprefix, sep=""),
-  "--coords", opt$ref, opt$query, sep = " ")
-system(mummer_command, wait = TRUE)
-mtable = readMummer(paste(opt$mummerprefix, ".coords", sep = ""))
-
-# move query origin to match
-qfa = readDNAStringSet(opt$query,"fasta")
-qname = mtable[1,"QUERY"]
-rname = mtable[1,"REF"]
-qfa = qfa[[qname]]
-#cat(as.numeric(mtable[1,"S2"]),"\n")
-#cat(as.numeric(mtable[1,"E2"]),"\n")
-if (mtable[1,"S2"] > mtable[1,"E2"]) {
-  # match is reverse
-  #cat("\n\n\nreverse_match\n\n\n\n\n")
-  if (abs(mtable[1,"S1"]-mtable[1,"E2"]) <= 100) {
-    # start is close - do nothing but reverse
-    #cat("not moving origin\n")
-    qfa_alt = reverseComplement(qfa)
-  } else if (abs(mtable[1,"E2"] - 100) <= 100) {
-    #cat("not moving origin\n")
-    qfa_alt = reverseComplement(qfa)
+preRunMummerToAlign <- function(opt) {
+  # run mummer
+  mummer_command = paste(paste("nucmer --prefix=", opt$mummerprefix, sep=""),
+    "--coords", opt$ref, opt$query, sep = " ")
+  system(mummer_command, wait = TRUE)
+  mtable = readMummer(paste(opt$mummerprefix, ".coords", sep = ""))
+  # move query origin to match
+  qfa = readDNAStringSet(opt$query,"fasta")
+  # fix for using canu output directly
+  names(qfa) = sapply(names(qfa),function(i){strsplit(i," ")[[1]][1]})
+  #qname = mtable[1,"QUERY"]
+  #rname = mtable[1,"REF"]
+  #qfa = qfa[[qname]]
+  #cat(as.numeric(mtable[1,"S2"]),"\n")
+  #cat(as.numeric(mtable[1,"E2"]),"\n")
+  # sort the table
+  qfa_alt = qfa
+  # only supports multiple query suquences at the moment
+  for (i in names(qfa)) {
+    print(i)
+    thismtable = mtable %>% filter(QUERY==i) %>% arrange(S1)
+    if (dim(thismtable)[1] > 0) {
+      if (thismtable[1,"S2"] > thismtable[1,"E2"]) {
+        # match is reverse
+        #cat("\n\n\nreverse_match\n\n\n\n\n")
+        if (abs(thismtable[1,"S1"]-thismtable[1,"E2"]) <= 100) {
+          # start is close - do nothing but reverse
+          #cat("not moving origin\n")
+          qfa_alt[[i]] = reverseComplement(qfa[[i]])
+        } else if (abs(thismtable[1,"E2"] - 100) <= 100) {
+          #cat("not moving origin\n")
+          qfa_alt[[i]] = reverseComplement(qfa[[i]])
+          } else {
+          #cat("moving origin\n")
+          qfa_alt[[i]] = reverseComplement(qfa[[i]])
+          qfa_alt[[i]] = DNAString(paste0(qfa[[i]][thismtable[1,"E2"]:length(qfa[[i]])], qfa[[i]][1:(thismtable[1,"E2"]-1)]))
+        }
+      } else {
+        #cat("\n\n\nforward_match\n\n\n\n\n")
+        if (abs(thismtable[1,"S1"]-thismtable[1,"S2"]) <= 100) {
+          # start is close - do nothing
+          qfa_alt[[i]] = qfa[[i]]
+        } else if (abs(thismtable[1,"S2"] - 100) <= 100) {
+          #cat("not moving origin\n")
+          qfa_alt[[i]] = qfa[[i]]
+        } else {
+          qfa_alt[[i]] = DNAString(paste0(qfa[[i]][thismtable[1,"S2"]:length(qfa[[i]])], qfa[[i]][1:(thismtable[1,"S2"]-1)]))
+        }
+      }
+    }
+  }
+  # write.fasta(qfa_alt, names = paste(names(qfa), "_originFix", sep = ""),
+  #   file.out = opt$out)
+  for (i in 1:length(qfa_alt)) {
+    if (i == 1) {
+      #print(i)
+      write.fasta(qfa_alt[[i]], names = names(qfa_alt)[i], open = "w",
+         file.out = opt$out)
     } else {
-    #cat("moving origin\n")
-    qfa_alt = reverseComplement(qfa)
-    qfa_alt = DNAString(paste0(qfa[mtable[1,"E2"]:length(qfa)], qfa[1:(mtable[1,"E2"]-1)]))
-  }
-} else {
-  #cat("\n\n\nforward_match\n\n\n\n\n")
-  if (abs(mtable[1,"S1"]-mtable[1,"S2"]) <= 100) {
-    # start is close - do nothing
-    qfa_alt = qfa
-  } else if (abs(mtable[1,"S2"] - 100) <= 100) {
-    #cat("not moving origin\n")
-    qfa_alt = qfa
-  } else {
-    qfa_alt = DNAString(paste0(qfa[mtable[1,"S2"]:length(qfa)], qfa[1:(mtable[1,"S2"]-1)]))
+      write.fasta(qfa_alt[[i]], names = names(qfa_alt)[i], open = "a",
+         file.out = opt$out)
+    }
   }
 }
-if (is.null(opt$out)) {
-  opt$out = paste(strsplit(opt$query, split = "\\.fasta")[[1]],
-    "_",qname,"_",rname,"originAlign",".fasta",sep="")
-}
-write.fasta(qfa_alt, names = paste(qname, "_originFix", sep = ""),
-  file.out = opt$out)
 
-# rerun mummer with aligned sequence
-mummer_command = paste(paste("nucmer --prefix=", opt$mummerprefix, ".originFix", sep=""),
-  "--coords", opt$ref, opt$out, sep = " ")
-system(mummer_command, wait = TRUE)
-mtable2 = readMummer(paste(opt$mummerprefix, ".originFix", ".coords", sep = ""))
-sample = strsplit(strsplit(opt$mummerprefix, split = "-")[[1]][1], split = "/")[[1]][3]
-mtable2$SAMPLE = sample
-# write r readable table
-write.table(mtable2, paste(opt$mummerprefix, ".originFix", ".txt", sep = ""),
-  quote = F, sep = "\t", row.names = FALSE, col.names = FALSE)
-
-cat(opt$plot,"\n")
-if (opt$plot) {
-  # realign and plot
-  ref = paste("REF=", opt$ref, sep="")
-  query = paste("QUERY=", opt$out, sep="")
-  prefix = paste("PREFIX=", opt$mummerprefix, ".originFix",sep="")
-  mummer_command2 = paste(ref, query, prefix,
-  "nucmer --maxmatch -c 100 -p $PREFIX $REF $QUERY",
-  "mummerplot --postscript -p $PREFIX ${PREFIX}.delta -R $REF -Q $QUERY",
-  "mummerplot --png -p $PREFIX ${PREFIX}.delta -R $REF -Q $QUERY",
-  "ps2pdf ${PREFIX}.ps ${PREFIX}.pdf",
-  sep=" && ")
-  system(mummer_command2, wait = TRUE)
+rerunMummer <- function(opt) {
+  # rerun mummer with aligned sequence
+  mummer_command = paste(paste("nucmer --prefix=", opt$mummerprefix, ".originFix", sep=""),
+    "--coords", opt$ref, opt$out, sep = " ")
+  print(mummer_command)
+  system(mummer_command, wait = TRUE)
+  mtable2 = readMummer(paste(opt$mummerprefix, ".originFix", ".coords", sep = ""))
+  sample = strsplit(strsplit(opt$mummerprefix, split = "-")[[1]][1], split = "/")[[1]][3]
+  mtable2$SAMPLE = sample
+  # write r readable table
+  write.table(mtable2, paste(opt$mummerprefix, ".originFix", ".txt", sep = ""),
+    quote = F, sep = "\t", row.names = FALSE, col.names = FALSE)
 }
+
+plotMummer <- function(opt) {
+  cat(opt$plot,"\n")
+  if (opt$plot) {
+    # realign and plot
+    ref = paste("REF=", opt$ref, sep="")
+    query = paste("QUERY=", opt$out, sep="")
+    prefix = paste("PREFIX=", opt$mummerprefix, ".originFix",sep="")
+    mummer_command2 = paste(ref, query, prefix,
+    "nucmer --maxmatch -c 100 -p $PREFIX $REF $QUERY",
+    "mummerplot --postscript -p $PREFIX ${PREFIX}.delta -R $REF -Q $QUERY",
+    "mummerplot --png -p $PREFIX ${PREFIX}.delta -R $REF -Q $QUERY",
+    "ps2pdf ${PREFIX}.ps ${PREFIX}.pdf",
+    sep=" && ")
+    system(mummer_command2, wait = TRUE)
+  }
+}
+
+# check query and reference files to see if there is more than one contig
+# if so, run for all combinations
+
+# query_tigs = read.fasta(opt$query)
+# ref_tigs = read.fasta(opt$ref)
+
+
+# run
+print("prerun")
+preRunMummerToAlign(opt)
+# print("rerun")
+rerunMummer(opt)
+plotMummer(opt)
 
 if (!opt$keep) {
   # remove everything expect plots
