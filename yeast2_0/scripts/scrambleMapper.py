@@ -243,6 +243,9 @@ def gffMod(df, mummerhits, doReps=False, repNum=1):
     seqname = mummerhits["NAME_Q"]
     start_s = int(mummerhits["S2"])
     end_s = int(mummerhits["E2"])
+    thisstrand = out.iloc[0]["strand"]
+    #print(thisstrand)
+    oppositestrand = lambda x: "-" if x is "+" else "+"
     # clean up web encoding (affects tRNA genes)
     attribute = urllib.request.unquote(out.iloc[0]["attribute"]).rstrip('"').lstrip('"')
     # do some attributes in yeast gff have two sets of quotes??
@@ -254,18 +257,21 @@ def gffMod(df, mummerhits, doReps=False, repNum=1):
     if end_s < start_s:
         start = end_s
         end = start_s
-        strand = "-"
+        strand = oppositestrand(thisstrand)
+        #strand = thisstrand
     else:
         start = start_s
         end = end_s
-        strand = "+"
+        strand = thisstrand
     out.index = pd.MultiIndex.from_tuples([(seqname,start,end)], names=("seqname","start","end"))
     out.loc[(seqname,start,end),"strand"] = strand
     out.loc[(seqname,start,end),"attribute"] = attribute
     return out
 
-def mapGFF(from_fa, gff_in, to_fa, onlyHighest=True, correct_tRNA=True, enforceLen=True):
+def mapGFF(gff_in, to_fa, from_fa, onlyHighest=True,
+           correct_tRNA=True, enforceLen=True):
     import pandas as pd
+    #print(gff_in)
     from_seq = readFASTA_SeqIO(from_fa)
     feature_seq = getSeq(from_seq,gff_in.index.get_level_values('seqname')[0],
                        gff_in.index.get_level_values('start')[0],
@@ -278,6 +284,8 @@ def mapGFF(from_fa, gff_in, to_fa, onlyHighest=True, correct_tRNA=True, enforceL
             if mummerhits.apply(lambda x : x["NAME_R"] == x["NAME_Q"], axis=1).any():
                 # exact chr match -- just return that
                 mummerhits = mummerhits[mummerhits.apply(lambda x : x["NAME_R"] == x["NAME_Q"], axis=1)]
+                if mummerhits.empty:
+                    return None
             # this is a syn match?
             if onlyHighest:
                 mummerhits = mummerhits[mummerhits["%_IDY"] >= mummerhits.max()["%_IDY"]]
@@ -285,9 +293,62 @@ def mapGFF(from_fa, gff_in, to_fa, onlyHighest=True, correct_tRNA=True, enforceL
                 # correct for tRNA and other annotations that may present mapping problems
                 if gff_in.feature[0]=="tRNA_gene":
                     mummerhits = mummerhits[mummerhits.apply(lambda x : x["NAME_R"] == x["NAME_Q"], axis=1)]
+                if mummerhits.empty:
+                    return None
             if enforceLen:
                 # make the ref:query match lengths equal
                 mummerhits = mummerhits[mummerhits.apply(lambda x : x["LEN_1"] == x["LEN_2"], axis=1)]
+                if mummerhits.empty:
+                    return None
+            #print(mummerhits)
+            mummerhits = mummerhits.reset_index()
+            if mummerhits.shape[0] > 0:
+                if mummerhits.shape[0] > 1:
+                    out = gffMod(gff_in, mummerhits.iloc[0], doReps=True, repNum=1)
+                    for i in range(1,(mummerhits.shape[0])):
+                        #print(i)
+                        newrow = gffMod(gff_in,mummerhits.loc[i], doReps=True, repNum=i+1)
+                        out = out.append(newrow)
+                else:
+            	    out = gffMod(gff_in, mummerhits.iloc[0])
+                #return mummerhits
+                return out
+            else:
+                return None
+        else:
+            return None
+    else:
+        return None
+
+def mapGFF_direct(gff_in, to_fa, from_direct, onlyHighest=True,
+           correct_tRNA=True, enforceLen=True):
+    import pandas as pd
+    #print(gff_in)
+    feature_seq = from_direct
+    if feature_seq is not None:
+        to_seq = readFASTA_SeqIO(to_fa)
+        mummerhits = runMummer(feature_seq,to_seq)
+        mummerhits["%_IDY"] = pd.to_numeric(mummerhits["%_IDY"])
+        if mummerhits.shape[0] > 0:
+            if mummerhits.apply(lambda x : x["NAME_R"] == x["NAME_Q"], axis=1).any():
+                # exact chr match -- just return that
+                mummerhits = mummerhits[mummerhits.apply(lambda x : x["NAME_R"] == x["NAME_Q"], axis=1)]
+                if mummerhits.empty:
+                    return None
+            # this is a syn match?
+            if onlyHighest:
+                mummerhits = mummerhits[mummerhits["%_IDY"] >= mummerhits.max()["%_IDY"]]
+            if correct_tRNA:
+                # correct for tRNA and other annotations that may present mapping problems
+                if gff_in.feature[0]=="tRNA_gene":
+                    mummerhits = mummerhits[mummerhits.apply(lambda x : x["NAME_R"] == x["NAME_Q"], axis=1)]
+                if mummerhits.empty:
+                    return None
+            if enforceLen:
+                # make the ref:query match lengths equal
+                mummerhits = mummerhits[mummerhits.apply(lambda x : x["LEN_1"] == x["LEN_2"], axis=1)]
+                if mummerhits.empty:
+                    return None
             #print(mummerhits)
             mummerhits = mummerhits.reset_index()
             if mummerhits.shape[0] > 0:
@@ -319,7 +380,7 @@ def mapMultipleGFF(from_fa, gff_in, to_fa, usemp=False, nproc=32):
             pool = mp.Pool(processes=nproc)
             #results = [pool.apply(mapGFF, args=(from_fa,gff_in.iloc[[x]], to_fa)) for x in range(0,gff_in.shape[0])]
             gff_arg = [gff_in.iloc[[x]] for x in range(0,gff_in.shape[0])]
-            results = pool.starmap(mapGFF, zip(repeat(from_fa),gff_arg,repeat(to_fa)))
+            results = pool.starmap(mapGFF, zip(gff_arg,repeat(to_fa),repeat(from_fa)))
             #results = pool.map(partial(mapGFF, gff_in=gff_arg), to_fa=to_fa, from_fa=from_fa)
             #results.close()
             #results.join()
@@ -332,10 +393,72 @@ def mapMultipleGFF(from_fa, gff_in, to_fa, usemp=False, nproc=32):
                 for i in tqdm(range(1,(gff_in.shape[0]))):
                     #print(i)
                     newrow = mapGFF(from_fa, gff_in.iloc[[i]], to_fa)
-                    out = out.append(newrow)
+                    # if newrow is not None:
+                    #     out = out.append(newrow)
             return out
     else:
         return None
+
+def addSeg(to_fa, seg_file, gff = None, usemp=False, nproc=32):
+    from Bio import SeqIO
+    import os
+    import tempfile
+    import uuid
+    import pandas as pd
+    from tqdm import tqdm
+    import multiprocessing as mp
+    from itertools import repeat
+    if os.path.isfile(seg_file):
+        with open(seg_file,'r') as f:
+            df = pd.DataFrame.from_csv(f,sep='\t')
+        temp_file = tempfile.TemporaryFile(mode='w')
+        temp_file = str(uuid.uuid4())
+        with open(temp_file,'w') as f2:
+            for i in df.index.get_level_values("number"):
+                f2.write(">"+str(i) + "\n")
+                f2.write(str(df.loc[i].seq)+"\n")
+        dummy_gff = pd.DataFrame.from_records([{
+            "seqname":"dummy",
+            "start":1,
+            "end":1,
+            "source":"ANB",
+            "feature":"engineered_region",
+            "score":".",
+            "strand":"+",
+            "frame":".",
+            "attribute":"ID=;"
+        }],index=("seqname","start","end"))
+        thisfrom = readFASTA_SeqIO(temp_file)
+        #out = pd.DataFrame()
+        results = []
+        segments = [x for x in thisfrom.keys()]
+        if usemp:
+            gff_arg = dummy_gff
+            for i in range(0,len(segments)):
+                ii = segments[i]
+                if i == 0:
+                    gff_arg.iloc[i].attribute = "ID=" + str(ii) + ";"
+                else:
+                    gff_arg = gff_arg.append(dummy_gff)
+                    gff_arg.iloc[i].attribute = "ID=" + str(ii) + ";"
+            gff_arg = [gff_arg.iloc[[x]] for x in range(0,gff_arg.shape[0])]
+            pool = mp.Pool(processes=nproc)
+            results = pool.starmap(mapGFF_direct, zip(gff_arg,repeat(to_fa),[thisfrom[s] for s in segments]))
+            out = pd.concat(results)
+        else:
+            for i in tqdm(range(0,len(segments))):
+                ii = segments[i]
+                dummy_gff.iloc[0].attribute = "ID=" + str(ii) + ";"
+                thisentry = mapGFF_direct(gff_in = dummy_gff, to_fa = to_fa, from_direct = thisfrom[ii])
+                if thisentry is not None:
+                    results.append(thisentry)
+            out = pd.concat(results)
+        os.remove(temp_file)
+        if gff is not None:
+            out = gff.append(out)
+        return out
+    else:
+        raise IOError("must provide filename for argument segment_table")
 
 if __name__ == "__main__":
     import argparse
@@ -345,7 +468,8 @@ if __name__ == "__main__":
             'ncRNA_gene',
             'tRNA_gene',
             'centromere',
-            'rRNA_gene'
+            'rRNA_gene',
+            'ncRNA_gene'
             ]
     parser = argparse.ArgumentParser()
     parser.add_argument('--ref_fa', help='file path to reference genome, fasta format',
@@ -358,6 +482,8 @@ if __name__ == "__main__":
                         required=True, metavar = "OUTPUT GFF FILE PATH")
     parser.add_argument('--annotation_filter', help='list of gff "type" features to keep',
                         required=False, default=annotations2keep, type=list, metavar = "FEATURE TYPE LIST")
+    parser.add_argument('--segment_table', help='segment sequence table file name. columns: number,seq',
+                        required=False, default=None, type=str, metavar = "FEATURE TYPE LIST")
     parser.add_argument('--cores', help='number of cores to use',
                         required=False, default=32, type=int)
     args = parser.parse_args()
@@ -377,7 +503,13 @@ if __name__ == "__main__":
     gff = readGFF(args.ref_gff)
     if len(args.annotation_filter) > 0:
         gff = gff[gff['feature'].isin(args.annotation_filter)]
-    out = mapMultipleGFF(args.ref_fa, gff, args.query_fa, usemp=True, nproc=32)
+    #gff = gff.loc[(gff.index.get_level_values('seqname') == "chrIX")]
+    #gff = gff.loc[(gff.index.get_level_values('seqname') == "chrIX") & (gff.index.get_level_values('start') > 416124)]
+
+    #out = mapMultipleGFF(args.ref_fa, gff, args.query_fa, usemp=True, nproc=24)
+    out = mapMultipleGFF(args.ref_fa, gff, args.query_fa, usemp=True, nproc=24)
+    if args.segment_table is not None:
+        out = addSeg(args.query_fa, args.segment_table, gff = out, usemp=True, nproc=32)
     writeGFF(out,args.output_gff)
 
     # EXAMPLE
