@@ -618,7 +618,7 @@ makeKernel <- function(thisdf,bed,idealKernel=F,long=F,log=F) {
                 fun.aggregate = mean,
                 fill=0)
     if (log) {
-      print("doing log transform")
+      #print("doing log transform")
       mat = log10(mat+1)
     }
     k = kernelMatrix(cosine,mat)
