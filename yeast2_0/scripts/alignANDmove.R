@@ -71,7 +71,11 @@ if (length(outdir) > 1) {
 }
 if (is.null(opt$out)) {
   opt$out = paste(strsplit(opt$query, split = "\\.fasta")[[1]],".originAlign",".fasta",sep="")
+<<<<<<< Updated upstream
   #opt$out = paste(outdir, opt$out, sep="/")
+=======
+  opt$out = paste(outdir, opt$out, sep="/")
+>>>>>>> Stashed changes
 }
 
 # read in mummer table
@@ -122,6 +126,7 @@ preRunMummerToAlign <- function(opt) {
   qfa_alt = qfa
   # only supports multiple query suquences at the moment
   for (i in names(qfa)) {
+<<<<<<< Updated upstream
     print(i)
     thismtable = mtable %>% filter(QUERY==i) %>% arrange(S1)
     if (dim(thismtable)[1] > 0) {
@@ -151,6 +156,35 @@ preRunMummerToAlign <- function(opt) {
         } else {
           qfa_alt[[i]] = DNAString(paste0(qfa[[i]][thismtable[1,"S2"]:length(qfa[[i]])], qfa[[i]][1:(thismtable[1,"S2"]-1)]))
         }
+=======
+    #print(i)
+    thismtable = mtable %>% filter(QUERY==i) %>% arrange(S1)
+    if (thismtable[1,"S2"] > thismtable[1,"E2"]) {
+      # match is reverse
+      #cat("\n\n\nreverse_match\n\n\n\n\n")
+      if (abs(thismtable[1,"S1"]-thismtable[1,"E2"]) <= 100) {
+        # start is close - do nothing but reverse
+        #cat("not moving origin\n")
+        qfa_alt[[i]] = reverseComplement(qfa[[i]])
+      } else if (abs(thismtable[1,"E2"] - 100) <= 100) {
+        #cat("not moving origin\n")
+        qfa_alt[[i]] = reverseComplement(qfa[[i]])
+        } else {
+        #cat("moving origin\n")
+        qfa_alt[[i]] = reverseComplement(qfa[[i]])
+        qfa_alt[[i]] = DNAString(paste0(qfa[[i]][thismtable[1,"E2"]:length(qfa[[i]])], qfa[[i]][1:(thismtable[1,"E2"]-1)]))
+      }
+    } else {
+      #cat("\n\n\nforward_match\n\n\n\n\n")
+      if (abs(thismtable[1,"S1"]-thismtable[1,"S2"]) <= 100) {
+        # start is close - do nothing
+        qfa_alt[[i]] = qfa[[i]]
+      } else if (abs(thismtable[1,"S2"] - 100) <= 100) {
+        #cat("not moving origin\n")
+        qfa_alt[[i]] = qfa[[i]]
+      } else {
+        qfa_alt[[i]] = DNAString(paste0(qfa[[i]][thismtable[1,"S2"]:length(qfa[[i]])], qfa[[i]][1:(thismtable[1,"S2"]-1)]))
+>>>>>>> Stashed changes
       }
     }
   }
@@ -158,7 +192,10 @@ preRunMummerToAlign <- function(opt) {
   #   file.out = opt$out)
   for (i in 1:length(qfa_alt)) {
     if (i == 1) {
+<<<<<<< Updated upstream
       #print(i)
+=======
+>>>>>>> Stashed changes
       write.fasta(qfa_alt[[i]], names = names(qfa_alt)[i], open = "w",
          file.out = opt$out)
     } else {
@@ -166,6 +203,7 @@ preRunMummerToAlign <- function(opt) {
          file.out = opt$out)
     }
   }
+
 }
 
 rerunMummer <- function(opt) {
