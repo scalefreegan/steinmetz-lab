@@ -16,6 +16,7 @@
 
 # Import packages ---------------------------------------------------
 try({
+  library(stringr)
   library(ggplot2)
   library(dplyr)
   library(reshape2)
