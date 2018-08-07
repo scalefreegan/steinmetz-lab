@@ -98,13 +98,13 @@ seg2seq <- function(segmentOrder = c(1,2,-3), segmentTable, file = NA, sname = "
     return(fseq)
 }
 
-seq2seg <- function(seq, segmentTable, segThreshold = 0.33) {
+seq2seg <- function(seq, segmentTable, segThreshold = 0.33, cores = 32) {
     #' Assemble segment order from scramble sequence.
     #'
     #' @param seq Character. scramble sequence
     #' @param segmentTable Data.frame. Two columns: "number" segment integer, "seq", character
     #' @return segment order
-    seq = as.character(seq)
+    seq = toupper(as.character(seq))
     # find loxP sites
     # split at loxP sites
     loxPseq = "ATAACTTCGTATAATGTACATTATACGAAGTTAT"
@@ -144,7 +144,7 @@ seq2seg <- function(seq, segmentTable, segThreshold = 0.33) {
           }
         }
         return(segmentNumber)
-    }))
+    }, mc.cores = cores))
 return(as.vector(thissegments))
 }
 
@@ -643,6 +643,20 @@ makeKernel <- function(thisdf,bed,idealKernel=F,long=F,log=F) {
     }
     o$mat = mat
   }
+  return(o)
+}
+
+makeKernel_direct <- function(mat,log=F) {
+  if (log) {
+    #print("doing log transform")
+    mat = log10(mat+1)
+  }
+  k = kernelMatrix(cosine,mat)
+  rownames(k) = rownames(mat)
+  colnames(k) = rownames(mat)
+  o = list()
+  o$kernel = k
+  o$mat = mat
   return(o)
 }
 

@@ -10,8 +10,8 @@ if (length(args)==0) {
 
 gene = args[1]
 resamples = as.integer(args[2])
-print(paste("Gene: ", gene))
-print(paste("Resamples: ", resamples))
+print(paste("Gene:", gene))
+print(paste("Resamples:", resamples))
 
 #-------------------------------------------------------------------#
 # GenPhen segregant Transcriptome Analysis
@@ -31,18 +31,18 @@ print(paste("Resamples: ", resamples))
 # library( plotly )
 # set_credentials_file( "scalefreegan", "5xyvvaleim" )
 library( qtl )
-library( GenomicRanges )
-library( rtracklayer )
+#library( GenomicRanges )
+#library( rtracklayer )
 library( plyr )
-library( parallel )
-options("mc.cores"=24)
-library( ggplot2 )
-library( ggbio )
-library( LSD )
-library( DESeq2 )
+#library( parallel )
+#options("mc.cores"=24)
+#library( ggplot2 )
+#library( ggbio )
+#library( LSD )
+#library( DESeq2 )
 library(dplyr)
 library(reshape2)
-library(pheatmap)
+#library(pheatmap)
 
 # source rQTL utilities
 devtools::source_url("https://raw.githubusercontent.com/scalefreegan/steinmetz-lab/master/QTL/rQTL.R")
@@ -107,16 +107,16 @@ genotype_f = "/g/steinmetz/brooks/yeast/genomes/S288CxYJM789/genotypes_S288c_R64
 load(genotype_f)
 
 # reduce data set - take mean of bioreps
-pheno = acast(trx_df, formula =strain~name, fun.aggregate = mean, value.var = "value")
+#pheno = acast(trx_df, formula =strain~name, fun.aggregate = mean, value.var = "value")
 # only take strains in genotype matrix
 # take the shifted logarithm
-pheno = log2(pheno[intersect(rownames(pheno),colnames(geno)),]+1)
+#pheno = log2(pheno[intersect(rownames(pheno),colnames(geno)),]+1)
 # only keep the protein coding genes
-tokeep = grep("^Y",colnames(pheno))
+#tokeep = grep("^Y",colnames(pheno))
 #pheno = pheno[,tokeep]
-pheno = pheno[,grep(gene,colnames(pheno)]
+#pheno = pheno[,grep(gene,colnames(pheno)),drop=F]
 
-qtl_f = file.path(BASEDIR,"qtl", paste("eQTL_",gene,".rda"))
+qtl_f = file.path(BASEDIR,"qtl", "gene",paste("eQTL_",gene,"_",resamples,".rda",sep=""))
 if (!file.exists(qtl_f)) {
 	cross_f = file.path(BASEDIR,"data","trx_cross.rda")
 	if (!file.exists(cross_f)) {
@@ -140,14 +140,14 @@ if (!file.exists(qtl_f)) {
   # phenotype = cross$pheno[,colnames(cross$pheno)!="id",drop=F]
   # cross$pheno = phenotype
   # eQTL$qtls = c( lapply(seq(1,dim(phenotype)[2]),function( i ) { qtl::scanone( cross, pheno.col = i ) } ) )
-	phes = which(colnames(cross$pheno)!="id")
+	#phes = which(colnames(cross$pheno)!="id")
+	#phes = which(colnames(cross$pheno)==colnames(pheno))
+  phes = grep(gene,colnames(cross$pheno))
+  #print(phes)
+	print("Finding QTLs")
 	eQTL$qtls = qtl::scanone(cross, pheno.col = phes, method = "hk")
-	pb = txtProgressBar(min = 0, max = dim(eQTL$qtls)[2], style = 3)
-	eQTL$resamples = lapply(seq(1,dim(eQTL$qtls)[2]), function(i) {
-		setTxtProgressBar(pb, i)
-		try(qtl::scanone( cross, pheno.col = phes[i], n.perm = resamples, n.cluster = 24))
-	})
-	close(pb)
+	print("Resampling")
+	eQTL$resamples = try(qtl::scanone( cross, pheno.col = phes, n.perm = resamples))
 	save(eQTL, file = qtl_f)
 } else {
 	load(qtl_f)
