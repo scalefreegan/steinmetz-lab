@@ -16,6 +16,7 @@
 
 # Import packages ---------------------------------------------------
 try({
+  library(stringr)
   library(ggplot2)
   library(dplyr)
   library(reshape2)
@@ -37,7 +38,7 @@ roman2arabic <- function(x, Mitochondrial = "XVII") {
   x.copy[x.copy=="Mito"] = Mitochondrial
   x.copy[x.copy=="M"] = Mitochondrial
   x.copy[x.copy=="mt"] = Mitochondrial
-  x.copy = str_pad(as.integer(as.roman(x.copy)), 2, pad = "0")
+  x.copy = stringr::str_pad(as.integer(as.roman(x.copy)), 2, pad = "0")
   if (sum(is.na(x.copy))>0) {
     cat("Substituting chr names that were not Roman numerals to original names")
     toreplace = which(is.na(x.copy))
